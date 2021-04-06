@@ -1,5 +1,7 @@
 build/
 codegen/
+slprj/
+figDir/
 
 *.asv
 *.csv
