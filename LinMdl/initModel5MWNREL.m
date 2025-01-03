@@ -1,8 +1,8 @@
-function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = initModel5MWNREL(plotOn, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir)
+function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] = initModel5MWNREL(plotOn, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir,titleOn,multRb)
 % initModel5MWNREL initializes parameters of NREL 5 MW turbine.
-% Aerodynamic force and thrust LUT can be plotted. 
+% Aerodynamic force and thrust LUT can be plotted.
 % All inputs are optional.
-% - plotOn: Plots aerodynamic torque and force dependent on pitch and tip 
+% - plotOn: Plots aerodynamic torque and force dependent on pitch and tip
 %   speed ratio (Default: 0)
 % - Rotor_Lamda: tip speed ratio vector (from mat file NREL5MW_CPdata)
 % - Rotor_Pitch: blade pitch vector (from mat file NREL5MW_CPdata)
@@ -12,8 +12,8 @@ function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = initM
 %
 % Outputs:
 % - wecs: Structure with NREL 5 WM information
-% - M: mass matrix Lagrange's equation 
-% - Ce: damping matrix Lagrange's equation 
+% - M: mass matrix Lagrange's equation
+% - Ce: damping matrix Lagrange's equation
 % - K: stiffness matrix Lagrange's equation
 % - Q: term for input matrix based on Lagrange's equation
 % - L: term for system matrix based on Lagrange's equation
@@ -25,13 +25,16 @@ function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = initM
 
 %% Set path for input data and output figure directory
 
+debugOn = 1; % this is only used to check that cQ = cP/lambda
+scaleLoopUp = 1; % this gives the possibility to scale cQ
+
 % Set path to input data directory
 workDir = fileparts(mfilename('fullpath'));
 mainDir = fileparts(workDir);
 
 % Switch for plots
 if ~nargin
-    plotOn = 0;
+    plotOn = 1;
 end
 
 % Load data for cT, cQ LUT if not passed as input
@@ -39,20 +42,35 @@ if nargin < 5 || isempty(Rotor_Lamda) || isempty(Rotor_Pitch) || ....
         isempty(Rotor_cQ) || isempty(Rotor_Pitch)
     dataInDir = fullfile(mainDir,'dataIn');
     load(fullfile(dataInDir,'NREL5MW_CPdata.mat'),...
-    'Rotor_Lamda','Rotor_Pitch','Rotor_cQ','Rotor_cT');
+        'Rotor_Lamda','Rotor_Pitch','Rotor_cQ','Rotor_cT','Rotor_cP');
+else
+    dataInDir = fullfile(mainDir,'dataIn');
+    load(fullfile(dataInDir,'NREL5MW_CPdata.mat'),...
+        'Rotor_cP');
 end
 
+
 % Set path to figure directory
-if nargin < 6
+if nargin < 6 || isempty(figDir)
     figDir = fullfile(mainDir,'figDir');
     if ~isfolder(figDir)
         mkdir(figDir)
     end
 end
 
+% Put a plot title
+if nargin < 7  || isempty(titleOn)
+    titleOn = 0;
+end
+
+% Set a multiplication factor for the aerodynamic center on the blade
+if nargin < 8  || isempty(multRb)
+    multRb = 0.75;
+end
+
 %% Define parameters
 % 5MW FAST WIND TURBINE (NREL/TP-500-38060) Definition of a 5-MW Reference
-% Wind Turbine for Offshore System Development
+% Wind Tudeltaine for Offshore System Development
 % Cut-In, Rated, Cut-Out Wind Speed 3 m/s, 11.4 m/s, 25 m/s
 % Cut-In, Rated Rotor Speed 6.9 rpm, 12.1 rpm
 % Tower equivalent mass, MT 438,000 kg
@@ -61,72 +79,88 @@ end
 
 % Constants: Air density and actuator time constants
 rho = 1.225; % Air density (kg/m^3)
-tau = 0.01; % time constant pitch actuator
+tau = 0.1; % time constant pitch actuator
 kappa = 0.01; % time constant torque  actuator
 % Bg = 0.9; % Tg= Bg(wg - wz). Unused because we use Tg as input
 
 % Turbine constants
-wecs.N = 3;% Number of blades
+wecs.N = 3;% Number of blades, Table 1-1
 wecs.Ng = 97; % Gearbox ratio
-wecs.mh = 56780; % kg;  Hub mass
-wecs.mb =  0.25 * 17740; %kg;  Modal mass of each blade
-wecs.mn = 240000; % kg;  Nacellle mass
-wecs.mtower = 347460;% kg; Mass of the tower and nacelle
-wecs.mt = 0.25*wecs.mtower + wecs.mn + wecs.mh;
-wecs.H =  87.6;
+wecs.mh = 56780; % kg;  Hub mas, Table 4-1
+wecs.mbl = 17740; %kg;  Mass of each blade Table 2-2
+wecs.mb = wecs.mbl*0.25; %kg;  Modal mass of each blade
+wecs.mn = 240000; % kg;  Nacelle mass Table 1-1
+wecs.mtower = 347460; % kg; Tower mass Table 1-1
+wecs.mr = wecs.mh + wecs.N*wecs.mbl; % kg; Rotor Mass: 110000 Table 1-1
+wecs.mt = 0.25*wecs.mtower + wecs.mn + wecs.mh + wecs.N*wecs.mbl;
+wecs.mtb = wecs.mt + wecs.N * wecs.mb; %tower modal mass + modal mass of blades
 
-wecs.Jrg = 534.116;%  kg*m^2; Inertia of the generator
-wecs.Jr = 115926 + 3 * 11.776e6; % kg*m^2; Inertia of the rotor (Hub inertia + 3 blades)
-f0 = 0.324; % Hz, First natural tower fore-aft frequency
-% f0sw = 0.3120; % First natural tower sidewards frequency
-wecs.wnb = 0.6993 * 2*pi; % rad/s First natural blade frequency 
+wecs.H =  90; % 87.6;
+
+wecs.Jg = 534.116; %  kg*m^2; Inertia of the generator
+wecs.Jr = 3.8759e+07; %115926 + 3 * 11.776e6; % kg*m^2; Inertia of the rotor (Hub inertia + 3 blades) 3.8759e+07; %
+f0 = 0.324;  % Hz, First natural tower fore-aft frequency
+f0sw = 0.3120;% ; % First natural tower sidewards frequency
+wecs.wnb = 0.6993 * 2*pi; % rad/s First natural blade frequency
 wecs.wnt = f0 * 2*pi; % wecs.wnb; 0.3240
-wecs.zetat = 1/100; %damping ratio of tower (Table 6.2)
+wecs.wntsw = f0sw * 2*pi; % wecs.wnb; 0.3240
+wecs.zetat = 1/100; % damping ratio of tower (Table 6.2)
 wecs.zetab = 0.477465/100;% damping ratio of blade
 
 wecs.Kt = wecs.wnt^2 * wecs.mt; % Stiffness of the tower s^2 + B/Ms + K/m
-wecs.Bt = 2 *wecs.zetat * wecs.wnt *wecs.mt; % tower 2*6421;
+wecs.Bt = 2 * wecs.zetat * wecs.wnt *wecs.mt; % tower 2*6421;
+
+wecs.Ktsw = wecs.wntsw^2 * wecs.mt; % Stiffness of the tower s^2 + B/Ms + K/m
+wecs.Btsw = 2 * wecs.zetat * wecs.wntsw *wecs.mt; % tower 2*6421;
+
 wecs.Kb = wecs.wnb^2 * wecs.mb; %Stiffness of each blade
-wecs.Bb = 2 *wecs.zetab*wecs.wnb *wecs.mb; %Damping of the blade
+wecs.Bb = 2 * wecs.zetab* wecs.wnb *wecs.mb; %Damping of the blade
 wecs.Ks = 867637000; %Nm/rad Stiffness of the transmission
 % 2*zeta*wn = B
 wecs.Bs = 6215000;  %Nm/rad/sec %Damping of the transmission
-wecs.rb = 63; % m blade radius
-wecs.etag = 0.944; %Drivetrain.Generator.Efficiency = 0.944;
+wecs.Rr = 63; % m length rotor radius
+wecs.rb = wecs.Rr*multRb; %*0.75; % m aerodynamic center on blade radius
+wecs.etag = 0.944; %Drivetrain.Generator.Efficiency: 0.944;
 
 %% Lagrange's Model matrices
 % Force input w = [Ft_fa,Ft_sw,Tr,Tg]; Ft_fa = Ft, Ft_sw = 3/2*Tg
 % States q: xdot_fa, zeta, xdot_sw, omega_r, omega_gr
 
-M =[wecs.mt + wecs.N*wecs.mb wecs.N*wecs.mb*wecs.rb 0 0 0; % 
+M =[wecs.mtb wecs.N*wecs.mb*wecs.rb 0 0 0; %
     wecs.N*wecs.mb*wecs.rb  wecs.N*wecs.mb*wecs.rb^2 0 0 0;
     0 0 wecs.mt 0 0;
     0 0 0 wecs.Jr 0;
-    0 0 0 0 wecs.Jrg*wecs.Ng^2];
+    0 0 0 0 wecs.Jg*wecs.Ng^2];
 
 Ce = [wecs.Bt 0 0 0 0;
     0 wecs.N*wecs.Bb*wecs.rb^2 0 0 0 ; %
-    0 0 wecs.Bt 0 0
+    0 0 wecs.Btsw 0 0
     0 0 0  wecs.Bs -wecs.Bs;
     0 0 0 -wecs.Bs wecs.Bs];
 
 K = [wecs.Kt 0 0 0;
     0 wecs.N*wecs.Kb*wecs.rb^2 0 0; %
-    0 0 wecs.Kt 0
+    0 0 wecs.Ktsw 0
     0 0 0 wecs.Ks;
     0 0 0 -wecs.Ks];
 
 Q = [1 0 0 0;
     wecs.rb 0 0 0;
-    0 1 0 0;
+    0 1 0 -wecs.Ng;
     0 0 1 0;
-    0 0 0 -wecs.Ng];
+    0 0 0  -wecs.Ng];
+
+Q3 = [1 0 0;
+    wecs.rb 0 0;
+    0 2/(3*wecs.H) -2*wecs.Ng/(3*wecs.H);
+    0 1 0;
+    0 0 -wecs.Ng];
 
 L = [eye(4), [0;0;0;-1]];
 
 %% Ct/Cq for LUT for Model
-idxPitch = Rotor_Pitch >= -8;
-idxTSR = Rotor_Lamda < 15;
+idxPitch = Rotor_Pitch >= -2;
+idxTSR = Rotor_Lamda < 20;
 
 betaDeg = Rotor_Pitch(idxPitch);
 pitch = betaDeg * pi/180;
@@ -134,39 +168,181 @@ lambda = Rotor_Lamda(idxTSR);
 
 Cq = Rotor_cQ(idxPitch,idxTSR);
 Ct = Rotor_cT(idxPitch,idxTSR);
+Cp = Rotor_cP(idxPitch,idxTSR);
 
-%% Plot aerodynamic torque and force dependent on pitch and tip speed ratio 
+if debugOn == 1
+    Cq1 = Cp ./ lambda';
 
-% Plot not generated by default 
+    idx0 = Cq1 <= eps;
+    Cq1nan = Cq1;
+    Cq1nan(idx0) = nan;
+end
+
+if scaleLoopUp == 1
+    
+    % Ct: Find the minimum and maximum values
+    lookupTable = Ct;
+    minValue = min(Ct(:)); % Find the minimum and maximum values
+    maxValue = max(Ct(:));
+    newMaxValue = maxValue; % Reduce the highest point if desired
+
+    % Ct: Apply linear scaling to adjust all values smoothly
+    scaledTable = (lookupTable - minValue) / (maxValue - minValue); % Normalize to [0, 1]
+    Ct1 = scaledTable * (newMaxValue - minValue) + minValue; % Scale back to new range
+    Ct = Ct1;
+
+    % Cq: Find the minimum and maximum values
+    lookupTable = Cq;
+    minValue = min(lookupTable(:));
+    maxValue = max(lookupTable(:));
+    newMaxValue = maxValue * 0.9475; % Reduce the highest point by 0.95%
+
+    % Cq: Apply linear scaling to adjust all values smoothly
+    scaledTable = (lookupTable - minValue) / (maxValue - minValue); % Normalize to [0, 1]
+    Cq1 = scaledTable * (newMaxValue - minValue) + minValue; % Scale back to new range
+    Cq = Cq1;
+
+    % Cq1nan for display
+    idx0 = Cq1 <= eps;
+    Cq1nan = Cq1;
+    Cq1nan(idx0) = nan;
+
+end
+
+idx0 = Ct <= eps;
+Ctnan = Ct;
+Ctnan(idx0) = nan;
+
+idx0 = Cq <= eps;
+Cqnan = Cq;
+Cqnan(idx0) = nan;
+
+idx0 = Cp <= eps;
+Cpnan = Cp;
+Cpnan(idx0) = nan;
+
+%% Plot aerodynamic torque and force dependent on pitch and tip speed ratio
+
+% Plot not generated by default
 if plotOn
     [Xq,Yq] = meshgrid(lambda,betaDeg);
-    
+    filtX1 = 1:1:size(Xq,1);
+    filtX2 = 1:1:size(Xq,2);
+    fs = 12;
+    sw = 3;
+
     % Plot aerodynamic force C_T
-    xlabelStr = 'tip speed ratio \lambda [-]';
-    ylabelStr = 'pitch angle \beta [deg]';
-    zlabelStr = 'Force coefficient C_T [-]';
+    xlabelStr = 'Tip speed ratio \lambda [-]';
+    ylabelStr = 'Pitch angle \beta_0 [deg]';
+    zlabelStr = 'Thrust coefficient c_T [-]';
     titleStrData1Interp = ['Aerodynamique ',zlabelStr,'  from NREL FAST 5 MW'];
-    
-    figure(1); surf(Xq,Yq,Ct,'FaceColor','interp','EdgeColor','none'); hold on
+    if titleOn == 1, faceAlphaVal = 1; else, faceAlphaVal = 0.9; end
+
+    figure(1); surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Ctnan(filtX1,filtX2),...
+        'FaceColor','interp','EdgeColor','none','FaceAlpha', faceAlphaVal); hold on
     axis tight;
     xlabel(xlabelStr); ylabel(ylabelStr ); zlabel(zlabelStr);
-    title(titleStrData1Interp);
-    view(60,30)
-    
+    set(gca, 'YDir', 'reverse');
+
+    if titleOn == 1
+        title(titleStrData1Interp);
+        % view(60,30)
+    else
+        hold on;
+        filtX1 = 1:sw:size(Xq,1);
+        filtX2 = 1:sw:size(Xq,2);
+        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Ctnan(filtX1,filtX2),'FaceColor','none');
+        set(gca,'Fontsize',fs)
+        hold off
+        % view(-160,60)
+        colorbar
+        set(gca,'Fontsize',fs)
+    end
+
     print(gcf,fullfile(figDir,'Ct_NRRLFAST5MW'), '-dpng');
     print(gcf,fullfile(figDir,'Ct_NRRLFAST5MW'), '-depsc');
-    
-    % Plot aerodynamic torque C_Q
-    zlabelStr = 'Torque coefficient C_Q [-]';
-    titleStrData1Interp = ['Aerodynamique ',zlabelStr,' from NREL FAST 5 MW'];
-    
-    figure(2); surf(Xq,Yq,Cq,'FaceColor','interp','EdgeColor','none'); hold on
+
+
+    zlabelStr = 'Power coefficient c_P [-]';
+    figure(100); surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cpnan(filtX1,filtX2),...
+        'FaceColor','interp','EdgeColor','none','FaceAlpha', faceAlphaVal); hold on
     axis tight;
     xlabel(xlabelStr); ylabel(ylabelStr ); zlabel(zlabelStr);
-    title(titleStrData1Interp)
-    view(60,30)
-    
+    set(gca, 'YDir', 'reverse');
+    if titleOn == 1
+        title(titleStrData1Interp);
+        view(60,30)
+    else
+        hold on;
+        filtX1 = 1:sw:size(Xq,1);
+        filtX2 = 1:sw:size(Xq,2);
+        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cpnan(filtX1,filtX2),'FaceColor','none');
+        set(gca,'Fontsize',fs)
+        hold off
+        %view(-160,60)
+        colorbar
+        set(gca,'Fontsize',fs)
+    end
+
+    print(gcf,fullfile(figDir,'Cp_NRRLFAST5MW'), '-dpng');
+    print(gcf,fullfile(figDir,'Cp_NRRLFAST5MW'), '-depsc');
+
+
+    % Plot aerodynamic torque C_Q
+    zlabelStr = 'Torque coefficient c_Q [-]';
+    titleStrData1Interp = ['Aerodynamique ',zlabelStr,' from NREL FAST 5 MW'];
+
+    figure(2);
+    filtX1 = 1:1:size(Xq,1);
+    filtX2 = 1:1:size(Xq,2);
+    surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cqnan(filtX1,filtX2),...
+        'FaceColor','interp','EdgeColor','none','FaceAlpha', faceAlphaVal); hold on
+    axis tight;
+    xlabel(xlabelStr); ylabel(ylabelStr ); zlabel(zlabelStr);
+    set(gca, 'YDir', 'reverse');
+
+    if titleOn == 1
+        title(titleStrData1Interp)
+        view(60,30)
+    else
+        hold on;
+        filtX1 = 1:sw:size(Xq,1);
+        filtX2 = 1:sw:size(Xq,2);
+        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cqnan(filtX1,filtX2),'FaceColor','none');
+        set(gca,'Fontsize',fs)
+        hold off
+        % view(-160,60)
+        colorbar
+        set(gca,'Fontsize',fs)
+    end
+
     print(gcf,fullfile(figDir,'Cq_NRRLFAST5MW'), '-dpng');
     print(gcf,fullfile(figDir,'Cq_NRRLFAST5MW'), '-depsc');
+
+    if debugOn == 1
+        figure(200); %For debugging
+        filtX1 = 1:1:size(Xq,1);
+        filtX2 = 1:1:size(Xq,2);
+        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cq1nan(filtX1,filtX2),...
+            'FaceColor','interp','EdgeColor','none','FaceAlpha', faceAlphaVal); hold on
+        axis tight;
+        xlabel(xlabelStr); ylabel(ylabelStr ); zlabel(zlabelStr);
+        set(gca, 'YDir', 'reverse');
+
+        if titleOn == 1
+            title(titleStrData1Interp)
+            view(60,30)
+        else
+            hold on;
+            filtX1 = 1:sw:size(Xq,1);
+            filtX2 = 1:sw:size(Xq,2);
+            surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cq1nan(filtX1,filtX2),'FaceColor','none');
+            set(gca,'Fontsize',fs)
+            hold off
+            % view(-160,60)
+            colorbar
+            set(gca,'Fontsize',fs)
+        end
+    end
 end
 
