@@ -11,3 +11,4 @@ figDir/
 *.mexmaci64
 *.mexw32
 *.mexw64
+*.slxc
