@@ -27,8 +27,8 @@ The code was updated in January 2025 with the following changes:
   F_xt = ksw * (Tr - Ng * Tg), with rotor torque Tr, generator torque Tg, 
   and gear ratio Ng. The lever is ksw = 2/3 Ht, with tower height Ht, the 
   effective point of action for a triangularly distributed load 
-- The aerodynamic center rb was set to rb = 0.75R, with R the rotor radius.
-- A scaling factor for the maximum torque coefficient Cq look-up-table was 
+- The aerodynamic center rb was set to rb = 0.75R, with rotor radius R
+- A scaling factor 0.94 for the maximum torque coefficient Cq look-up-table was 
   introduced. This scaling factor improved the model fit to the FAST model 
   around rated speed.
 - The Bode and timeseries plot now also depict the side-to-side motion
