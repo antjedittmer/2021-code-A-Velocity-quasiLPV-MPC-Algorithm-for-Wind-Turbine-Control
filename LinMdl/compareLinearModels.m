@@ -42,7 +42,7 @@ if nargin == 0 || isempty(speedVec)
 end
 
 if nargin < 2 || isempty(figFolder)
-    figFolder = fullfile(mainDir,'figDir1');
+    figFolder = fullfile(mainDir,'figDir');
 end
 % Create output folder
 if ~isfolder(figFolder)

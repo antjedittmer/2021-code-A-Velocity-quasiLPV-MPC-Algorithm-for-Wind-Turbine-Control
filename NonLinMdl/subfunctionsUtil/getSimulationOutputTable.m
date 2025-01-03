@@ -39,6 +39,7 @@ else
     assignin(WS,'OutTable',OutTable)
     open_system(simMdlname1);
     out1 = sim(simMdlname1,'SrcWorkspace',WS);
+    varnames = varnames(1: size(out1.OutDataTest,2));
     currentOutTableTest = array2table(out1.OutDataTest,'VariableNames',varnames);
     eval([strTable,' = currentOutTableTest;']);
     if contains(strTable,'MPC')

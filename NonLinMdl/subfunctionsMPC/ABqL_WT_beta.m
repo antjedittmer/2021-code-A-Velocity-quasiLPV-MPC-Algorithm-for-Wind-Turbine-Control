@@ -46,9 +46,9 @@ end
 
 %% Physical and model constants
 rho = 1.2250;
-rb = 63; % m blade radius
+Rr = 63; % m blade radius
 Ng = 97; %Gearbox ratio
-Jr = (115926 + 3 * 11.776e6) *1; %kg*m^2 Inertia of the rotor (Hub inertia + 3 blades
+Jr = 3.8759e+07; %(115926 + 3 * 11.776e6) *1; %kg*m^2 Inertia of the rotor (Hub inertia + 3 blades
 Jg = 534.116;% * Ng^2; %kg*m^2 Inertia of the generator (HSS)
 Jgr = Jg * Ng^2; % Inertia of the generator in LSS
 Ks = 867637000; %Nm/rad Stiffness of the transmission
@@ -56,19 +56,19 @@ Bs = 6215000;  %Nm/rad/sec        %Damping of the transmission
 tau_g = 0.01; % for pitch actuator and airspeed
 
 %% Lambda 
-Lambda_bar = omegabar*rb/Vbar;
-dlambdadomega= rb/Vbar;
-dlambdadV = - omegabar*rb/Vbar^2;
+Lambda_bar = omegabar*Rr/Vbar;
+dlambdadomega= Rr/Vbar;
+dlambdadV = - omegabar*Rr/Vbar^2;
 
 %% Grid points
 Cqb = interp2(lambdaVec,pitchVec,cQ,Lambda_bar,beta_bar); 
 dCqdlambdab = interp2(lambdaVec,pitchVec,Cqdlambda,Lambda_bar,beta_bar);
 dCqdbetab = interp2(lambdaVec,pitchVec,Cqdbeta,Lambda_bar,beta_bar); 
-%% Tr=0.5*pi*rb^3*Cq*v^2
-dTrdomega = 0.5*rho*pi*rb^3*(dCqdlambdab*dlambdadomega)*Vbar^2;% br = dTr/domega
-dTrdbeta = 0.5*rho*pi*rb^3*dCqdbetab*Vbar^2;% Krb = dTr/dbeta
-dTrdV =  2*0.5*rho*pi*rb^3*Vbar*Cqb + ...
-    0.5*rho*pi*rb^3*Vbar^2*dCqdlambdab*dlambdadV;
+%% Tr=0.5*pi*Rr^3*Cq*v^2
+dTrdomega = 0.5*rho*pi*Rr^3*(dCqdlambdab*dlambdadomega)*Vbar^2;% br = dTr/domega
+dTrdbeta = 0.5*rho*pi*Rr^3*dCqdbetab*Vbar^2;% KRr = dTr/dbeta
+dTrdV =  2*0.5*rho*pi*Rr^3*Vbar*Cqb + ...
+    0.5*rho*pi*Rr^3*Vbar^2*dCqdlambdab*dlambdadV;
 
 %% Create system matrix A:
 % States: [Theta_s [rad], omega_r [rad/s], omega_gr [rad/s], T_g [Nm]]

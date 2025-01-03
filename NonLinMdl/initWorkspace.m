@@ -41,7 +41,7 @@ end
 %% Load FASTTool wind as test signal
 DT = 0.008; % one sample time 
 load(fullfile(dataInPath,'OutDataSweep.mat'),'OutTable');
-% load(fullfile(dataInPath,'OutDataWind18NTW.mat'),'OutTable');
+%load(fullfile(dataInPath,'OutDataWind18NTM.mat'),'OutTable');
 
 %% Clean-up
 clear RESTORE*

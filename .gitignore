@@ -2,6 +2,7 @@ build/
 codegen/
 slprj/
 figDir/
+NonLinMdl/dataOut/
 
 *.asv
 *.csv
