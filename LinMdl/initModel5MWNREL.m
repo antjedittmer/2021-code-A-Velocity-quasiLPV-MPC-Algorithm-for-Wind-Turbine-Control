@@ -41,7 +41,7 @@ end
 if nargin < 5 || isempty(Rotor_Lamda) || isempty(Rotor_Pitch) || ....
         isempty(Rotor_cQ) || isempty(Rotor_Pitch)
     dataInDir = fullfile(mainDir,'dataIn');
-    load(fullfile(dataInDir,'NREL5MW_CPdata.mat'),...
+    load(fullfile(dataInDir,'FASTToolCPnew.mat'),... % FASTToolCPnew 'NREL5MW_CPdata.mat'
         'Rotor_Lamda','Rotor_Pitch','Rotor_cQ','Rotor_cT','Rotor_cP');
 else
     dataInDir = fullfile(mainDir,'dataIn');
@@ -80,7 +80,7 @@ end
 % Constants: Air density and actuator time constants
 rho = 1.225; % Air density (kg/m^3)
 tau = 0.1; % time constant pitch actuator
-kappa = 0.01; % time constant torque  actuator
+kappa = 0.01; % time constant torque actuator
 % Bg = 0.9; % Tg= Bg(wg - wz). Unused because we use Tg as input
 
 % Turbine constants
@@ -92,7 +92,7 @@ wecs.mb = wecs.mbl*0.25; %kg;  Modal mass of each blade
 wecs.mn = 240000; % kg;  Nacelle mass Table 1-1
 wecs.mtower = 347460; % kg; Tower mass Table 1-1
 wecs.mr = wecs.mh + wecs.N*wecs.mbl; % kg; Rotor Mass: 110000 Table 1-1
-wecs.mt = 0.25*wecs.mtower + wecs.mn + wecs.mh + wecs.N*wecs.mbl;
+wecs.mt = 0.25*wecs.mtower + wecs.mn + wecs.mr;
 wecs.mtb = wecs.mt + wecs.N * wecs.mb; %tower modal mass + modal mass of blades
 
 wecs.H =  90; % 87.6;
@@ -195,7 +195,7 @@ if scaleLoopUp == 1
     lookupTable = Cq;
     minValue = min(lookupTable(:));
     maxValue = max(lookupTable(:));
-    newMaxValue = maxValue * 0.9475; % Reduce the highest point by 0.95%
+    newMaxValue = maxValue * 0.9475; % Reduce the highest point by 0.95%  * 0.9475
 
     % Cq: Apply linear scaling to adjust all values smoothly
     scaledTable = (lookupTable - minValue) / (maxValue - minValue); % Normalize to [0, 1]
@@ -251,7 +251,7 @@ if plotOn
         hold on;
         filtX1 = 1:sw:size(Xq,1);
         filtX2 = 1:sw:size(Xq,2);
-        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Ctnan(filtX1,filtX2),'FaceColor','none');
+        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Ct(filtX1,filtX2),'FaceColor','none');
         set(gca,'Fontsize',fs)
         hold off
         % view(-160,60)
@@ -276,7 +276,7 @@ if plotOn
         hold on;
         filtX1 = 1:sw:size(Xq,1);
         filtX2 = 1:sw:size(Xq,2);
-        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cpnan(filtX1,filtX2),'FaceColor','none');
+        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cp(filtX1,filtX2),'FaceColor','none');
         set(gca,'Fontsize',fs)
         hold off
         %view(-160,60)
@@ -308,7 +308,7 @@ if plotOn
         hold on;
         filtX1 = 1:sw:size(Xq,1);
         filtX2 = 1:sw:size(Xq,2);
-        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cqnan(filtX1,filtX2),'FaceColor','none');
+        surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cq(filtX1,filtX2),'FaceColor','none');
         set(gca,'Fontsize',fs)
         hold off
         % view(-160,60)
@@ -336,7 +336,7 @@ if plotOn
             hold on;
             filtX1 = 1:sw:size(Xq,1);
             filtX2 = 1:sw:size(Xq,2);
-            surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cq1nan(filtX1,filtX2),'FaceColor','none');
+            surf(Xq(filtX1,filtX2),Yq(filtX1,filtX2),Cq1(filtX1,filtX2),'FaceColor','none');
             set(gca,'Fontsize',fs)
             hold off
             % view(-160,60)
