@@ -6,6 +6,16 @@ if ~nargin
     multRb = 0.75;
 end
 
+% Update DD
+nameCell = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs'};
+
+loadEqPoints = 0; % load equilibrium/reference points for wind speeds from file
+if  loadEqPoints == 1    
+    load('NREL5MW_linearised_4to25.mat','Lin');
+    Lin_points = Lin;
+    nameCell{end+1} = 'Lin_points';
+end
+
 plotOn = 0;
 Rotor_Lamda = ''; Rotor_Pitch = ''; Rotor_cQ = ''; Rotor_cT = '';
 figDir = ''; titleOn = 0;
@@ -15,10 +25,11 @@ figDir = ''; titleOn = 0;
 K5 = [K,-K(:,4)];%#ok<*ASGLU> 
 DDNameCell = {'DD_test.sldd'; 'DD_Mdl1.sldd'};
 
+
 for idxDD = 1: length(DDNameCell)
     DDName =  DDNameCell{idxDD}; %'DD_test.sldd'; %'DD_Mdl1.sldd'; %
     Q = Q3;
-    DDDataNames = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs'}; %; 'Lin_points'};
+    DDDataNames = nameCell;
 
     myDictionaryObj = Simulink.data.dictionary.open(DDName);
     dDataSectObj = getSection(myDictionaryObj,'Design Data');
