@@ -7,13 +7,40 @@ if ~nargin
 end
 
 % Update DD
-nameCell = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs'};
+nameCell = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs';'Lin_points'};
 
 loadEqPoints = 0; % load equilibrium/reference points for wind speeds from file
-if  loadEqPoints == 1    
+if  loadEqPoints == 1
     load('NREL5MW_linearised_4to25.mat','Lin');
     Lin_points = Lin;
     nameCell{end+1} = 'Lin_points';
+else
+    load('OutDataStep.mat', 'OutTable');
+    idxT = OutTable.Time >= 100;
+    OutTableT = OutTable(idxT,:);
+
+    OutTableT.Time =  OutTableT.Time - OutTableT.Time(1);
+    time = OutTableT.Time;
+
+    tmp.Lin.V = 4:25;
+
+    for idx = 1 : length(tmp.Lin.V)
+        timeIdx = time <= idx*100-10 & time >= idx*100-30;
+        Lin_points.V(idx) = mean(OutTableT.Wind1VelX(timeIdx));
+
+        Lin_points.RSpeed(idx) = mean(OutTableT.GenSpeed(timeIdx)/97/(60/(2*pi)));
+        Lin_points.Pitch(idx) = mean(OutTableT.BlPitch1(timeIdx)/(180/(pi)));
+        Lin_points.Torque(idx) = mean(OutTableT.GenTq(timeIdx));
+
+    end
+
+% Lin.RSpeed = Lin_points1.RSpeed;
+% Lin.Pitch = Lin_points1.Pitch;
+% Lin.Torque = Lin_points1.Torque;
+% Lin.V= Lin_points1.V;
+% 
+% Lin_points = Lin;
+
 end
 
 plotOn = 0;

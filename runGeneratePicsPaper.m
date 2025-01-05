@@ -82,7 +82,6 @@ for idx = 1:6
 
     ylabel([aFieldname,' (-)']);
 
-
 end
 
 figFolder = 'figDir';
