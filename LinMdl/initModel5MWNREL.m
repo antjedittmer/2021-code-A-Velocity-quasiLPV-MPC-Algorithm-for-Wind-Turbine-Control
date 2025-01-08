@@ -25,7 +25,7 @@ function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] 
 
 %% Set path for input data and output figure directory
 
-debugOn = 1; % this is only used to check that cQ = cP/lambda
+debugOn = 0; % this is only used to check that cQ = cP/lambda
 scaleLoopUp = 1; % this gives the possibility to scale cQ
 
 % Set path to input data directory
@@ -172,10 +172,6 @@ Cp = Rotor_cP(idxPitch,idxTSR);
 
 if debugOn == 0
     Cq1 = Cp ./ lambda';
-
-    idx0 = Cq1 <= eps;
-    Cq1nan = Cq1;
-    Cq1nan(idx0) = nan;
 end
 
 if scaleLoopUp == 1
@@ -202,30 +198,8 @@ if scaleLoopUp == 1
     Cq1 = scaledTable * (newMaxValue - minValue) + minValue; % Scale back to new range
     Cq = Cq1;
 
-    % Cq1nan for display
-    idx0 = Cq1 <= eps;
-    Cq1nan = Cq1;
-    Cq1nan(idx0) = nan;
-
 end
 
-idnan = isnan(Ct);
-Ct(idnan) = 0;
-idx0 = Ct <= eps;
-Ctnan = Ct;
-Ctnan(idx0) = nan;
-
-idnan = isnan(Cq);
-Cq(idnan) = 0;
-idx0 = Cq <= eps;
-Cqnan = Cq;
-Cqnan(idx0) = nan;
-
-idnan = isnan(Cp);
-Cp(idnan) = 0;
-idx0 = Cp <= eps;
-Cpnan = Cp;
-Cpnan(idx0) = nan;
 
 %% Plot aerodynamic torque and force dependent on pitch and tip speed ratio
 
@@ -234,29 +208,35 @@ if plotOn
     [Xq,Yq] = meshgrid(lambda,betaDeg);
    
     % Plot aerodynamic force C_T
-    xlabelStr = 'Tip speed ratio \lambda [-]';
-    ylabelStr = 'Pitch angle \beta_0 [deg]';
     zlabelStr = 'Thrust coefficient c_T [-]';
-    
     figStr = 'Ct_NRRLFAST5MW'; figN = 1; % Plot aerodynamic torque C_T
-    plotCoefficients(Xq,Yq,Ct,Ctnan,xlabelStr,ylabelStr,zlabelStr,figN,titleOn,figDir,figStr);
+    plotCoefficients(Xq,Yq,Ct,zlabelStr,figN,titleOn,figDir,figStr);
 
     zlabelStr = 'Power coefficient c_P [-]'; % Plot aerodynamic torque C_P
     figStr = 'Cp_NRRLFAST5MW'; figN = 100;
-    plotCoefficients(Xq,Yq,Cp,Cpnan,xlabelStr,ylabelStr,zlabelStr,figN,titleOn,figDir,figStr);
+    plotCoefficients(Xq,Yq,Cp,zlabelStr,figN,titleOn,figDir,figStr);
     
     zlabelStr = 'Torque coefficient c_Q [-]'; % Plot aerodynamic torque C_Q
     figStr = 'Cq_NRRLFAST5MW'; figN = 2;
-    plotCoefficients(Xq,Yq,Cq,Cqnan,xlabelStr,ylabelStr,zlabelStr,figN,titleOn,figDir,figStr);
+    plotCoefficients(Xq,Yq,Cq,zlabelStr,figN,titleOn,figDir,figStr);
    
     if debugOn == 1
         figStr = 'Cq1_NRRLFAST5MW'; figN = 200;
-        plotCoefficients(Xq,Yq,Cq1,Cq1nan,xlabelStr,ylabelStr,zlabelStr,figN,titleOn,figDir,figStr);
+        plotCoefficients(Xq,Yq,Cq1,zlabelStr,figN,titleOn,figDir,figStr);
     end
 end
 end
 
-function plotCoefficients(Xq,Yq,C,Cnan,xlabelStr,ylabelStr,zlabelStr,figN,titleOn,figDir,figStr)
+function plotCoefficients(Xq,Yq,C,zlabelStr,figN,titleOn,figDir,figStr)
+
+xlabelStr = 'Tip speed ratio \lambda [-]';
+ylabelStr = 'Pitch angle \beta_0 [deg]';
+
+idnan = isnan(C);
+C(idnan) = 0;
+idx0 = C <= eps;
+Cnan = C;
+Cnan(idx0) = nan;
 
 fs = 12; % front size
 sw = 3; % step width for look-up grid
