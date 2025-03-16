@@ -1,7 +1,20 @@
 function plotNormBodePlots(gapCell,speedVec,figFolder)
 % plotNormBodePlots plots the norm of the difference of the signals in the
 % bode plots.
-% Inputs 
+% Inputs gapCell,speedVec,figFolder
+
+%% Handle inputs
+
+if nargin < 2 || isempty(speedVec)
+    speedVec = [1,8,9,22]; % variations of wind speed
+end
+
+if nargin < 3 || isempty(figFolder)
+    % Get relative paths to main directory (for data input dir)
+    workDir = fileparts(mfilename('fullpath'));
+    mainDir = fileparts(workDir);
+    figFolder = fullfile(mainDir,'figDir');
+end
 
 fieldsGapAll = fieldnames(gapCell); % get the field names
 fieldsGap = fieldsGapAll(contains(fieldsGapAll,'n')); % only use Vinnicombe/nu-gap and norm for now

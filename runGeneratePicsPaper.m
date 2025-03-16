@@ -12,7 +12,8 @@ initWorkspace;
 % FAST models. 
 
 % Create Bode plots for comparison
-compareLinearModels;
+[sysOut,gapCell] = compareLinearModels([1,8,9,22]);
+plotNormBodePlots(gapCell);
 
 %% Simulink simulations 
 % Simulink models are compared with FAST (NREL) references.
@@ -20,7 +21,7 @@ compareLinearModels;
 % mat-files in dataIn folder. 
 
 %Load data if available from previous simulation.
-loadData = 0;
+loadData = 1;
 updateDDMdl1(0.93);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
