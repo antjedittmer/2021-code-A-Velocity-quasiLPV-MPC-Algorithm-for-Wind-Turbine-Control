@@ -1,4 +1,4 @@
-function sysOut = compareLinearModels(speedVec,figFolder, useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut)
+function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder, useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut)
 % compareLinearModels compares two sets of linearized turbine models with
 % linearized FASTTool models at different wind speeds.
 % All inputs are optional.
@@ -38,7 +38,7 @@ mainDir = fileparts(workDir);
 
 % speedVec: index vector for 22 windspeeds, 4 to 25 m/s (Default: [1, 22])
 if nargin == 0 || isempty(speedVec)
-    speedVec = [1, 22]; % variations of wind speed
+    speedVec = [1,8,9,22]; % variations of wind speed
 end
 
 if nargin < 2 || isempty(figFolder)
@@ -66,7 +66,7 @@ load('NREL5MW_CPdata','Rotor_Lamda', 'Rotor_Pitch', 'Rotor_cQ', 'Rotor_cT','Roto
 
 % Initialize name of models and load into workspace
 idxModel = 1; %in case several linearized models are provided
-modelNames = {'NREL5MW_linearised_4to25'}; %{'NREL5MW_linearised_AD'}; %
+modelNames = {'NREL5MW_linearised_4to25'};
 modelNames = modelNames(idxModel);
 
 modelsL = {'FAST 30 states'};
@@ -91,6 +91,7 @@ end
 % Wind energy conversion system (WECS) parameters
 [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = ...
     initModel5MWNREL(0, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder);
+wecs.Js = wecs.Jr + wecs.Ng^2 * wecs.Jg;
 
 %% Compute aerodynamic force and torque gradients
 ksw = 1/(2/3* wecs.H);
@@ -153,6 +154,18 @@ multFASTOutput = multFASTOutputAll(1:noOut);
 multFASTInput = [1000,1,1];
 multFASTInput0 = multFASTInput;
 
+% Initialize gap metrics for quantitative evaluation
+noVelMdl = length(speedVec);
+% noOutMdl = length(sysOutputname);
+% noInMdl = length(sysOutputname);
+
+gapCell.gap9DoF = cell(noVelMdl,1);
+gapCell.nugap9DoF = cell(noVelMdl,1);
+gapCell.gap5DoF = cell(noVelMdl,1);
+gapCell.nugap5DoF = cell(noVelMdl,1);
+gapCell.norm9DoF = cell(noVelMdl,1);
+gapCell.norm5DoF = cell(noVelMdl,1);
+
 
 %% Loop over all air speeds in LinV
 for index =  speedVec
@@ -195,8 +208,8 @@ for index =  speedVec
     % States omega ydotfa xdotsw xfa xss
 
     % dotomega = (Tr - Ng * Tg)/J
-    A11 = 1/wecs.Jr * dTrdomega;
-    A12 = 1/wecs.Jr * dTrdydotfa;
+    A11 = 1/wecs.Js * dTrdomega;
+    A12 = 1/wecs.Js * dTrdydotfa;
 
     % ydotdotfa = 1/Mt( -Bt * ydotfa - Kt* yfa +Ft)
     wecs.mt = wecs.mtb;
@@ -213,9 +226,9 @@ for index =  speedVec
         [0 1 0 0 0; 0 0 1 0 0]];
 
     % Inputs: Torque [Nm], pitch angle beta [rad], wind speed V [m/s]
-    B11 = -1/wecs.Jr * wecs.Ng;
-    B12 = 1/wecs.Jr * dTrdbeta;
-    B13 = 1/wecs.Jr * dTrdV;
+    B11 = -1/wecs.Js * wecs.Ng;
+    B12 = 1/wecs.Js * dTrdbeta;
+    B13 = 1/wecs.Js * dTrdV;
 
     B22 = 1/wecs.mtb * dFtdbeta;
     B23 = 1/wecs.mtb * dFtdV;
@@ -376,8 +389,10 @@ for index =  speedVec
         %wVec = logspace(opts.XLim{1}(1),opts.XLim{1}(2),100);
 
         bodemag(sysLagrange,opts); hold on; grid on;
+        freq9DoF = linspace(opts.XLim{:}(1),opts.XLim{:}(2),100);
+        mag9DoF = bode(sysLagrange,freq9DoF);
         bodemag(sys5DoF,'k--',opts); hold on; grid on;
-        
+        mag5DoF = bode(sys5DoF,freq9DoF);
 
         for indexModels=1:lenModelNames
             sysm =  sysmCell{indexModels};
@@ -385,6 +400,7 @@ for index =  speedVec
             model.OutputName = sysOutputname;
             model.InputName = sysInputname;
             bodemag(model,opts); hold on
+            magFAST = bode(model,freq9DoF);
             grid on
         end
 
@@ -404,6 +420,34 @@ for index =  speedVec
                 '\color[rgb]{',num2str(cl(ilegC+1,:)),'}',' ',modelsL{ilegC}]; %#ok<AGROW> This fast
         end
 
+        % Gap and nugap metric results
+        tempNormMatrix5 = nan(size(sysLagrange));
+        tempNormMatrix9 = nan(size(sysLagrange));
+        for idxOut = 1:size(sysLagrange,1)
+            for idxIn = 1:size(sysLagrange,2)
+                [gapCell.gap9DoF{index}(idxOut,idxIn),gapCell.nugap9DoF{index}(idxOut,idxIn)] = gapmetric(sysLagrange(idxOut,idxIn),model(idxOut,idxIn));
+                [gapCell.gap5DoF{index}(idxOut,idxIn),gapCell.nugap5DoF{index}(idxOut,idxIn)] = gapmetric(sys5DoF(idxOut,idxIn),model(idxOut,idxIn));
+
+                %% For debugging
+                % [gapCell.gap59DoF{index}(idxOut,idxIn),gapCell.nugap59DoF{index}(idxOut,idxIn)] =
+                % ...
+                % gapmetric(sysLagrange(idxOut,idxIn),sys5DoF(idxOut,idxIn));
+
+                mag_9DOF = 20*log10(squeeze(mag9DoF(idxOut,idxIn,:)));    % Squeeze to get a 1D array
+                mag_5DOF = 20*log10(squeeze(mag5DoF(idxOut,idxIn,:)));
+                mag_FAST = 20*log10(squeeze(magFAST(idxOut,idxIn,:)));
+
+                % figure; semilogx(freq9DoF,mag_9DOF,freq9DoF,mag_5DOF,'k--',freq9DoF,mag_FAST)
+                tempNormMatrix9(idxOut,idxIn) = norm(mag_9DOF - mag_FAST)/norm(mag_FAST);
+                tempNormMatrix5(idxOut,idxIn) = norm(mag_5DOF - mag_FAST)/norm(mag_FAST);
+
+            end
+        end
+
+        gapCell.norm9DoF{index} = tempNormMatrix9;
+        gapCell.norm5DoF{index} = tempNormMatrix5;
+
+        
         % Title string
         titleStr = sprintf('Bode mag. plot for V = %d, pitch = %2.2f, and TSR = %2.4f',Vbar,beta_bar,Lambda_bar);
         titleCell = {titleStr, [legCell{1},legCell{2},strExtr]};

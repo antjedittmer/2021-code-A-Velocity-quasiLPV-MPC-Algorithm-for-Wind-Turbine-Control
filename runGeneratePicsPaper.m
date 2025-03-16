@@ -20,8 +20,8 @@ compareLinearModels;
 % mat-files in dataIn folder. 
 
 %Load data if available from previous simulation.
-loadData = 1;
-updateDDMdl1(0.75);
+loadData = 0;
+updateDDMdl1(0.93);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
 % k-omega-squared, Pitch controller: Gainscheduled Pi)
