@@ -1,4 +1,4 @@
-function plotNormBodePlots(gapCell,speedVec,figFolder)
+function plotNormBodePlots(gapCell,speedVec,figFolder,createNugapPlot)
 % plotNormBodePlots plots the norm of the difference of the signals in the
 % bode plots.
 % Inputs gapCell,speedVec,figFolder
@@ -16,6 +16,13 @@ if nargin < 3 || isempty(figFolder)
     figFolder = fullfile(mainDir,'figDir');
 end
 
+if ~isfolder(figFolder), mkdir(figFolder); end
+
+if nargin < 4 || isempty(figFolder)
+    createNugapPlot = 0;
+end
+
+%% Create matrix with values for bar plots
 fieldsGapAll = fieldnames(gapCell); % get the field names
 fieldsGap = fieldsGapAll(contains(fieldsGapAll,'n')); % only use Vinnicombe/nu-gap and norm for now
 sortFieldsGap = sort(fieldsGap); % Mdl1 (5 states) should be listed before Mdl2 (9 states)
@@ -57,25 +64,65 @@ sysInputname =[{'GenTq T_g (-)'}; {'BlPitch \beta_0 (-)'};{'Wind V_{\infty} (-)'
 
 Mdl2Str = ' Rot,Twr,Gen+Bld';
 
-
 %% Set values for first, norm plot
 aMat1 = [aMatrix(vec,idxVec),aMatrix(vec+len,idxVec)];
-aMax = max(aMat1(:))* 1.01;
+aMax = max(aMat1(:))* 1.2;
 legCell = ['                        Norm: \color{black}Mdl1: Rot+Twr ',...
     '\color[rgb]{',num2str(lc(1,:)),'}Mdl2:',Mdl2Str];
 
+scaleF = 100;
 figure(1);
+pos0 = get(0,'defaultFigurePosition');
+set(gcf,'Position',[pos0(1)-pos0(3)*0.7,pos0(2),pos0(3)*1.5,pos0(4)])
+t = tiledlayout(3,3);
+
+t.TileSpacing = 'compact';
+t.Padding = 'compact';
+
 for idx = 1:9
-    subplot(3,3,idx)
-    b = bar([aMatrix(vec,idx),aMatrix(vec+len,idx)]);
+    %subplot(3,3,idx)
+    nexttile;
+    b = bar([aMatrix(vec,idx),aMatrix(vec+len,idx)]*scaleF);
 
     for k = 1:length(b), b(k).FaceColor = lc1(k,:); end
     set(gca,'XTickLabel',windTickLabel);
-    set(gca,'YLim',[0,aMax]);
+    set(gca,'YLim',[0,aMax*scaleF]);
 
     if idx == 1
         title( legCell)
     end
+    % if printTitle
+    %     title(titleCellNew)
+    % else
+
+    % end
+for idxB = 1: length(b)
+    xtips1 = b(idxB).XEndPoints;
+    ytips1 = b(idxB).YEndPoints;
+    yData = b(idxB).YData;
+
+    if idxB <= 5
+        labels1 = string(round(yData,1));
+    else
+        labels1 = string(round(yData*10,2));
+    end
+
+    % Adjustments
+    yOffset = 0.02 * aMax * scaleF;  % Move text up a bit more
+    if idxB == 1
+        xOffset = 0.; % Left bar, shift slightly left
+    else
+        xOffset = +0.15; % Right bar, shift slightly right
+    end
+
+    % Apply text with rotation and offset
+    text(xtips1 + xOffset, ytips1 + yOffset, labels1, ...
+        'HorizontalAlignment', 'center', ...
+        'VerticalAlignment', 'bottom', ...
+        'Rotation', 30, ...
+        'FontSize', 9)
+end
+
 
     if mod(idx-1,3)== 0
         anOutputStr = sysOutputname{(idx-1)/3 + 1};
@@ -93,6 +140,10 @@ figFolderStr = fullfile(figFolder,figStr);
 figFolderStrEps = figFolderStr;
 print(figFolderStr, '-dpng');
 print(figFolderStrEps, '-depsc');
+
+if ~createNugapPlot
+    return;
+end
 
 
 %% Set values for second, nugap plot

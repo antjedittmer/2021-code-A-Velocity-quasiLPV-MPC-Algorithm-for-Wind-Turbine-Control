@@ -12,8 +12,9 @@ initWorkspace;
 % FAST models. 
 
 % Create Bode plots for comparison
-[sysOut,gapCell] = compareLinearModels([1,8,9,22]);
-plotNormBodePlots(gapCell);
+speedVec = [1,8,9,22];
+[sysOut,gapCell] = compareLinearModels(speedVec,'figDir1'); %
+plotNormBodePlots(gapCell,speedVec,'figDir1');
 
 %% Simulink simulations 
 % Simulink models are compared with FAST (NREL) references.
@@ -22,7 +23,7 @@ plotNormBodePlots(gapCell);
 
 %Load data if available from previous simulation.
 loadData = 1;
-updateDDMdl1(0.93);
+updateDDMdl1(0.75);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
 % k-omega-squared, Pitch controller: Gainscheduled Pi)
@@ -79,7 +80,21 @@ for idx = 1:6
     if idx == 1
         title( legCell)
     end
-
+% if printTitle
+%     title(titleCellNew)
+% else
+%     for idx = 1: length(b)
+%         xtips1 = b(idx).XEndPoints;
+%         ytips1 = b(idx).YEndPoints;
+%         if idx <= 5
+%         labels1 = string(round(b(idx).YData,2));
+%         else
+%             labels1 = string(round(b(idx).YData*10,2));
+%         end
+%         text(xtips1,ytips1,labels1,'HorizontalAlignment','center',...
+%             'VerticalAlignment','bottom')
+%     end
+% end
 
     ylabel([aFieldname,' (-)']);
 
