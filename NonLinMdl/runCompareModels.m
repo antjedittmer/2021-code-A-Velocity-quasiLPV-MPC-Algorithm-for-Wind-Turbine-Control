@@ -1,4 +1,4 @@
-function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell)
+function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr)
 % runCompareModels compares two Simulink models with FASTTool simulation 
 % data generated with the baseline controller. 
 %
@@ -32,6 +32,11 @@ if nargin < 4 || isempty(yAxCell) % Axes labels for figure
     'GenPwr P_g (MW)','Twr_{FA} y_t (m/s^2)', 'Twr_{SW} x_t (m/s^2)'};
 end
 
+if nargin <5 || isempty(figDirStr)
+    figDirStr = 'figDir';
+end
+
+
 %% Initialize path and files names
 % The path to figure and input directory is set. The name of the Simulink
 % models for Mdl1 and Mdl2 are provided. The name of the mat file with the
@@ -44,7 +49,7 @@ dataInDir = fullfile( mainDir,'dataIn');
 addpath(dataInDir);
 
 % Set path to figure directory
-figDir = fullfile(mainDir,'figDir');
+figDir = fullfile(mainDir,figDirStr);
 if ~isfolder(figDir)
     mkdir(figDir)
 end

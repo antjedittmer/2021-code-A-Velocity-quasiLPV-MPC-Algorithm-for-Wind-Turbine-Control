@@ -22,14 +22,14 @@ plotNormBodePlots(gapCell,speedVec,'figDir1');
 % mat-files in dataIn folder. 
 
 %Load data if available from previous simulation.
-loadData = 1;
+loadData = 0;
 updateDDMdl1(0.75);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
 % k-omega-squared, Pitch controller: Gainscheduled Pi)
-figNo = 1;
+figNo = 2;
 normStruct.Sweep = runCompareModels('Sweep',loadData,figNo);
-figNo = 4;
+figNo = 5;
 normStruct.NTM18 = runCompareModels(18,loadData,figNo);
 
 %% Read out the quantative information

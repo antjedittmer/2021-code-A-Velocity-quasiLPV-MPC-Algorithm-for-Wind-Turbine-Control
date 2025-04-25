@@ -99,6 +99,7 @@ wecs.H =  90; % 87.6;
 
 wecs.Jg = 534.116; %  kg*m^2; Inertia of the generator
 wecs.Jr = 3.8759e+07; %115926 + 3 * 11.776e6; % kg*m^2; Inertia of the rotor (Hub inertia + 3 blades) 3.8759e+07; %
+wecs.Js = wecs.Jr + wecs.Ng^2*wecs.Jg;
 f0 = 0.324;  % Hz, First natural tower fore-aft frequency
 f0sw = 0.3120;% ; % First natural tower sidewards frequency
 wecs.wnb = 0.6993 * 2*pi; % rad/s First natural blade frequency
