@@ -1,4 +1,4 @@
-function runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison)
+function runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
@@ -29,6 +29,10 @@ if nargin < 4 || isempty(useFASTForComparison)
     useFASTForComparison = 1;
 end
 
+if nargin <5 || isempty(figDirStr)
+    figDirStr = 'figDir';
+end
+
 %% Set path to directories
 
 % Set path to inputdata directory
@@ -38,7 +42,7 @@ dataInDir = fullfile( mainDir,'dataIn');
 addpath(dataInDir);
 
 % Set path to figure directory
-figDir = fullfile(mainDir,'figDir');
+figDir = fullfile(mainDir,figDirStr);
 if ~isfolder(figDir)
     mkdir(figDir)
 end

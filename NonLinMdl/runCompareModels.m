@@ -1,4 +1,4 @@
-function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr)
+function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr,allPlots)
 % runCompareModels compares two Simulink models with FASTTool simulation 
 % data generated with the baseline controller. 
 %
@@ -36,6 +36,9 @@ if nargin <5 || isempty(figDirStr)
     figDirStr = 'figDir';
 end
 
+if nargin < 6
+    allPlots =0;
+end
 
 %% Initialize path and files names
 % The path to figure and input directory is set. The name of the Simulink
@@ -69,10 +72,15 @@ if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataSweep.mat'; %'OutDataStep.mat'; %
     strFig = '';
     testCaseStr = 'Wind Sweep';
-else  % wind with average 18 m/s
+elseif isa(strWindType,'double')  % wind with average 18 m/s
     outDataSimulationMat = sprintf('OutDataWind%02dNTW.mat',strWindType);
     strFig = sprintf('NTW%02d',strWindType); %'NTW18';
     testCaseStr = sprintf('Wind, mean %02d m/s',strWindType);
+else
+     % EOG16mpers
+      outDataSimulationMat = 'EOG16mpers.mat'; %'OutDataStep.mat'; %
+    strFig = 'EOG';
+    testCaseStr = 'EOG16mpers';
 end
 
 %% Load data from FAST run
@@ -141,6 +149,7 @@ else
     titleStr2 = titleStr;
 end
 
+if allPlots == 1
 % 1st figure
 figure(figNo1);
 axPlot(1) = subplot(3,1,1);
@@ -223,6 +232,7 @@ end
 set(gcf,'Name',nameFig)
 
 print(fullfile(figDir,nameFig), '-dpng');
+end
 
 
 %% L2 norm to quantify difference
@@ -244,7 +254,7 @@ end
 
 
 %% Figure for paper and dissertation
-figure(figNo2+1)
+figure(figNo1 + 2*allPlots)
 nAx = 7;
 tiledlayout(nAx,1,'TileSpacing','Compact');
 

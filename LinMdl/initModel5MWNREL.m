@@ -82,13 +82,21 @@ rho = 1.225; % Air density (kg/m^3)
 tau = 0.1; % time constant pitch actuator
 kappa = 0.01; % time constant torque actuator
 % Bg = 0.9; % Tg= Bg(wg - wz). Unused because we use Tg as input
+%x = [0.3540, 6.9975e+03]; % [0.608380, 7128.534769];
+x = [1,1,1];
+%x = [3.2950    3.9394    0.1974];
+%x =   [4.1814    0.7651];
+% x = [1.2745    0.6876];
+%x =  [2.1336    0.8631   100];
 
+
+% Turbine constants
 % Turbine constants
 wecs.N = 3;% Number of blades, Table 1-1
 wecs.Ng = 97; % Gearbox ratio
 wecs.mh = 56780; % kg;  Hub mas, Table 4-1
 wecs.mbl = 17740; %kg;  Mass of each blade Table 2-2
-wecs.mb = wecs.mbl*0.25; %kg;  Modal mass of each blade
+wecs.mb = x(1)*wecs.mbl*0.25; %kg;  Modal mass of each blade
 wecs.mn = 240000; % kg;  Nacelle mass Table 1-1
 wecs.mtower = 347460; % kg; Tower mass Table 1-1
 wecs.mr = wecs.mh + wecs.N*wecs.mbl; % kg; Rotor Mass: 110000 Table 1-1
@@ -98,7 +106,8 @@ wecs.mtb = wecs.mt + wecs.N * wecs.mb; %tower modal mass + modal mass of blades
 wecs.H =  90; % 87.6;
 
 wecs.Jg = 534.116; %  kg*m^2; Inertia of the generator
-wecs.Jr = 3.8759e+07; %115926 + 3 * 11.776e6; % kg*m^2; Inertia of the rotor (Hub inertia + 3 blades) 3.8759e+07; %
+wecs.Jr = x(2) * 3.8759e+07; % 3.8759e+07; %
+wecs.JrL = 115926 + 3 * 11.776e6; % kg*m^2; Inertia of the rotor (Hub inertia + 3 blades)
 wecs.Js = wecs.Jr + wecs.Ng^2*wecs.Jg;
 f0 = 0.324;  % Hz, First natural tower fore-aft frequency
 f0sw = 0.3120;% ; % First natural tower sidewards frequency
@@ -106,7 +115,8 @@ wecs.wnb = 0.6993 * 2*pi; % rad/s First natural blade frequency
 wecs.wnt = f0 * 2*pi; % wecs.wnb; 0.3240
 wecs.wntsw = f0sw * 2*pi; % wecs.wnb; 0.3240
 wecs.zetat = 1/100; % damping ratio of tower (Table 6.2)
-wecs.zetab = 0.477465/100;% damping ratio of blade
+wecs.zetab = x(3) * 0.477465/100;% damping ratio of blade
+
 
 wecs.Kt = wecs.wnt^2 * wecs.mt; % Stiffness of the tower s^2 + B/Ms + K/m
 wecs.Bt = 2 * wecs.zetat * wecs.wnt *wecs.mt; % tower 2*6421;
@@ -130,7 +140,7 @@ wecs.etag = 0.944; %Drivetrain.Generator.Efficiency: 0.944;
 M =[wecs.mtb wecs.N*wecs.mb*wecs.rb 0 0 0; %
     wecs.N*wecs.mb*wecs.rb  wecs.N*wecs.mb*wecs.rb^2 0 0 0;
     0 0 wecs.mt 0 0;
-    0 0 0 wecs.Jr 0;
+    0 0 0 wecs.JrL 0;
     0 0 0 0 wecs.Jg*wecs.Ng^2];
 
 Ce = [wecs.Bt 0 0 0 0;

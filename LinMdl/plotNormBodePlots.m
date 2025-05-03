@@ -1,4 +1,4 @@
-function plotNormBodePlots(gapCell,speedVec,figFolder,createNugapPlot)
+function aMatrix = plotNormBodePlots(gapCell,speedVec,figFolder,createNugapPlot)
 % plotNormBodePlots plots the norm of the difference of the signals in the
 % bode plots.
 % Inputs gapCell,speedVec,figFolder

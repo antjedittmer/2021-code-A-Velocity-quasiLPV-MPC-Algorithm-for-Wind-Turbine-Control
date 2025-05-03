@@ -1,4 +1,4 @@
-function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder,useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut)
+function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder,useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,x)
 % compareLinearModels compares two sets of linearized turbine models with
 % linearized FASTTool models at different wind speeds.
 % All inputs are optional.
@@ -59,6 +59,8 @@ if nargin < 6,  plotVisible = 'on';  end
 
 if nargin < 7, noOut = 3;  end
 
+if nargin < 8, x = [];  end
+
 
 %% Load and initialize name of models and load into workspace
 addpath(fullfile(mainDir,'dataIn'));
@@ -89,9 +91,14 @@ end
 % Cut-In, Rated Rotor Speed 6.9 rpm, 12.1 rpm
 
 % Wind energy conversion system (WECS) parameters
-[wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = ...
-    initModel5MWNREL(0, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder);
-wecs.Js = wecs.Jr + wecs.Ng^2 * wecs.Jg;
+
+if isempty(x)
+    [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = ...
+        initModel5MWNREL(0, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder);
+else
+    [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct] = ...
+        initModel5MWNRELTune(x);
+end
 
 %% Compute aerodynamic force and torque gradients
 ksw = 1/(2/3* wecs.H);
@@ -137,16 +144,19 @@ sysOutputname =[{'RotSpd \omega_r (rad/s)'};{'TwrAcc_{fa} (m/s^2)'}; {'TwrAcc_{s
 sysOutputname = sysOutputname(1:noOut);
 sysInputname =[{'GenTq T_g (kNm)'}; {'BlPitch \beta_0 (rad)'};{'Wind V_{\infty} (m/s)'}];
 
-% Check FAst names
+% Check FAST names
 sysOutNamesOrig = sysm{1}.OutputName(idxFASTOutput);
-disp(['TU Delft sysOutputnames: ', sprintf('%s, ', sysOutputname{:})])
-disp('FAST sysOutputnames:')
-fprintf('%s\n', sysOutNamesOrig{:});
-fprintf('\n')
-disp(['TU Delft sysInputnames: ', sprintf('%s, ', sysInputname{:})])
 sysInNamesOrig = sysm{1}.InputName(idxFASTInput);
-disp('FAST sysInputnames: ');
-fprintf('%s\n', sysInNamesOrig{:})
+
+if isempty(x)
+    disp(['TU Delft sysOutputnames: ', sprintf('%s, ', sysOutputname{:})])
+    disp('FAST sysOutputnames:')
+    fprintf('%s\n', sysOutNamesOrig{:});
+    fprintf('\n')
+    disp(['TU Delft sysInputnames: ', sprintf('%s, ', sysInputname{:})])
+    disp('FAST sysInputnames: ');
+    fprintf('%s\n', sysInNamesOrig{:})
+end
 
 % Set output gains for FAST accordingly
 multFASTOutputAll = [pi/30,1,1]; % ED RotSpeed, (rpm)

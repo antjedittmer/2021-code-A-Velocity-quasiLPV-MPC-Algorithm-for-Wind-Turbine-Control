@@ -13,8 +13,9 @@ initWorkspace;
 
 % Create Bode plots for comparison
 speedVec = [1,8,9,22];
-[sysOut,gapCell] = compareLinearModels(speedVec,'figDir1'); %
-plotNormBodePlots(gapCell,speedVec,'figDir1');
+figDirStr = 'figDir2';
+[sysOut,gapCell] = compareLinearModels(speedVec,figDirStr); %
+plotNormBodePlots(gapCell,speedVec,figDirStr);
 
 %% Simulink simulations 
 % Simulink models are compared with FAST (NREL) references.
@@ -22,15 +23,20 @@ plotNormBodePlots(gapCell,speedVec,'figDir1');
 % mat-files in dataIn folder. 
 
 %Load data if available from previous simulation.
-loadData = 0;
+loadData = 1;
 updateDDMdl1(0.75);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
 % k-omega-squared, Pitch controller: Gainscheduled Pi)
+yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch (°)', 'RotSpd (rpm)',...
+    'GenPwr (MW)','Twr_{FA} (m/s^2)', 'Twr_{SW} (m/s^2)'};
+
 figNo = 2;
-normStruct.Sweep = runCompareModels('Sweep',loadData,figNo);
-figNo = 5;
-normStruct.NTM18 = runCompareModels(18,loadData,figNo);
+normStruct.Sweep = runCompareModels('Sweep',loadData,figNo,yAxCell,figDirStr);
+figNo = 3;
+normStruct.NTM18 = runCompareModels(18,loadData,figNo,yAxCell,figDirStr);
+figNo = 4;
+normStruct.EOG = runCompareModels('EOG',loadData,figNo,yAxCell,figDirStr);
 
 %% Read out the quantative information
 
@@ -100,7 +106,7 @@ for idx = 1:6
 
 end
 
-figFolder = 'figDir';
+figFolder = figDirStr;
 figStr = 'NormTime';
 figFolderStr = fullfile(figFolder,figStr);
 figFolderStrEps = figFolderStr;
@@ -110,8 +116,9 @@ print(figFolderStrEps, '-depsc');
 % return;
 
 % Run models in closed loop with qLPV MPC
-figNo1 = 8;
-runCompareCtrl('Sweep',loadData,figNo1);
-figNo1 = 9;
-runCompareCtrl('NTW18',loadData,figNo1);
+useFASTForComparison = 1;
+figNo1 = 5;
+runCompareCtrl('Sweep',loadData,figNo1,useFASTForComparison,figDirStr);
+figNo1 = 7;
+runCompareCtrl('NTW18',loadData,figNo1,useFASTForComparison,figDirStr);
 
