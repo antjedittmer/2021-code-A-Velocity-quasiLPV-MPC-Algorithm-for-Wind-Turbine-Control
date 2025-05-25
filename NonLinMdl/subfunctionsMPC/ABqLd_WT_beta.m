@@ -1,4 +1,4 @@
-function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ)
+function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs)
 % ABqLd calculates system (A) and input (B) matrix for quasiLPV
 % representation from ABgL and augments the states with integrating
 % disturbances.
@@ -13,7 +13,7 @@ function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ)
 % modified for WECS simulation: Antje Dittmer
 
 % Calculate system and input matrices at current wind speed
-[Arho,Brho] = ABqL_WT_beta(rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ);
+[Arho,Brho] = ABqL_WT_beta(rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs);
 
 %% Calculate discrete forms of A,B
 A2 = Arho*Arho;

@@ -13,7 +13,7 @@ initWorkspace;
 
 % Create Bode plots for comparison
 speedVec = [1,8,9,22];
-figDirStr = 'figDir2';
+figDirStr = 'figDir5';
 [sysOut,gapCell] = compareLinearModels(speedVec,figDirStr); %
 plotNormBodePlots(gapCell,speedVec,figDirStr);
 
@@ -23,7 +23,7 @@ plotNormBodePlots(gapCell,speedVec,figDirStr);
 % mat-files in dataIn folder. 
 
 %Load data if available from previous simulation.
-loadData = 1;
+loadData = 0;
 updateDDMdl1(0.75);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
@@ -33,92 +33,22 @@ yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch (°)', 'RotSpd (rpm)',...
 
 figNo = 2;
 normStruct.Sweep = runCompareModels('Sweep',loadData,figNo,yAxCell,figDirStr);
-figNo = 3;
+figNo = figNo + 1;
 normStruct.NTM18 = runCompareModels(18,loadData,figNo,yAxCell,figDirStr);
-figNo = 4;
+figNo = figNo + 1;
 normStruct.EOG = runCompareModels('EOG',loadData,figNo,yAxCell,figDirStr);
 
+save('normsGapCell','gapCell', 'normStruct');
+
 %% Read out the quantative information
+figNo = figNo + 1;
+plotNormTimePlots(normStruct,figNo,figDirStr);
 
-fieldsGapAll = fieldnames(normStruct); %get the field names
-sortFieldsGap = fieldsGapAll; % Mdl1 (5 states) should be listed before Mdl2 (9 states)
-
-sortFieldsSignals =  [{'GenTq'}  {'BlPitch1'}  {'RotSpeed'}    {'GenPwr'}   {'TwrAccFA'}    {'TwrAccSW'}];
-
-% sysOutputname =[{'RotSpd \omega_r (-)'};{'TwrAcc_{fa} (-)'}; {'TwrAcc_{sw} (-)'}];
-% sysInputname =[{'GenTq T_g (-)'}; {'BlPitch \beta_0 (-)'};{'Wind V_{\infty} (-)'}];
-
-% NcIMUTAxs
-windTickLabel = sortFieldsGap;
-
-
-%% Set informations for both plots
-
-lc = lines; %line colors
-lc1 = [0*[0.5, 0.5,0.5];lc];
-len = 6;
-vec = 1:len;
-idxVec = 1:len; % this is the number of input/output combination
-
-
-%% Set values for first, norm plot
-Mdl2Str = ' Rot,Twr,Gen+Bld';
-legCell = ['                        Norm: \color{black}Mdl1: Rot+Twr ',...
-    '\color[rgb]{',num2str(lc(1,:)),'}Mdl2:',Mdl2Str];
-
-figure(100);
-for idx = 1:6
-    subplot(3,2,idx)
-    aFieldname = sortFieldsSignals{idx};
-    aFieldn = aFieldname;
-    if strcmp(aFieldn,'TwrAccFA')
-        aFieldn = 'NcIMUTAxs';
-    elseif strcmp(aFieldn,'TwrAccSW')
-         aFieldn = 'NcIMUTAys';
-    end
-
-    b = bar([normStruct.Sweep.(aFieldn); normStruct.NTM18.(aFieldn)]);
-
-    for k = 1:length(b), b(k).FaceColor = lc1(k,:); end
-    set(gca,'XTickLabel',sortFieldsGap);
-    %set(gca,'YLim',[0,aMax]);
-
-    if idx == 1
-        title( legCell)
-    end
-% if printTitle
-%     title(titleCellNew)
-% else
-%     for idx = 1: length(b)
-%         xtips1 = b(idx).XEndPoints;
-%         ytips1 = b(idx).YEndPoints;
-%         if idx <= 5
-%         labels1 = string(round(b(idx).YData,2));
-%         else
-%             labels1 = string(round(b(idx).YData*10,2));
-%         end
-%         text(xtips1,ytips1,labels1,'HorizontalAlignment','center',...
-%             'VerticalAlignment','bottom')
-%     end
-% end
-
-    ylabel([aFieldname,' (-)']);
-
-end
-
-figFolder = figDirStr;
-figStr = 'NormTime';
-figFolderStr = fullfile(figFolder,figStr);
-figFolderStrEps = figFolderStr;
-print(figFolderStr, '-dpng');
-print(figFolderStrEps, '-depsc');
-
-% return;
 
 % Run models in closed loop with qLPV MPC
 useFASTForComparison = 1;
-figNo1 = 5;
-runCompareCtrl('Sweep',loadData,figNo1,useFASTForComparison,figDirStr);
-figNo1 = 7;
-runCompareCtrl('NTW18',loadData,figNo1,useFASTForComparison,figDirStr);
+figNo = figNo + 1;
+runCompareCtrl('Sweep',loadData,figNo,useFASTForComparison,figDirStr);
+figNo = figNo + 1;
+runCompareCtrl('NTW18',loadData,figNo,useFASTForComparison,figDirStr);
 

@@ -1,4 +1,4 @@
-function [Aeval,Beval] = ABqL_WT_beta(rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ)
+function [Aeval,Beval] = ABqL_WT_beta(rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs)
 % ABqL calculates system (A) and input (B) matrix for quasiLPV
 % representation for ve
 %
@@ -21,6 +21,7 @@ if isempty(lambdaVec)
     [Cqdlambda,Cqdbeta] = gradient(Rotor_cQ,mean(diff(Rotor_Lambda)),mean(diff(Rotor_Pitch))); %dcQ/dbetaDeg * dbetaDeg/dbetaRad *betaRAd
 end
    
+%disp(wecs.Rr)
 
 %% Parameters
 if length(rhoP) == 1 
@@ -46,13 +47,13 @@ end
 
 %% Physical and model constants
 rho = 1.2250;
-Rr = 63; % m blade radius
-Ng = 97; %Gearbox ratio
-Jr = 3.8759e+07; %(115926 + 3 * 11.776e6) *1; %kg*m^2 Inertia of the rotor (Hub inertia + 3 blades
-Jg = 534.116;% * Ng^2; %kg*m^2 Inertia of the generator (HSS)
+Rr = wecs.Rr; % m blade radius
+Ng = wecs.Ng; %Gearbox ratio
+Jr = wecs.Jr; % 3.8759e+07; %(115926 + 3 * 11.776e6) *1; %kg*m^2 Inertia of the rotor (Hub inertia + 3 blades
+Jg = wecs.Jg; % 534.116;% * Ng^2; %kg*m^2 Inertia of the generator (HSS)
 Jgr = Jg * Ng^2; % Inertia of the generator in LSS
-Ks = 867637000; %Nm/rad Stiffness of the transmission
-Bs = 6215000;  %Nm/rad/sec        %Damping of the transmission
+Ks = wecs.Ks; %867637000; %Nm/rad Stiffness of the transmission
+Bs = wecs.Bs; 6215000;  %Nm/rad/sec        %Damping of the transmission
 tau_g = 0.01; % for pitch actuator and airspeed
 
 %% Lambda 
