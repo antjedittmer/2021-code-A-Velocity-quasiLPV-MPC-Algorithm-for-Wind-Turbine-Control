@@ -14,7 +14,7 @@ function runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirS
 % The default inputs are provided here.
 
 if ~nargin || isempty(strWindType) 
-    strWindType =  'Sweep'; %'NTW18';  %
+    strWindType =  'NTW18';  % 'Sweep'; %
 end
 
 if nargin < 2 || isempty(loadData)
