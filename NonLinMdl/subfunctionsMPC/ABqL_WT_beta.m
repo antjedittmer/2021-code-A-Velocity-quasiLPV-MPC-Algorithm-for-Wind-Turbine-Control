@@ -54,7 +54,7 @@ Jg = wecs.Jg; % 534.116;% * Ng^2; %kg*m^2 Inertia of the generator (HSS)
 Jgr = Jg * Ng^2; % Inertia of the generator in LSS
 Ks = wecs.Ks; %867637000; %Nm/rad Stiffness of the transmission
 Bs = wecs.Bs; %6215000;  %Nm/rad/sec        %Damping of the transmission
-tau_g = 0.05; % for pitch actuator and airspeed
+tau_g = 0.01; % for pitch actuator and airspeed
 kappa_g = 0.01; % for generator torque
 
 %% Lambda 

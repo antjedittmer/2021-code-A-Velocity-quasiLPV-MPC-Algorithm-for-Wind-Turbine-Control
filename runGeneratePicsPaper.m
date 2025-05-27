@@ -44,7 +44,6 @@ save('normsGapCell','gapCell', 'normStruct');
 figNo = figNo + 1;
 plotNormTimePlots(normStruct,figNo,figDirStr);
 
-
 % Run models in closed loop with qLPV MPC
 useFASTForComparison = 1;
 figNo = figNo + 1;

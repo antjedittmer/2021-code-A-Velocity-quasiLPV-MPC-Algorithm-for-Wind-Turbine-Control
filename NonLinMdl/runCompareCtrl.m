@@ -155,7 +155,7 @@ titleStdqLPV_Pwr = sprintf('%2.2e',varqLPV_Pwr);
 ratioStd_Pwr = sprintf('%2.1f ', varPI_Pwr/varqLPV_Pwr);
 
 % axis for plot
-yAxCell = {'wind V [m/s]', 'Twr_{FA} y_t [m/s^2]','GenPwr P_g [kW]'};
+yAxCell = {'wind V (m/s)', 'Twr_{FA} (m/s^2)','GenPwr P_g (kW)'};
 
 %% Plot
 % Plot input wind, tower fore-aft acceleration and generator power
@@ -167,25 +167,25 @@ ax1(1) = subplot(3,1,1);
 plot(timeVecPlot, OutTableMPCPlot.Wind);
 ylabel(yAxCell{1}); 
 axis tight; grid on;
-title({['Baseline (P-PI) vs. qLPV MPC; ', meanOpt],... %WT mdl: Model2
+title({['Baseline (P-PI) vs. qLMPC; ', meanOpt],... %WT mdl: Model2
     ['q_ = [', qVec,'], r = [',rVec,'], p = ',pVec,'* q']})
 
 % Tower fore-aft acceleration
 ax1(2) = subplot(3,1,2);
 plot(timeVecPlot, OutTableTest2Plot.NcIMUTAxs, timeVecPlot,OutTableMPCPlot.NcIMUTAxs,'-.');
-title([yAxCell{2}, ': var_{P-Pi} = ',titleStdPI , ', var_{qLPVMPC} = ' ,titleStdqLPV,', ratio: ' ,ratioStd])
+title([yAxCell{2}, ': var_{PI}: ',titleStdPI , ', var_{qLMPC}: ' ,titleStdqLPV,', ratio: ' ,ratioStd])
 ylabel(yAxCell{2}); %'y_t [m/s^2]')
 axis tight; grid on;
 
 % Generator power
 ax1(3) = subplot(3,1,3);
 plot(timeVecPlot, OutTableTest2Plot.GenPwr, timeVecPlot,OutTableMPCPlot.GenPwr,'-.',timeVecPlot,PGRef,'k:');
-title(['|P_{g,ref}  - P_g| [kW]: var_{P-Pi} = ',titleStdPI_Pwr, ', var_{qLPVMPC} = ' ,...
+title(['|P_{g,ref}-P_g| [kW]: var_{PI}: ',titleStdPI_Pwr, ', var_{qLMPC}: ' ,...
     titleStdqLPV_Pwr,', ratio: ' ,ratioStd_Pwr])
 ylabel(yAxCell{3}); %'P_g [kW]')
 axis tight; grid on;
 legend('P-PI','MPC','P_{g,ref}','Location','SouthEast')
-xlabel('time [s]');
+xlabel('Time (s)');
 
 % Link axes and set poisition
 linkaxes(ax1,'x')
@@ -193,6 +193,10 @@ set(gcf,'Name', figStr)
 
 posDefault = [520   378   560   420]; %get(gcf, 'position');
 set(gcf, 'position', [posDefault(1:3),posDefault(4)*1.1]);
+
+set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
+
 
 print(gcf,[fullfile(figDir,'cmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))], '-dpng');
 print(gcf,[fullfile(figDir,'cmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))], '-depsc');
