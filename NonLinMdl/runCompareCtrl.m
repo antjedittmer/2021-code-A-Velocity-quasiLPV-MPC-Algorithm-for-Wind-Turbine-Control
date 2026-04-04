@@ -1,4 +1,4 @@
-function runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr)
+function runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
@@ -18,7 +18,7 @@ if ~nargin || isempty(strWindType)
 end
 
 if nargin < 2 || isempty(loadData)
-    loadData = 0; %load simulation output data if available;
+    loadData = 1; %load simulation output data if available;
 end
 
 if nargin < 3 || isempty(figNo1) 
@@ -31,6 +31,10 @@ end
 
 if nargin <5 || isempty(figDirStr)
     figDirStr = 'figDir';
+end
+
+if nargin < 6 || isempty(useTitle)
+    useTitle = [0,0];
 end
 
 %% Set path to directories
@@ -110,9 +114,9 @@ DT = 0.008;
 r = GenPwrRef;
 
 % Plot and compare closed-loop results
-plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1)
+plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle)
 
-function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1)
+function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,noTitle)
 %plotComparison plots the time series obtained with baseline and qLPVMPC
 
 %% Handle optional inputs
@@ -155,7 +159,7 @@ titleStdqLPV_Pwr = sprintf('%2.2e',varqLPV_Pwr);
 ratioStd_Pwr = sprintf('%2.1f ', varPI_Pwr/varqLPV_Pwr);
 
 % axis for plot
-yAxCell = {'wind V (m/s)', 'Twr_{FA} (m/s^2)','GenPwr P_g (kW)'};
+yAxCell = {'Wind V (m/s)', 'Twr_{FA} (m/s^2)','GenPwr P_g (kW)'};
 
 %% Plot
 % Plot input wind, tower fore-aft acceleration and generator power
@@ -167,22 +171,28 @@ ax1(1) = subplot(3,1,1);
 plot(timeVecPlot, OutTableMPCPlot.Wind);
 ylabel(yAxCell{1}); 
 axis tight; grid on;
+if noTitle(1)
 title({['Baseline (P-PI) vs. qLMPC; ', meanOpt],... %WT mdl: Model2
     ['q_ = [', qVec,'], r = [',rVec,'], p = ',pVec,'* q']})
+end
 
 % Tower fore-aft acceleration
 ax1(2) = subplot(3,1,2);
 plot(timeVecPlot, OutTableTest2Plot.NcIMUTAxs, timeVecPlot,OutTableMPCPlot.NcIMUTAxs,'-.');
+if noTitle(1)
 title([yAxCell{2}, ': var_{PI}: ',titleStdPI , ', var_{qLMPC}: ' ,titleStdqLPV,', ratio: ' ,ratioStd])
+end
 ylabel(yAxCell{2}); %'y_t [m/s^2]')
 axis tight; grid on;
 
 % Generator power
 ax1(3) = subplot(3,1,3);
-plot(timeVecPlot, OutTableTest2Plot.GenPwr, timeVecPlot,OutTableMPCPlot.GenPwr,'-.',timeVecPlot,PGRef,'k:');
+plot(timeVecPlot, OutTableTest2Plot.GenPwr/1000, timeVecPlot,OutTableMPCPlot.GenPwr/1000,'-.',timeVecPlot,PGRef/1000,'k--');
+if noTitle(1)
 title(['|P_{g,ref}-P_g| [kW]: var_{PI}: ',titleStdPI_Pwr, ', var_{qLMPC}: ' ,...
     titleStdqLPV_Pwr,', ratio: ' ,ratioStd_Pwr])
-ylabel(yAxCell{3}); %'P_g [kW]')
+end
+ylabel(strrep(yAxCell{3}, 'kW','MW'))
 axis tight; grid on;
 legend('P-PI','MPC','P_{g,ref}','Location','SouthEast')
 xlabel('Time (s)');
@@ -194,12 +204,16 @@ set(gcf,'Name', figStr)
 posDefault = [520   378   560   420]; %get(gcf, 'position');
 set(gcf, 'position', [posDefault(1:3),posDefault(4)*1.1]);
 
-set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
-set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
+set(findall(gcf,'-property','FontSize'),'FontSize',12.5)
+set(findall(gcf,'-property','LineWidth'),'LineWidth',1.2)
 
 
-print(gcf,[fullfile(figDir,'cmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))], '-dpng');
-print(gcf,[fullfile(figDir,'cmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))], '-depsc');
+print(gcf,[fullfile(figDir,'aCmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))], '-dpng');
+print(gcf,[fullfile(figDir,'aCmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))], '-depsc');
+
+if length(noTitle) == 2
+    if (noTitle(2) == 0), return, end
+end
 
 
 %% Figure for paper and dissertation

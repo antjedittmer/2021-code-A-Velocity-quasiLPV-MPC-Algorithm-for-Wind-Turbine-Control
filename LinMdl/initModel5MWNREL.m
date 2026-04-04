@@ -1,4 +1,4 @@
-function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] = initModel5MWNREL(plotOn, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir,titleOn,multRb)
+function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] = initModel5MWNREL(plotOn, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir,titleOn,multRb,x)
 % initModel5MWNREL initializes parameters of NREL 5 MW turbine.
 % Aerodynamic force and thrust LUT can be plotted.
 % All inputs are optional.
@@ -68,6 +68,10 @@ if nargin < 8  || isempty(multRb)
     multRb = 0.75;
 end
 
+if nargin < 9
+    x = [1,1,1];
+end
+
 %% Define parameters
 % 5MW FAST WIND TURBINE (NREL/TP-500-38060) Definition of a 5-MW Reference
 % Wind Tudeltaine for Offshore System Development
@@ -83,7 +87,7 @@ tau = 0.1; % time constant pitch actuator
 kappa = 0.01; % time constant torque actuator
 % Bg = 0.9; % Tg= Bg(wg - wz). Unused because we use Tg as input
 %x = [0.3540, 6.9975e+03]; % [0.608380, 7128.534769];
-x = [1,1,1];
+% x = [1,1,1];
 %x = [3.2950    3.9394    0.1974];
 %x =   [4.1814    0.7651];
 % x = [1.2745    0.6876];
@@ -105,8 +109,8 @@ wecs.mtb = wecs.mt + wecs.N * wecs.mb; %tower modal mass + modal mass of blades
 
 wecs.H =  90; % 87.6;
 
-wecs.Jg = 534.116; %  kg*m^2; Inertia of the generator
-wecs.Jr = x(2) * 3.8759e+07; % 3.8759e+07; %
+wecs.Jg = x(2) *534.116; %  kg*m^2; Inertia of the generator
+wecs.Jr = 3.8759e+07; % 3.8759e+07; %
 wecs.JrL = wecs.Jr; %115926 + 3 * 11.776e6; % kg*m^2; Inertia of the rotor (Hub inertia + 3 blades)
 wecs.Js = wecs.Jr + wecs.Ng^2*wecs.Jg;
 f0 = 0.324;  % Hz, First natural tower fore-aft frequency

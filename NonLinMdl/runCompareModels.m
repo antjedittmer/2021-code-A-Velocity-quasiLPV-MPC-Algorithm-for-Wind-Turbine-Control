@@ -1,35 +1,35 @@
 function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr,allPlots)
-% runCompareModels compares two Simulink models with FASTTool simulation 
-% data generated with the baseline controller. 
+% runCompareModels compares two Simulink models with FASTTool simulation
+% data generated with the baseline controller.
 %
 % All inputs are optional:
-% - strWindType: Two testcases: step sweep 4 to 25 ms and normal dist. with 
+% - strWindType: Two testcases: step sweep 4 to 25 ms and normal dist. with
 %   18 m/s mean (Default: Sweep)
 % - loadData: load simulation output data if available instead of running
 %   simulation (Default: 1)
 % - figNo1: Number of figure (Default: 1)
-% - yAxCell: Axes labels 
+% - yAxCell: Axes labels
 
 %% Handle optional inputs
 % The default inputs are provided here.
 
 % Two testcases: step sweep 4 to 25 ms and normal dist. 18 m/s mean
-if ~nargin || isempty(strWindType) 
-   strWindType = 'Sweep'; % 4,11,18,
+if ~nargin || isempty(strWindType)
+    strWindType = 'Sweep'; % 4,11,18,
 end
 
-if nargin < 2 || isempty(loadData) 
+if nargin < 2 || isempty(loadData)
     loadData = 0; %load simulation output data if available;
 end
 
-if nargin < 3 || isempty(figNo1) 
+if nargin < 3 || isempty(figNo1)
     figNo1 = 1;
 end
 figNo2 = figNo1 + 1;
 
 if nargin < 4 || isempty(yAxCell) % Axes labels for figure
     yAxCell = {'Wind V (m/s)', 'GenTq T_g (kNm)', 'Pitch \beta (°)', 'RotSpd \omega_r (rpm)',...
-    'GenPwr P_g (MW)','Twr_{FA} y_t (m/s^2)', 'Twr_{SW} x_t (m/s^2)'};
+        'GenPwr P_g (MW)','Twr_{FA} y_t (m/s^2)', 'Twr_{SW} x_t (m/s^2)'};
 end
 
 if nargin <5 || isempty(figDirStr)
@@ -37,7 +37,7 @@ if nargin <5 || isempty(figDirStr)
 end
 
 if nargin < 6
-    allPlots =0;
+    allPlots =1;
 end
 
 %% Initialize path and files names
@@ -64,12 +64,12 @@ if ~isfolder(dataDirOut)
 end
 
 % Provide names of Simulink models to be run
-simMdlname1 = 'test_SimulinkMdl1_Baseline'; 
-simMdlname2 = 'test_SimulinkMdl2_Baseline'; 
+simMdlname1 = 'test_SimulinkMdl1_Baseline';
+simMdlname2 = 'test_SimulinkMdl2_Baseline';
 
 % Provide names of FAST simulation data to be loaded
-if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps  
-    outDataSimulationMat = 'OutDataSweep.mat'; %'OutDataStep.mat'; %
+if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
+    outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
     strFig = '';
     testCaseStr = 'Wind Sweep';
 elseif isa(strWindType,'double')  % wind with average 18 m/s
@@ -77,8 +77,8 @@ elseif isa(strWindType,'double')  % wind with average 18 m/s
     strFig = sprintf('NTW%02d',strWindType); %'NTW18';
     testCaseStr = sprintf('Wind, mean %02d m/s',strWindType);
 else
-     % EOG16mpers
-      outDataSimulationMat = 'EOG16mpers.mat'; %'OutDataStep.mat'; %
+    % EOG16mpers
+    outDataSimulationMat = 'EOG16mpers.mat'; %'OutDataStep.mat'; %
     strFig = 'EOG';
     testCaseStr = 'EOG16mpers';
 end
@@ -108,7 +108,7 @@ vectAmpWind = sqrt(sum((vectWind.^2),2));
 
 % Names of simulation output in order of Simulink bus
 % wind [m/s],Rotor Speed [rad/s],Generator Power [kW],Generator Torque  [Nm],Pitch [rad],xdotdotfa [m/s2],xdotdotsw [m/s2]
-varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', 'NcIMUTAxs', 'NcIMUTAys','zetadotdot'}; 
+varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', 'NcIMUTAxs', 'NcIMUTAys','zetadotdot'};
 
 % Run simulation for two models or load mat files if available
 matFileOutTableTest1 = fullfile(dataDirOut,['OutTableTest1',strFig,'.mat']);
@@ -118,7 +118,7 @@ matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strFig,'.mat']);
 OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadData,OutTable,simMdlname2,varnames);
 
 %% Create output plots (for use in power point)
-% Two plots are created: 1st plot shows wind, rotor speed, 
+% Two plots are created: 1st plot shows wind, rotor speed,
 
 % Create output plot time reference
 idxTime = 1: min([length(idxTime), height(OutTableTest1),height(OutTableTest2)]);
@@ -138,10 +138,10 @@ if cmpOnly1 <= 1
     titleStr = [testCaseStr,': {\color[rgb]{',num2str(cl(1,:)),'} Simulink Model, ',...
         '\color[rgb]{',num2str(cl(2,:)),'}FAST Model} '];
     titleStr1 = [testCaseStr,' Inputs: {\color[rgb]{',num2str(cl(1,:)),'} Simulink Model, ',...
-        '\color[rgb]{',num2str(cl(2,:)),'}FAST Model} '];  
-     titleStr2 = [testCaseStr,' Signals: {\color[rgb]{',num2str(cl(1,:)),'} Simulink Model, ',...
         '\color[rgb]{',num2str(cl(2,:)),'}FAST Model} '];
-    
+    titleStr2 = [testCaseStr,' Signals: {\color[rgb]{',num2str(cl(1,:)),'} Simulink Model, ',...
+        '\color[rgb]{',num2str(cl(2,:)),'}FAST Model} '];
+
 else
     titleStr = [testCaseStr,': Mdl1: Rot+Twr {\color[rgb]{',num2str(cl(1,:)),'}Mdl2: Rot,Gen,Twr+Bld ',...
         '\color[rgb]{',num2str(cl(2,:)),'}FAST} '];
@@ -150,88 +150,88 @@ else
 end
 
 if allPlots == 1
-% 1st figure
-figure(figNo1);
-axPlot(1) = subplot(3,1,1);
-plot(time,vectAmpWind(idxTime),time,OutTableTest1.Wind(idxTime),'--'); 
-axis tight; grid on;
-ylabel('wind [m/s]')
-title(titleStr1);
+    % 1st figure
+    figure(figNo1);
+    axPlot(1) = subplot(3,1,1);
+    plot(time,vectAmpWind(idxTime),time,OutTableTest1.Wind(idxTime),'--');
+    axis tight; grid on;
+    ylabel('wind [m/s]')
+    title(titleStr1);
 
-axPlot(2) = subplot(3,1,2);
-if cmpOnly1 <= 1
-    plot(time,OutTableTest2.GenTq(idxTime)/10^3,time,OutTable.GenTq(idxTime),'--');   
-else
-    plot(time,OutTableTest2.GenTq(idxTime)/10^3,time,OutTable.GenTq(idxTime),time,OutTableTest1.GenTq(idxTime)/10^3,'k--');
-end
-axis tight; grid on;
-ylabel('GenTq T_g [kNm]') 
+    axPlot(2) = subplot(3,1,2);
+    if cmpOnly1 <= 1
+        plot(time,OutTableTest2.GenTq(idxTime)/10^3,time,OutTable.GenTq(idxTime),'--');
+    else
+        plot(time,OutTableTest2.GenTq(idxTime)/10^3,time,OutTable.GenTq(idxTime),time,OutTableTest1.GenTq(idxTime)/10^3,'k--');
+    end
+    axis tight; grid on;
+    ylabel('GenTq T_g [kNm]')
 
-axPlot(3) = subplot(3,1,3);
-if cmpOnly1 <= 1
-    plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),'--');
-else
-    plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),time,OutTableTest1.BlPitch1(idxTime),'k--');
-end
-axis tight; grid on;
-ylabel('BldPitch1 \beta [deg]')
-xlabel('Time [s]')
-linkaxes(axPlot,'x');
-set(findall(gcf,'-property','FontSize'),'FontSize',12)
-set(findall(gcf,'-property','LineWidth'),'LineWidth',1)
+    axPlot(3) = subplot(3,1,3);
+    if cmpOnly1 <= 1
+        plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),'--');
+    else
+        plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),time,OutTableTest1.BlPitch1(idxTime),'k--');
+    end
+    axis tight; grid on;
+    ylabel('BldPitch1 \beta [deg]')
+    xlabel('Time [s]')
+    linkaxes(axPlot,'x');
+    set(findall(gcf,'-property','FontSize'),'FontSize',12)
+    set(findall(gcf,'-property','LineWidth'),'LineWidth',1)
 
-if cmpOnly1 <= 1
-    nameFig =  sprintf('cmpTimeDomain_WindIn%d%s',cmpOnly1,strFig);
-else
-    nameFig = ['cmpTimeDomain_WindIn',strFig];
-end
-set(gcf,'Name',['cmpTimeDomain_Wind',strFig])
+    if cmpOnly1 <= 1
+        nameFig =  sprintf('cmpTimeDomain_WindIn%d%s',cmpOnly1,strFig);
+    else
+        nameFig = ['cmpTimeDomain_WindIn',strFig];
+    end
+    set(gcf,'Name',['cmpTimeDomain_Wind',strFig])
 
-print(fullfile(figDir,nameFig), '-dpng');
+    print(fullfile(figDir,nameFig), '-dpng');
 
-% 2nd figure
-figure(figNo2)
-axPlot2(1) = subplot(3,1,1);
-if cmpOnly1 <= 1
-    plot(time,OutTableTest2.RotSpeed(idxTime), time,OutTable.RotSpeed(idxTime),'--');
-else
-    plot(time,OutTableTest2.RotSpeed(idxTime), time,OutTable.RotSpeed(idxTime),time,OutTableTest1.RotSpeed(idxTime),'k--');
-end
-axis tight; grid on;
-ylabel('RotSpd \omega_r [rpm]')
-title(titleStr2);
+    % 2nd figure
+    figure(figNo2)
+    axPlot2(1) = subplot(3,1,1);
+    if cmpOnly1 <= 1
+        plot(time,OutTableTest2.RotSpeed(idxTime), time,OutTable.RotSpeed(idxTime),'--');
+    else
+        plot(time,OutTableTest2.RotSpeed(idxTime), time,OutTable.RotSpeed(idxTime),time,OutTableTest1.RotSpeed(idxTime),'k--');
+    end
+    axis tight; grid on;
+    ylabel('RotSpd \omega_r [rpm]')
+    title(titleStr2);
 
-axPlot2(2) = subplot(3,1,2);
-if cmpOnly1 <= 1
-    plot(time,OutTableTest2.NcIMUTAxs(idxTime),time,OutTable.NcIMUTAxs(idxTime),'--');
-else
-    plot(time,OutTableTest2.NcIMUTAxs(idxTime),time,OutTable.NcIMUTAxs(idxTime),time,OutTableTest1.NcIMUTAxs(idxTime),'k--');
-end
-axis tight; grid on;
-ylabel('Twr_{FA} y_t[m/s^2]')
+    axPlot2(2) = subplot(3,1,2);
+    if cmpOnly1 <= 1
+        plot(time,OutTableTest2.NcIMUTAxs(idxTime),time,OutTable.NcIMUTAxs(idxTime),'--');
+    else
+        plot(time,OutTableTest2.NcIMUTAxs(idxTime),time,OutTable.NcIMUTAxs(idxTime),time,OutTableTest1.NcIMUTAxs(idxTime),'k--');
+    end
+    axis tight; grid on;
+    ylabel('Twr_{FA} y_t[m/s^2]')
 
-axPlot2(3) = subplot(3,1,3);
-if cmpOnly1 <= 1
-    plot(time,OutTableTest2.GenPwr(idxTime)/1000,time,OutTable.GenPwr(idxTime)/1000,'--');
-else
-    plot(time,OutTableTest2.GenPwr(idxTime)/1000,time,OutTable.GenPwr(idxTime)/1000,time,OutTableTest1.GenPwr(idxTime)/1000,'k--');
-end
-axis tight; grid on;
-ylabel('GenPwr P_g [MW]')
-xlabel('Time [s]')
-set(findall(gcf,'-property','FontSize'),'FontSize',12)
-set(findall(gcf,'-property','LineWidth'),'LineWidth',1)
-linkaxes(axPlot2,'x');
+    axPlot2(3) = subplot(3,1,3);
+    if cmpOnly1 <= 1
+        plot(time,OutTableTest2.GenPwr(idxTime)/1000,time,OutTable.GenPwr(idxTime)/1000,'--');
+    else
+        plot(time,OutTableTest2.GenPwr(idxTime)/1000,time,OutTable.GenPwr(idxTime)/1000,time,OutTableTest1.GenPwr(idxTime)/1000,'k--');
+    end
+    axis tight; grid on;
+    ylabel('GenPwr P_g [MW]')
+    xlabel('Time [s]')
+    set(findall(gcf,'-property','FontSize'),'FontSize',12)
+    set(findall(gcf,'-property','LineWidth'),'LineWidth',1)
+    linkaxes(axPlot2,'x');
 
-if cmpOnly1 <= 1
-    nameFig = sprintf('cmpTimeDomain_WindSig1%d%s',cmpOnly1,strFig);
-else
-    nameFig = ['cmpTimeDomain_WindSig',strFig];
-end
+    if cmpOnly1 <= 1
+        nameFig = sprintf('cmpTimeDomain_WindSig1%d%s',cmpOnly1,strFig);
+    else
+        nameFig = ['cmpTimeDomain_WindSig',strFig];
+    end
 
-set(gcf,'Name',nameFig)
+    set(gcf,'Name',nameFig)
 
-print(fullfile(figDir,nameFig), '-dpng');
+    print(fullfile(figDir,nameFig), '-dpng');
 end
 
 
@@ -259,11 +259,11 @@ nAx = 7;
 tiledlayout(nAx,1,'TileSpacing','Compact');
 
 axPlotAll(1) = nexttile; %subplot(nAx,1,1);
-plot(time,vectAmpWind(idxTime),time,OutTableTest1.Wind(idxTime),'k--'); 
+plot(time,vectAmpWind(idxTime),time,OutTableTest1.Wind(idxTime),'k--');
 axis tight; grid on;
 ylabel(yAxCell{1}); %'wind [m/s]')
 title(titleStr);
-  
+
 axPlotAll(2) = nexttile; %axPlotAll(2) = subplot(nAx,1,2);
 plot(time,OutTableTest2.GenTq(idxTime)/10^3,time,OutTable.GenTq(idxTime),time,OutTableTest1.GenTq(idxTime)/10^3,'k--');
 axis tight;
@@ -272,10 +272,10 @@ axis([posAxis(1:2), min(43,posAxis(3)), 44]);
 ylabel(yAxCell{3}); %'T_g [kNm]')
 grid on; % axis tight;
 %grid on;
-ylabel(yAxCell{2}); %'GenTq T_g [Nm]') 
+ylabel(yAxCell{2}); %'GenTq T_g [Nm]')
 
 axPlotAll(3) = nexttile; %axPlotAll(3) = subplot(nAx,1,3);
-plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),time,OutTableTest1.BlPitch1(idxTime),'k--'); 
+plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),time,OutTableTest1.BlPitch1(idxTime),'k--');
 axis tight; grid on;
 ylabel(yAxCell{3}); %'Pitch \beta [°]')
 
@@ -313,4 +313,59 @@ set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
 print(fullfile(figDir,['cmpTimeDomain_All',strFig]), '-dpng');
 print(fullfile(figDir,['cmpTimeDomain_All',strFig]), '-depsc');
+
+
+if OutTable.Time(end) >1000
+
+    % Create zoomed-in version of the figure
+figure(figNo1 + 2*allPlots + 1) % new figure number
+tiledlayout(nAx,1,'TileSpacing','Compact');
+
+for i = 1:nAx
+    axZoom(i) = nexttile;
+end
+
+% Re-plot each subplot with same data and axes
+plot(axZoom(1), time, vectAmpWind(idxTime), time, OutTableTest1.Wind(idxTime), 'k--');
+ylabel(axZoom(1), yAxCell{1}); title(axZoom(1), titleStr); grid(axZoom(1), 'on');
+
+plot(axZoom(2), time, OutTableTest2.GenTq(idxTime)/1e3, time, OutTable.GenTq(idxTime), time, OutTableTest1.GenTq(idxTime)/1e3, 'k--');
+ylabel(axZoom(2), yAxCell{2}); grid(axZoom(2), 'on');
+posAxis = axis(axZoom(2));
+axis(axZoom(2), [posAxis(1:2), min(43,posAxis(3)), 44]);
+
+plot(axZoom(3), time, OutTableTest2.BlPitch1(idxTime), time, OutTable.BlPitch1(idxTime), time, OutTableTest1.BlPitch1(idxTime), 'k--');
+ylabel(axZoom(3), yAxCell{3}); grid(axZoom(3), 'on');
+
+plot(axZoom(4), time, OutTableTest2.RotSpeed(idxTime), time, OutTable.RotSpeed(idxTime), time, OutTableTest1.RotSpeed(idxTime), 'k--');
+ylabel(axZoom(4), yAxCell{4}); grid(axZoom(4), 'on');
+
+plot(axZoom(5), time, OutTableTest2.NcIMUTAxs(idxTime), time, OutTable.NcIMUTAxs(idxTime), time, OutTableTest1.NcIMUTAxs(idxTime), 'k--');
+ylabel(axZoom(5), yAxCell{6}); grid(axZoom(5), 'on');
+
+plot(axZoom(6), time, OutTableTest2.NcIMUTAys(idxTime), time, OutTable.NcIMUTAys(idxTime), time, OutTableTest1.NcIMUTAys(idxTime), 'k--');
+ylabel(axZoom(6), yAxCell{7}); grid(axZoom(6), 'on');
+set(axZoom(6),'YLim', get(axZoom(5),'YLim'))
+
+plot(axZoom(7), time, OutTableTest2.GenPwr(idxTime)/1e3, time, OutTable.GenPwr(idxTime)/1e3, time, OutTableTest1.GenPwr(idxTime)/1e3, 'k--');
+ylabel(axZoom(7), yAxCell{5}); xlabel(axZoom(7), 'Time (s)'); grid(axZoom(7), 'on');
+
+% Link and zoom
+linkaxes(axZoom, 'x');
+xlim(axZoom(1), [600 1000]); % This sets zoom for all
+
+set(gcf,'Name',['cmpTimeDomain_AllZoom_',strFig])
+posDefault = get(0,'DefaultFigurePosition');
+set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*2.1]);
+
+set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
+
+print(fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]), '-dpng');
+print(fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]), '-depsc');
+
+
+
+end
+
 

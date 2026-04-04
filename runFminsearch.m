@@ -8,7 +8,9 @@ initWorkspace;
 options = optimset('Display','iter','PlotFcns',@optimplotfval);
 
 x0 = [2.1336    0.8631 1];
+x0 = [1,1,1];
 
+x0 = [2.1295    0.8824   -0.5780];
 
 fun = @getInfluenceBladeParams;
 [x,fval,exitflag,output] = fminsearch(fun,x0,options);

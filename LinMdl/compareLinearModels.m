@@ -1,4 +1,4 @@
-function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder,useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,x)
+function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder, useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,x)
 % compareLinearModels compares two sets of linearized turbine models with
 % linearized FASTTool models at different wind speeds.
 % All inputs are optional.
@@ -38,7 +38,7 @@ mainDir = fileparts(workDir);
 
 % speedVec: index vector for 22 windspeeds, 4 to 25 m/s (Default: [1, 22])
 if nargin == 0 || isempty(speedVec)
-    speedVec = [1,22]; % variations of wind speed 8,9,
+    speedVec = [1,8,9,22]; % variations of wind speed
 end
 
 if nargin < 2 || isempty(figFolder)
@@ -59,7 +59,7 @@ if nargin < 6,  plotVisible = 'on';  end
 
 if nargin < 7, noOut = 3;  end
 
-if nargin < 8, x = [];  end
+if nargin < 8, x = [1,1,1]; end
 
 
 %% Load and initialize name of models and load into workspace
@@ -68,7 +68,7 @@ load('NREL5MW_CPdata','Rotor_Lamda', 'Rotor_Pitch', 'Rotor_cQ', 'Rotor_cT','Roto
 
 % Initialize name of models and load into workspace
 idxModel = 1; %in case several linearized models are provided
-modelNames = {'NREL5MW_linearised_4to25'};
+modelNames = {'NREL5MW_linearised_4to25'}; %{'NREL5MW_linearised_AD'}; %
 modelNames = modelNames(idxModel);
 
 modelsL = {'FAST 30 states'};
@@ -91,14 +91,9 @@ end
 % Cut-In, Rated Rotor Speed 6.9 rpm, 12.1 rpm
 
 % Wind energy conversion system (WECS) parameters
-
-if isempty(x)
-    [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = ...
-        initModel5MWNREL(0, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder);
-else
-    [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct] = ...
-        initModel5MWNRELTune(x);
-end
+[wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = ...
+    initModel5MWNREL(0, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder,0.75,x);
+wecs.Js = wecs.Jr + wecs.Ng^2 * wecs.Jg;
 
 %% Compute aerodynamic force and torque gradients
 ksw = 1/(2/3* wecs.H);
@@ -144,19 +139,16 @@ sysOutputname =[{'RotSpd \omega_r (rad/s)'};{'TwrAcc_{fa} (m/s^2)'}; {'TwrAcc_{s
 sysOutputname = sysOutputname(1:noOut);
 sysInputname =[{'GenTq T_g (kNm)'}; {'BlPitch \beta_0 (rad)'};{'Wind V_{\infty} (m/s)'}];
 
-% Check FAST names
+% Check FAst names
 sysOutNamesOrig = sysm{1}.OutputName(idxFASTOutput);
+disp(['TU Delft sysOutputnames: ', sprintf('%s, ', sysOutputname{:})])
+disp('FAST sysOutputnames:')
+fprintf('%s\n', sysOutNamesOrig{:});
+fprintf('\n')
+disp(['TU Delft sysInputnames: ', sprintf('%s, ', sysInputname{:})])
 sysInNamesOrig = sysm{1}.InputName(idxFASTInput);
-
-if isempty(x)
-    disp(['TU Delft sysOutputnames: ', sprintf('%s, ', sysOutputname{:})])
-    disp('FAST sysOutputnames:')
-    fprintf('%s\n', sysOutNamesOrig{:});
-    fprintf('\n')
-    disp(['TU Delft sysInputnames: ', sprintf('%s, ', sysInputname{:})])
-    disp('FAST sysInputnames: ');
-    fprintf('%s\n', sysInNamesOrig{:})
-end
+disp('FAST sysInputnames: ');
+fprintf('%s\n', sysInNamesOrig{:})
 
 % Set output gains for FAST accordingly
 multFASTOutputAll = [pi/30,1,1]; % ED RotSpeed, (rpm)
@@ -272,15 +264,16 @@ for index =  speedVec
 
     C5aero =  [B1_3(5,1) * [-dFtdV, -dFtdV*wecs.rb, 0, dFtdomega 0]; ... % yFAdot
         B1_3(6,1) * [-dFtdV, -dFtdV*wecs.rb, 0, dFtdomega 0]; ... % deltaDot
-        B1_3(7,2) *[-dTrdV, -dTrdV*wecs.rb,0,dTrdomega,0];... % xSWdot
-        B1_3(8,2) *[-dTrdV, -dTrdV*wecs.rb,0,dTrdomega,0];... % omega_r
+        B1_3(7,2) * [-dTrdV, -dTrdV*wecs.rb, 0, dTrdomega,0];... % xSWdot
+        B1_3(8,2) * [-dTrdV, -dTrdV*wecs.rb, 0, dTrdomega,0];... % omega_r
         zeros(1,5)];  % omega_gr
-    QTildaTg = [0;0; B1_3(7,3);B11; -B11 ]; %B1_3(9,3);
+   
+    % B1_3 has the order: F_T, T_r, T_g
+    QTildaTg =  [0;0; B1_3(7,3); 0; B1_3(9,3)]; 
     QTildaBeta = [B1_3(5,1) *dFtdbeta; B1_3(6,1)*dFtdbeta; B1_3(7,2) * dTrdbeta;...
         B1_3(8,2)*dTrdbeta;0];
     QTildaV = [B1_3(5,1) * dFtdV; B1_3(6,1) * dFtdV; B1_3(7,2) * dTrdV;...
         B1_3(8,2)*dTrdV;0];
-
 
     A9DoF = zeros(size(A1) + 2); % 9 states + 2 ctrl input
     A9DoF(1:4,:) = [A1(1:4,:) ,zeros(4,2)]; % states 1 - 4: y_FA,delta,x_sw, Theta_s
@@ -291,14 +284,12 @@ for index =  speedVec
     A9DoF(10,10) =  -1/kappa;
     A9DoF(11,11) =  -1/tau;
 
-
     B9DoF = zeros(size(A1,1) + 2,3); % 3 inputs -> 9 states + 2 ctrl input
     B9DoF(5:9,3) = QTildaV;
     B9DoF(10,1) = 1/kappa;
     B9DoF(11,2) = 1/tau;
-
     A7DoF = A9DoF(1:9,1:9);
-    
+
     B7DoF = B9DoF(1:9,:);
     B7DoF(:,1) = A9DoF(1:9,8+2); % Torque Tg as input
     B7DoF(:,2) = A9DoF(1:9,9+2); % Pitch beta as input
@@ -424,8 +415,8 @@ for index =  speedVec
         posaxes =   get(0,'defaultFigurePosition');
         set(gcf,'Position',[posaxes(1:3),posaxes(4)*1.1]);
 
-        print(figFolderStr, '-dpng');
-        print(figFolderStrEps, '-depsc');
+        % print(figFolderStr, '-dpng');
+        % print(figFolderStrEps, '-depsc');
 
         
     end
