@@ -40,6 +40,9 @@ end
 
 %% Load FASTTool wind as test signal
 DT = 0.008; % one sample time 
+step_thresshold = 0; % per default filter wind
+kVeFilt = 0;
+kVeFilt_tau = 0.75;
 load(fullfile(dataInPath,'OutDataSweep.mat'),'OutTable');
 %load(fullfile(dataInPath,'OutDataWind18NTM.mat'),'OutTable');
 

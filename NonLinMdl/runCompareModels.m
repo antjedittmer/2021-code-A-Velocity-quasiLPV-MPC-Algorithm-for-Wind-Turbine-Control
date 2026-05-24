@@ -15,7 +15,7 @@ function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDi
 
 % Two testcases: step sweep 4 to 25 ms and normal dist. 18 m/s mean
 if ~nargin || isempty(strWindType)
-    strWindType = 'Sweep'; % 4,11,18,
+    strWindType = 18; %'Sweep'; %18; %''; %'Sweep'; % 4,11,18,
 end
 
 if nargin < 2 || isempty(loadData)
@@ -68,10 +68,15 @@ simMdlname1 = 'test_SimulinkMdl1_Baseline';
 simMdlname2 = 'test_SimulinkMdl2_Baseline';
 
 % Provide names of FAST simulation data to be loaded
+step_thresshold = 1;
+kVeFilt = 0;
+kVeFilt_tau = 0.75;
+
 if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
     strFig = '';
     testCaseStr = 'Wind Sweep';
+    step_thresshold = 0;
 elseif isa(strWindType,'double')  % wind with average 18 m/s
     outDataSimulationMat = sprintf('OutDataWind%02dNTW.mat',strWindType);
     strFig = sprintf('NTW%02d',strWindType); %'NTW18';
@@ -82,6 +87,9 @@ else
     strFig = 'EOG';
     testCaseStr = 'EOG16mpers';
 end
+assignin('base','step_thresshold', step_thresshold);
+assignin('base','kVeFilt', kVeFilt);
+assignin('base','kVeFilt_tau', kVeFilt_tau);
 
 %% Load data from FAST run
 % Load FASTtool simulation data from dataIn folder.
