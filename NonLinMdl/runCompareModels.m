@@ -15,7 +15,7 @@ function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDi
 
 % Two testcases: step sweep 4 to 25 ms and normal dist. 18 m/s mean
 if ~nargin || isempty(strWindType)
-    strWindType = 18; %'Sweep'; %18; %''; %'Sweep'; % 4,11,18,
+    strWindType = 18; %'Sweep'; %18; %'Sweep'; %18; %''; %'Sweep'; % 4,11,18,
 end
 
 if nargin < 2 || isempty(loadData)
@@ -68,9 +68,9 @@ simMdlname1 = 'test_SimulinkMdl1_Baseline';
 simMdlname2 = 'test_SimulinkMdl2_Baseline';
 
 % Provide names of FAST simulation data to be loaded
-step_thresshold = 1;
-kVeFilt = 0;
-kVeFilt_tau = 0.75;
+step_thresshold = 0;
+kVeFilt = 0.001;
+kVeFilt_tau = 0.5;
 
 if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
@@ -87,6 +87,12 @@ else
     strFig = 'EOG';
     testCaseStr = 'EOG16mpers';
 end
+
+if step_thresshold == 1
+    strFig = [strFig,sprintf('_kVe%2.2f_kVeTau%2.2f',kVeFilt,kVeFilt_tau)];
+    strFig = strrep(strFig,'.','dot');
+end
+
 assignin('base','step_thresshold', step_thresshold);
 assignin('base','kVeFilt', kVeFilt);
 assignin('base','kVeFilt_tau', kVeFilt_tau);
