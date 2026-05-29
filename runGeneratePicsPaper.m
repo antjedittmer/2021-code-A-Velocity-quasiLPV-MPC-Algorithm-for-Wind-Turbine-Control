@@ -12,8 +12,8 @@ initWorkspace;
 % FAST models. 
 
 % Create Bode plots for comparison
-speedVec = [1,22] ; %[1,8,9,22];
-figDirStr = 'figDir5';
+speedVec = [1,8,9,22] ; %[1,8,9,22];
+figDirStr = 'figDir6';
 [sysOut,gapCell] = compareLinearModels(speedVec,figDirStr); %
 plotNormBodePlots(gapCell,speedVec,figDirStr);
 

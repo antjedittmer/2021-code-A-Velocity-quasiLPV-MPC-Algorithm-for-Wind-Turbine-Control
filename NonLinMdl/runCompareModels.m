@@ -68,7 +68,7 @@ simMdlname1 = 'test_SimulinkMdl1_Baseline';
 simMdlname2 = 'test_SimulinkMdl2_Baseline';
 
 % Provide names of FAST simulation data to be loaded
-step_thresshold = 0;
+step_thresshold = 1;
 kVeFilt = 0.001;
 kVeFilt_tau = 0.5;
 
@@ -144,7 +144,6 @@ time = time(idxTime);
 defaultLineWidth = get(groot,'defaultLineLineWidth');
 set(groot,'defaultLineLineWidth',0.75);
 cmpOnly1 = 2;
-
 
 % Get color map for 'title legends'
 cl = lines;
