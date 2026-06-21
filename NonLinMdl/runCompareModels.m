@@ -1,4 +1,4 @@
-function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr,allPlots)
+function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr,allPlots,ylimVal)
 % runCompareModels compares two Simulink models with FASTTool simulation
 % data generated with the baseline controller.
 %
@@ -37,7 +37,11 @@ if nargin <5 || isempty(figDirStr)
 end
 
 if nargin < 6
-    allPlots =1;
+    allPlots = 1;
+end
+
+if nargin < 7
+    ylimVal = '';
 end
 
 %% Initialize path and files names
@@ -68,9 +72,9 @@ simMdlname1 = 'test_SimulinkMdl1_Baseline';
 simMdlname2 = 'test_SimulinkMdl2_Baseline';
 
 % Provide names of FAST simulation data to be loaded
-step_thresshold = 1;
-kVeFilt = 0.001;
-kVeFilt_tau = 0.5;
+step_thresshold = ~isempty(ylimVal); % This is for now used as a switch for the filter 
+kVeFilt = 0.25;
+kVeFilt_tau = 0.75;
 
 if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
@@ -168,6 +172,7 @@ if allPlots == 1
     axPlot(1) = subplot(3,1,1);
     plot(time,vectAmpWind(idxTime),time,OutTableTest1.Wind(idxTime),'--');
     axis tight; grid on;
+    if ~isempty(ylimVal), ylim(ylimVal(1,:)); end
     ylabel('wind [m/s]')
     title(titleStr1);
 
@@ -275,6 +280,7 @@ axPlotAll(1) = nexttile; %subplot(nAx,1,1);
 plot(time,vectAmpWind(idxTime),time,OutTableTest1.Wind(idxTime),'k--');
 axis tight; grid on;
 ylabel(yAxCell{1}); %'wind [m/s]')
+if ~isempty(ylimVal), ylim(gca,ylimVal(1,:)); end
 title(titleStr);
 
 axPlotAll(2) = nexttile; %axPlotAll(2) = subplot(nAx,1,2);
@@ -282,6 +288,7 @@ plot(time,OutTableTest2.GenTq(idxTime)/10^3,time,OutTable.GenTq(idxTime),time,Ou
 axis tight;
 posAxis = axis;
 axis([posAxis(1:2), min(43,posAxis(3)), 44]);
+if ~isempty(ylimVal), ylim(gca,ylimVal(2,:)); end
 ylabel(yAxCell{3}); %'T_g [kNm]')
 grid on; % axis tight;
 %grid on;
@@ -290,27 +297,32 @@ ylabel(yAxCell{2}); %'GenTq T_g [Nm]')
 axPlotAll(3) = nexttile; %axPlotAll(3) = subplot(nAx,1,3);
 plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),time,OutTableTest1.BlPitch1(idxTime),'k--');
 axis tight; grid on;
+if ~isempty(ylimVal), ylim(gca,ylimVal(3,:)); end
 ylabel(yAxCell{3}); %'Pitch \beta [°]')
 
 axPlotAll(4) = nexttile; %axPlotAll(4) = subplot(nAx,1,4);
 plot(time,OutTableTest2.RotSpeed(idxTime), time,OutTable.RotSpeed(idxTime),time,OutTableTest1.RotSpeed(idxTime),'k--');
 axis tight; grid on;
+if ~isempty(ylimVal), ylim(gca,ylimVal(4,:)); end
 ylabel(yAxCell{4}); %'RotSpd \omega_r [rpm]')
 
 axPlotAll(5) = nexttile; %axPlotAll(5) = subplot(nAx,1,5);
 plot(time,OutTableTest2.NcIMUTAxs(idxTime),time,OutTable.NcIMUTAxs(idxTime),time,OutTableTest1.NcIMUTAxs(idxTime),'k--');
 axis tight; grid on;
+if ~isempty(ylimVal), ylim(gca,ylimVal(5,:)); end
 ylabel(yAxCell{6}); %'Twr_{FA} y_t[m/s^2]')
 
 axPlotAll(6) = nexttile; %axPlotAll(6) = subplot(nAx,1,6);
 plot(time,OutTableTest2.NcIMUTAys(idxTime),time,OutTable.NcIMUTAys(idxTime),time,OutTableTest1.NcIMUTAys(idxTime),'k--');
-axis tight; grid on;
+grid on; axis tight;
+if ~isempty(ylimVal), ylim(gca,ylimVal(5,:)); end
 ylabel(yAxCell{7}); %'Twr_{SW} x_t[m/s^2]')
 set(axPlotAll(6),'YLim', get(axPlotAll(5) ,'YLim'))
 
 axPlotAll(7) = nexttile; %axPlotAll(7) = subplot(nAx,1,7);
 plot(time,OutTableTest2.GenPwr(idxTime)/1000,time,OutTable.GenPwr(idxTime)/1000,time,OutTableTest1.GenPwr(idxTime)/1000,'k--');
 axis tight; grid on;
+if ~isempty(ylimVal), ylim(gca,ylimVal(7,:)); end
 ylabel(yAxCell{5}); %'GenPwr P_g [MW]')
 xlabel('Time (s)')
 linkaxes(axPlotAll,'x');
@@ -331,51 +343,51 @@ print(fullfile(figDir,['cmpTimeDomain_All',strFig]), '-depsc');
 if OutTable.Time(end) >1000
 
     % Create zoomed-in version of the figure
-figure(figNo1 + 2*allPlots + 1) % new figure number
-tiledlayout(nAx,1,'TileSpacing','Compact');
+    figure(figNo1 + 2*allPlots + 1) % new figure number
+    tiledlayout(nAx,1,'TileSpacing','Compact');
 
-for i = 1:nAx
-    axZoom(i) = nexttile;
-end
+    for i = 1:nAx
+        axZoom(i) = nexttile;
+    end
 
-% Re-plot each subplot with same data and axes
-plot(axZoom(1), time, vectAmpWind(idxTime), time, OutTableTest1.Wind(idxTime), 'k--');
-ylabel(axZoom(1), yAxCell{1}); title(axZoom(1), titleStr); grid(axZoom(1), 'on');
+    % Re-plot each subplot with same data and axes
+    plot(axZoom(1), time, vectAmpWind(idxTime), time, OutTableTest1.Wind(idxTime), 'k--');
+    ylabel(axZoom(1), yAxCell{1}); title(axZoom(1), titleStr); grid(axZoom(1), 'on');
 
-plot(axZoom(2), time, OutTableTest2.GenTq(idxTime)/1e3, time, OutTable.GenTq(idxTime), time, OutTableTest1.GenTq(idxTime)/1e3, 'k--');
-ylabel(axZoom(2), yAxCell{2}); grid(axZoom(2), 'on');
-posAxis = axis(axZoom(2));
-axis(axZoom(2), [posAxis(1:2), min(43,posAxis(3)), 44]);
+    plot(axZoom(2), time, OutTableTest2.GenTq(idxTime)/1e3, time, OutTable.GenTq(idxTime), time, OutTableTest1.GenTq(idxTime)/1e3, 'k--');
+    ylabel(axZoom(2), yAxCell{2}); grid(axZoom(2), 'on');
+    posAxis = axis(axZoom(2));
+    axis(axZoom(2), [posAxis(1:2), min(43,posAxis(3)), 44]);
 
-plot(axZoom(3), time, OutTableTest2.BlPitch1(idxTime), time, OutTable.BlPitch1(idxTime), time, OutTableTest1.BlPitch1(idxTime), 'k--');
-ylabel(axZoom(3), yAxCell{3}); grid(axZoom(3), 'on');
+    plot(axZoom(3), time, OutTableTest2.BlPitch1(idxTime), time, OutTable.BlPitch1(idxTime), time, OutTableTest1.BlPitch1(idxTime), 'k--');
+    ylabel(axZoom(3), yAxCell{3}); grid(axZoom(3), 'on');
 
-plot(axZoom(4), time, OutTableTest2.RotSpeed(idxTime), time, OutTable.RotSpeed(idxTime), time, OutTableTest1.RotSpeed(idxTime), 'k--');
-ylabel(axZoom(4), yAxCell{4}); grid(axZoom(4), 'on');
+    plot(axZoom(4), time, OutTableTest2.RotSpeed(idxTime), time, OutTable.RotSpeed(idxTime), time, OutTableTest1.RotSpeed(idxTime), 'k--');
+    ylabel(axZoom(4), yAxCell{4}); grid(axZoom(4), 'on');
 
-plot(axZoom(5), time, OutTableTest2.NcIMUTAxs(idxTime), time, OutTable.NcIMUTAxs(idxTime), time, OutTableTest1.NcIMUTAxs(idxTime), 'k--');
-ylabel(axZoom(5), yAxCell{6}); grid(axZoom(5), 'on');
+    plot(axZoom(5), time, OutTableTest2.NcIMUTAxs(idxTime), time, OutTable.NcIMUTAxs(idxTime), time, OutTableTest1.NcIMUTAxs(idxTime), 'k--');
+    ylabel(axZoom(5), yAxCell{6}); grid(axZoom(5), 'on');
 
-plot(axZoom(6), time, OutTableTest2.NcIMUTAys(idxTime), time, OutTable.NcIMUTAys(idxTime), time, OutTableTest1.NcIMUTAys(idxTime), 'k--');
-ylabel(axZoom(6), yAxCell{7}); grid(axZoom(6), 'on');
-set(axZoom(6),'YLim', get(axZoom(5),'YLim'))
+    plot(axZoom(6), time, OutTableTest2.NcIMUTAys(idxTime), time, OutTable.NcIMUTAys(idxTime), time, OutTableTest1.NcIMUTAys(idxTime), 'k--');
+    ylabel(axZoom(6), yAxCell{7}); grid(axZoom(6), 'on');
+    set(axZoom(6),'YLim', get(axZoom(5),'YLim'))
 
-plot(axZoom(7), time, OutTableTest2.GenPwr(idxTime)/1e3, time, OutTable.GenPwr(idxTime)/1e3, time, OutTableTest1.GenPwr(idxTime)/1e3, 'k--');
-ylabel(axZoom(7), yAxCell{5}); xlabel(axZoom(7), 'Time (s)'); grid(axZoom(7), 'on');
+    plot(axZoom(7), time, OutTableTest2.GenPwr(idxTime)/1e3, time, OutTable.GenPwr(idxTime)/1e3, time, OutTableTest1.GenPwr(idxTime)/1e3, 'k--');
+    ylabel(axZoom(7), yAxCell{5}); xlabel(axZoom(7), 'Time (s)'); grid(axZoom(7), 'on');
 
-% Link and zoom
-linkaxes(axZoom, 'x');
-xlim(axZoom(1), [600 1000]); % This sets zoom for all
+    % Link and zoom
+    linkaxes(axZoom, 'x');
+    xlim(axZoom(1), [600 1000]); % This sets zoom for all
 
-set(gcf,'Name',['cmpTimeDomain_AllZoom_',strFig])
-posDefault = get(0,'DefaultFigurePosition');
-set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*2.1]);
+    set(gcf,'Name',['cmpTimeDomain_AllZoom_',strFig])
+    posDefault = get(0,'DefaultFigurePosition');
+    set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*2.3]);
 
-set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
-set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
+    set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+    set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
-print(fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]), '-dpng');
-print(fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]), '-depsc');
+    print(fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]), '-dpng');
+    print(fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]), '-depsc');
 
 
 

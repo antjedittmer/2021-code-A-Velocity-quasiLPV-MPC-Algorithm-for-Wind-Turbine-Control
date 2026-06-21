@@ -415,8 +415,8 @@ for index =  speedVec
         posaxes =   get(0,'defaultFigurePosition');
         set(gcf,'Position',[posaxes(1:3),posaxes(4)*1.1]);
 
-        % print(figFolderStr, '-dpng');
-        % print(figFolderStrEps, '-depsc');
+        print(figFolderStr, '-dpng');
+        print(figFolderStrEps, '-depsc');
 
         
     end
