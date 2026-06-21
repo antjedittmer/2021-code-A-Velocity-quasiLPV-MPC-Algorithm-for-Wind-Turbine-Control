@@ -10,6 +10,7 @@ addpath(genpath('LinMdl'));
 initWorkspace;
 onlyDissPics = 1;
 allPlots = 0;
+filteredPlots = 0;
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
 % Bode plots of two linearized non-linear wind turbine models with linearized 
@@ -51,6 +52,7 @@ end
 ylimVal = flipud(yl);
 
 % For tests with filtered wind speed
+if filteredPlots == 1
 simMdlname1 = 'test_SimulinkMdl1_Baseline';
 simMdlname2 = 'test_SimulinkMdl2_Baseline';
 simMdlCell = {simMdlname1,simMdlname2};
@@ -74,6 +76,7 @@ for idxM = 1: length(simMdlCell)
     set_param(block{1}, 'ModelName', strrep(refModel, '_WindFiltered',''));
     
 end
+end
 
 if onlyDissPics ==  0
     figNo = figNo + 1;
@@ -88,9 +91,10 @@ end
 
 % Run models in closed loop with qLPV MPC
 useFASTForComparison = 1;
+useTitle = [0,1]; % for thesis
 loadData = 0;
 figNo = figNo + 1;
-runCompareCtrl('Sweep',loadData,figNo,useFASTForComparison,figDirStr);
+runCompareCtrl('Sweep',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 figNo = figNo + 1;
-runCompareCtrl('NTW18',loadData,figNo,useFASTForComparison,figDirStr);
+runCompareCtrl('NTW18',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 
