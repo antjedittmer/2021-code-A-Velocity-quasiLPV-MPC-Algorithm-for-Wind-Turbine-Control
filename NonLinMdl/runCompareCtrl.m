@@ -34,7 +34,7 @@ if nargin <5 || isempty(figDirStr)
 end
 
 if nargin < 6 || isempty(useTitle)
-    useTitle = [0,1];
+    useTitle = [1,0]; %[0,0];
 end
 
 %% Set path to directories
@@ -114,9 +114,9 @@ DT = 0.008;
 r = GenPwrRef;
 
 % Plot and compare closed-loop results
-plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle)
+plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType)
 
-function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle)
+function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType)
 %plotComparison plots the time series obtained with baseline and qLPVMPC
 
 %% Handle optional inputs
@@ -154,10 +154,60 @@ ratioStd = sprintf('%2.1f ', varPI/varqLPV);
 
 varPI_Pwr = var(abs(PGRef - OutTableTest2Plot.GenPwr));
 varqLPV_Pwr = var(abs(PGRef - OutTableMPCPlot.GenPwr));
+
+
 titleStdPI_Pwr = sprintf('%2.2e',varPI_Pwr);
 titleStdqLPV_Pwr = sprintf('%2.2e',varqLPV_Pwr);
 ratioStd_Pwr = sprintf('%2.1f ', varPI_Pwr/varqLPV_Pwr);
 
+% --- Sample time ---
+dt = mean(diff(timeVecPlot));
+
+% --- Compute derivatives ---
+dGenTq_PI   = diff(OutTableTest2Plot.GenTq/1000) / dt;  % kNm/s
+dGenTq_qLPV = diff(OutTableMPCPlot.GenTq/1000)  / dt;
+dPitch_PI   = diff(OutTableTest2Plot.BlPitch1)   / dt;  % deg/s
+dPitch_qLPV = diff(OutTableMPCPlot.BlPitch1)     / dt;
+
+% --- Define metrics ---
+metrics = {
+%  Label                      std_PI                                            std_qLPV                                          unit
+'Tower fore-aft acc.',        std(OutTableTest2Plot.NcIMUTAxs),                 std(OutTableMPCPlot.NcIMUTAxs),                  'm/s^2';
+'Power tracking error',       std(abs(PGRef - OutTableTest2Plot.GenPwr)),       std(abs(PGRef - OutTableMPCPlot.GenPwr)),         'MW';
+'Generator torque rate',      std(dGenTq_PI),                                   std(dGenTq_qLPV),                                'kNm/s';
+'Blade pitch rate',           std(dPitch_PI),                                   std(dPitch_qLPV),                                'deg/s';
+};
+
+% --- Print variance ratios to console (for use in text) ---
+fprintf('\n--- Variance ratios (PI/qLMPC, for text) ---\n');
+for i = 1:size(metrics, 1)
+    var_PI   = metrics{i,2}^2;
+    var_qLPV = metrics{i,3}^2;
+    fprintf('%s: var_PI = %.4e, var_qLPV = %.4e, ratio = %.2f\n', ...
+        metrics{i,1}, var_PI, var_qLPV, var_PI/var_qLPV);
+end
+
+% --- Write LaTeX table (std ratio only) ---
+fid = fopen(['results_table',strWindType,'.tex'], 'w');
+fprintf(fid, '\\begin{table}[h]\n');
+fprintf(fid, '\\centering\n');
+fprintf(fid, '\\caption[Controller comparison: PI baseline vs.\\ qLMPC.]{Controller comparison: PI baseline vs.\\ qLMPC. The standard deviation ratio $\\sigma_\\text{PI}/\\sigma_\\text{qLMPC}$ is shown; values above 1 indicate improvement.}\n');
+fprintf(fid, '\\label{tab:ControllerComparison}\n');
+fprintf(fid, '\\begin{tabular}{lSSSS}\n');
+fprintf(fid, '\\toprule\n');
+fprintf(fid, '{Metric} & {Unit} & {$\\sigma$ PI} & {$\\sigma$ qLMPC} & {$\\sigma$ ratio} \\\\\n');
+fprintf(fid, '\\midrule\n');
+for i = 1:size(metrics, 1)
+    std_PI   = metrics{i,2};
+    std_qLPV = metrics{i,3};
+    fprintf(fid, '%s & %s & %.4f & %.4f & %.2f \\\\\n', ...
+        metrics{i,1}, metrics{i,4}, std_PI, std_qLPV, std_PI/std_qLPV);
+end
+fprintf(fid, '\\bottomrule\n');
+fprintf(fid, '\\end{tabular}\n');
+fprintf(fid, '\\end{table}\n');
+fclose(fid);
+fprintf('Table written to results_table.tex\n');
 % axis for plot
 yAxCell = {'Wind V (m/s)', 'Twr_{FA} (m/s^2)','GenPwr P_g (kW)'};
 
@@ -304,8 +354,18 @@ end
 
 axPlotAll(idxT) = nexttile; %axPlotAll(7) = subplot(nAx,1,7);
 plot(timeVecPlot,OutTableTest2Plot.GenPwr/1000,timeVecPlot,OutTableMPCPlot.GenPwr/1000,'-.');
+hold on; plot(timeVecPlot,PGRef/1000,'k--')
 axis tight; grid on;
 ylabel(yAxCell{idxT}); %'GenPwr P_g [MW]')
+
+ax_pwr = gca;
+text(ax_pwr, 0.55, 0.17, 'P_{g,ref} (black dashed line)', ...
+    'Units', 'normalized', ...
+    'Interpreter', 'tex', ...
+    'FontSize', 12, ...
+    'BackgroundColor', [1 1 1 0.7], ...
+    'Color', 'k');
+
 xlabel('Time (s)')
 linkaxes(axPlotAll,'x');
 

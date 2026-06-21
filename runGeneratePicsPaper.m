@@ -92,7 +92,7 @@ end
 % Run models in closed loop with qLPV MPC
 useFASTForComparison = 1;
 useTitle = [0,1]; % for thesis
-loadData = 0;
+loadData = 1;
 figNo = figNo + 1;
 runCompareCtrl('Sweep',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 figNo = figNo + 1;
