@@ -14,7 +14,7 @@ function runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirS
 % The default inputs are provided here.
 
 if ~nargin || isempty(strWindType) 
-    strWindType =  'NTW18';  %  'Sweep'; % 
+    strWindType =  'NTW18';  %  ; % 'Sweep'; %
 end
 
 if nargin < 2 || isempty(loadData)
@@ -30,11 +30,11 @@ if nargin < 4 || isempty(useFASTForComparison)
 end
 
 if nargin <5 || isempty(figDirStr)
-    figDirStr = 'figDir';
+    figDirStr = 'figDir7';
 end
 
 if nargin < 6 || isempty(useTitle)
-    useTitle = [1,0]; %[0,0];
+    useTitle = [0,1]; %[0,0];
 end
 
 %% Set path to directories
@@ -359,11 +359,14 @@ axis tight; grid on;
 ylabel(yAxCell{idxT}); %'GenPwr P_g [MW]')
 
 ax_pwr = gca;
-text(ax_pwr, 0.55, 0.17, 'P_{g,ref} (black dashed line)', ...
+text(ax_pwr, ... 
+     0.55, 0.17, 'P_{g,ref} (black dashed line)', ...
+    ...  % 0.85, 0.17, 'P_{g,ref}',..
     'Units', 'normalized', ...
     'Interpreter', 'tex', ...
-    'FontSize', 12, ...
+    'FontSize', 11, ...
     'BackgroundColor', [1 1 1 0.7], ...
+    'Margin', 0.01, ...          % default is 3, reducing tightens the box
     'Color', 'k');
 
 xlabel('Time (s)')

@@ -329,7 +329,8 @@ linkaxes(axPlotAll,'x');
 
 set(gcf,'Name',['cmpTimeDomain_All',strFig])
 posDefault = get(0,'DefaultFigurePosition');
-set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*2.1]);
+pl = 2.4;
+set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*pl]);
 
 set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
@@ -381,7 +382,7 @@ if OutTable.Time(end) >1000
 
     set(gcf,'Name',['cmpTimeDomain_AllZoom_',strFig])
     posDefault = get(0,'DefaultFigurePosition');
-    set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*2.3]);
+    set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*pl]);
 
     set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)

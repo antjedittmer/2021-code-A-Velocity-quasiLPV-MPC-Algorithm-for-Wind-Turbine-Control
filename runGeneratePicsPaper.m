@@ -2,7 +2,6 @@
 clc; clear; close all;
 
 
-
 %% Set path to initialization script initWorkspace and run it
 addpath(genpath('NonLinMdl'));
 addpath(genpath('LinMdl'));
@@ -13,8 +12,8 @@ allPlots = 0;
 filteredPlots = 0;
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
-% Bode plots of two linearized non-linear wind turbine models with linearized 
-% FAST models. 
+% Bode plots of two linearized non-linear wind turbine models with linearized
+% FAST models.
 
 % Create Bode plots for comparison
 speedVec = [1,8,9,22] ; %[1,8,9,22];
@@ -25,10 +24,10 @@ if onlyDissPics ==  0
     plotNormBodePlots(gapCell,speedVec,figDirStr);
 end
 
-%% Simulink simulations 
+%% Simulink simulations
 % Simulink models are compared with FAST (NREL) references.
 % FAST simulation results obtained with FASTTool (Tu Delft) are provided as
-% mat-files in dataIn folder. 
+% mat-files in dataIn folder.
 
 %Load data if available from previous simulation.
 loadData = 1;
@@ -37,7 +36,7 @@ updateDDMdl1(0.75);
 % Run Simulink models in closed loop w baseline controller( Torque controller
 % k-omega-squared, Pitch controller: Gainscheduled Pi)
 yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch (°)', 'RotSpd (rpm)',...
-    'GenPwr (MW)','Twr_{FA} (m/s^2)', 'Twr_{SW} (m/s^2)'};
+    'GenPwr (MW)','TwrAcc_{FA} (m/s^2)', 'TwrAcc_{SW} (m/s^2)'};
 
 figNo = 2;
 normStruct.Sweep = runCompareModels('Sweep',loadData,figNo,yAxCell,figDirStr,allPlots);
@@ -53,29 +52,29 @@ ylimVal = flipud(yl);
 
 % For tests with filtered wind speed
 if filteredPlots == 1
-simMdlname1 = 'test_SimulinkMdl1_Baseline';
-simMdlname2 = 'test_SimulinkMdl2_Baseline';
-simMdlCell = {simMdlname1,simMdlname2};
+    simMdlname1 = 'test_SimulinkMdl1_Baseline';
+    simMdlname2 = 'test_SimulinkMdl2_Baseline';
+    simMdlCell = {simMdlname1,simMdlname2};
 
-for idxM = 1: length(simMdlCell)
-    load_system(simMdlCell{idxM})
-    block = find_system(simMdlCell{idxM}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
-    refModel = get_param(block{1}, 'ModelName');
-    if ~contains(refModel,'WindFiltered')
-        set_param(block{1}, 'ModelName', [refModel, '_WindFiltered']);
+    for idxM = 1: length(simMdlCell)
+        load_system(simMdlCell{idxM})
+        block = find_system(simMdlCell{idxM}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+        refModel = get_param(block{1}, 'ModelName');
+        if ~contains(refModel,'WindFiltered')
+            set_param(block{1}, 'ModelName', [refModel, '_WindFiltered']);
+        end
     end
-end
-figNo = figNo + 1;
-runCompareModels(18,0,figNo,yAxCell,figDirStr,allPlots,ylimVal);
+    figNo = figNo + 1;
+    runCompareModels(18,0,figNo,yAxCell,figDirStr,allPlots,ylimVal);
 
-% Remove the filters again
-for idxM = 1: length(simMdlCell)
-    load_system(simMdlCell{idxM})
-    block = find_system(simMdlCell{idxM}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
-    refModel = get_param(block{1}, 'ModelName');
-    set_param(block{1}, 'ModelName', strrep(refModel, '_WindFiltered',''));
-    
-end
+    % Remove the filters again
+    for idxM = 1: length(simMdlCell)
+        load_system(simMdlCell{idxM})
+        block = find_system(simMdlCell{idxM}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+        refModel = get_param(block{1}, 'ModelName');
+        set_param(block{1}, 'ModelName', strrep(refModel, '_WindFiltered',''));
+
+    end
 end
 
 if onlyDissPics ==  0
