@@ -49,7 +49,8 @@ if ~isfolder(figFolder)
     mkdir(figFolder);
 end
 
-if nargin < 3, useActuatorStates = 0; end
+if nargin < 3 || isempty(useActuatorStates)
+    useActuatorStates = 0; end
 
 if nargin < 4, figNoAdd = 0; close all; end
 

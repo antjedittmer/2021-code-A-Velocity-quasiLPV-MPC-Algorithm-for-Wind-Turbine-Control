@@ -91,9 +91,21 @@ end
 % Run models in closed loop with qLPV MPC
 useFASTForComparison = 1;
 useTitle = [0,1]; % for thesis
-loadData = 1;
+loadData = 0;
 figNo = figNo + 1;
 runCompareCtrl('Sweep',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 figNo = figNo + 1;
 runCompareCtrl('NTW18',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
+
+%% For debugging
+varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
+    'NcIMUTAxs', 'NcIMUTAys'};
+OutDataTable13 = array2table(OutDataTest,'VariableNames',varnames);
+% time0 = OutTable.Time(1:length(OutDataTable.GenPwr));
+% idxT = time0 >= 30;
+% time1 = time0(idxT);
+% figure; subplot(2,1,1); plot(time1,OutDataTable13.GenPwr(idxT));
+% subplot(2,1,2); plot(time1,OutDataTable13.NcIMUTAxs(idxT));
+% OutDataTable04= array2table(OutDataTest,'VariableNames',varnames);
+% OutDataTable08= array2table(OutDataTest,'VariableNames',varnames);
 

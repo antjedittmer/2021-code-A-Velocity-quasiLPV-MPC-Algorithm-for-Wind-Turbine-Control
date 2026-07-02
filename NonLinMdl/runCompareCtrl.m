@@ -183,9 +183,19 @@ fprintf('\n--- Variance ratios (PI/qLMPC, for text) ---\n');
 for i = 1:size(metrics, 1)
     var_PI   = metrics{i,2}^2;
     var_qLPV = metrics{i,3}^2;
-    fprintf('%s: var_PI = %.4e, var_qLPV = %.4e, ratio = %.2f\n', ...
+    fprintf('%s: var_PI = %.3f, var_qLPV = %.3f, ratio = %.2f\n', ...
         metrics{i,1}, var_PI, var_qLPV, var_PI/var_qLPV);
 end
+
+% --- Print variance ratios to console (for use in text) ---
+fprintf('\n--- Std ratios (PI/qLMPC, for text) ---\n');
+for i = 1:size(metrics, 1)
+    var_PI   = metrics{i,2};
+    var_qLPV = metrics{i,3};
+    fprintf('%s: var_PI = %.2f, var_qLPV = %.2f, ratio = %.2f\n', ...
+        metrics{i,1}, var_PI, var_qLPV, var_PI/var_qLPV);
+end
+
 
 % --- Write LaTeX table (std ratio only) ---
 fid = fopen(['results_table',strWindType,'.tex'], 'w');
