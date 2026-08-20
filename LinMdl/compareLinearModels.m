@@ -1,4 +1,4 @@
-function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder, useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,x)
+function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder,useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,xWeights,allPlots)
 % compareLinearModels compares two sets of linearized turbine models with
 % linearized FASTTool models at different wind speeds.
 % All inputs are optional.
@@ -24,7 +24,12 @@ function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder, useActuatorS
 % - figNoAdd: Add integer to figure number (100 + index) (Default: 0)
 % - createBodePlots: Bode plots for analysis (Default: 1)
 % - plotVisible: Figure visible (Default: 'on')
-%
+% - noOut: Rotor speed and Tower Foreaft Acc (2), additional Side-Side (3, default)
+% - xWeights: Weights for optimization: Modal blade mass, generator
+%   inertia, and damping ratio of blade (Default: [1,1,1])
+% - allPlots: Generate all plots, including norm plots (Default: 0)
+% - plotOnCpCt: Plot the Cp and Ct
+
 % Bindu Sharan, Antje Dittmer, ICS TUHH
 % TU Delft model (ll. 175- 222): Atindriyo K. Pamososuryo and Jan-Willem
 % van Wingerden (with small additions: Antje Dittmer)
@@ -41,26 +46,29 @@ if nargin == 0 || isempty(speedVec)
     speedVec = [1,8,9,22]; % variations of wind speed
 end
 
-if nargin < 2 || isempty(figFolder)
-    figFolder = fullfile(mainDir,'figDir');
+if nargin < 2 || isempty(figFolder),figFolder = fullfile(mainDir,'figDir');
 end
+
 % Create output folder
-if ~isfolder(figFolder)
-    mkdir(figFolder);
+if ~isfolder(figFolder),mkdir(figFolder); end
+
+if nargin < 3 || isempty(useActuatorStates), useActuatorStates = 0; end
+
+if nargin < 4 || isempty(useActuatorStates), figNoAdd = 0; end
+
+if nargin < 5 || isempty(createBodePlots), createBodePlots = 1; close all;
 end
 
-if nargin < 3 || isempty(useActuatorStates)
-    useActuatorStates = 0; end
+if nargin < 6 || isempty(plotVisible),  plotVisible = 'on'; end
 
-if nargin < 4, figNoAdd = 0; close all; end
+if nargin < 7 || isempty(noOut), noOut = 3; end
 
-if nargin < 5, createBodePlots = 1; close all;  end
+if nargin < 8  || isempty(xWeights), xWeights = [1,1,1]; end
 
-if nargin < 6,  plotVisible = 'on';  end
+if nargin < 9 || isempty(allPlots), allPlots = 0; end
 
-if nargin < 7, noOut = 3;  end
+if nargin < 10, plotOnCpCt = 0; end
 
-if nargin < 8, x = [1,1,1]; end
 
 
 %% Load and initialize name of models and load into workspace
@@ -93,7 +101,7 @@ end
 
 % Wind energy conversion system (WECS) parameters
 [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct ] = ...
-    initModel5MWNREL(0, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder,0.75,x);
+    initModel5MWNREL(plotOnCpCt, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder,0.75,xWeights); %  
 wecs.Js = wecs.Jr + wecs.Ng^2 * wecs.Jg;
 
 %% Compute aerodynamic force and torque gradients
@@ -268,9 +276,9 @@ for index =  speedVec
         B1_3(7,2) * [-dTrdV, -dTrdV*wecs.rb, 0, dTrdomega,0];... % xSWdot
         B1_3(8,2) * [-dTrdV, -dTrdV*wecs.rb, 0, dTrdomega,0];... % omega_r
         zeros(1,5)];  % omega_gr
-   
+
     % B1_3 has the order: F_T, T_r, T_g
-    QTildaTg =  [0;0; B1_3(7,3); 0; B1_3(9,3)]; 
+    QTildaTg =  [0;0; B1_3(7,3); 0; B1_3(9,3)];
     QTildaBeta = [B1_3(5,1) *dFtdbeta; B1_3(6,1)*dFtdbeta; B1_3(7,2) * dTrdbeta;...
         B1_3(8,2)*dTrdbeta;0];
     QTildaV = [B1_3(5,1) * dFtdV; B1_3(6,1) * dFtdV; B1_3(7,2) * dTrdV;...
@@ -378,31 +386,33 @@ for index =  speedVec
         % Gap and nugap metric results
         tempNormMatrix5 = nan(size(sysLagrange));
         tempNormMatrix9 = nan(size(sysLagrange));
-        for idxOut = 1:size(sysLagrange,1)
-            for idxIn = 1:size(sysLagrange,2)
-                [gapCell.gap9DoF{index}(idxOut,idxIn),gapCell.nugap9DoF{index}(idxOut,idxIn)] = gapmetric(sysLagrange(idxOut,idxIn),model(idxOut,idxIn));
-                [gapCell.gap5DoF{index}(idxOut,idxIn),gapCell.nugap5DoF{index}(idxOut,idxIn)] = gapmetric(sys5DoF(idxOut,idxIn),model(idxOut,idxIn));
+        if allPlots == 1
+            for idxOut = 1:size(sysLagrange,1)
+                for idxIn = 1:size(sysLagrange,2)
+                    [gapCell.gap9DoF{index}(idxOut,idxIn),gapCell.nugap9DoF{index}(idxOut,idxIn)] = gapmetric(sysLagrange(idxOut,idxIn),model(idxOut,idxIn));
+                    [gapCell.gap5DoF{index}(idxOut,idxIn),gapCell.nugap5DoF{index}(idxOut,idxIn)] = gapmetric(sys5DoF(idxOut,idxIn),model(idxOut,idxIn));
 
-                %% For debugging
-                % [gapCell.gap59DoF{index}(idxOut,idxIn),gapCell.nugap59DoF{index}(idxOut,idxIn)] =
-                % ...
-                % gapmetric(sysLagrange(idxOut,idxIn),sys5DoF(idxOut,idxIn));
+                    %% For debugging
+                    % [gapCell.gap59DoF{index}(idxOut,idxIn),gapCell.nugap59DoF{index}(idxOut,idxIn)] =
+                    % ...
+                    % gapmetric(sysLagrange(idxOut,idxIn),sys5DoF(idxOut,idxIn));
 
-                mag_9DOF = 20*log10(squeeze(mag9DoF(idxOut,idxIn,:)));    % Squeeze to get a 1D array
-                mag_5DOF = 20*log10(squeeze(mag5DoF(idxOut,idxIn,:)));
-                mag_FAST = 20*log10(squeeze(magFAST(idxOut,idxIn,:)));
+                    mag_9DOF = 20*log10(squeeze(mag9DoF(idxOut,idxIn,:)));    % Squeeze to get a 1D array
+                    mag_5DOF = 20*log10(squeeze(mag5DoF(idxOut,idxIn,:)));
+                    mag_FAST = 20*log10(squeeze(magFAST(idxOut,idxIn,:)));
 
-                % figure; semilogx(freq9DoF,mag_9DOF,freq9DoF,mag_5DOF,'k--',freq9DoF,mag_FAST)
-                tempNormMatrix9(idxOut,idxIn) = norm(mag_9DOF - mag_FAST)/norm(mag_FAST);
-                tempNormMatrix5(idxOut,idxIn) = norm(mag_5DOF - mag_FAST)/norm(mag_FAST);
+                    % figure; semilogx(freq9DoF,mag_9DOF,freq9DoF,mag_5DOF,'k--',freq9DoF,mag_FAST)
+                    tempNormMatrix9(idxOut,idxIn) = norm(mag_9DOF - mag_FAST)/norm(mag_FAST);
+                    tempNormMatrix5(idxOut,idxIn) = norm(mag_5DOF - mag_FAST)/norm(mag_FAST);
 
+                end
             end
+
+            gapCell.norm9DoF{index} = tempNormMatrix9;
+            gapCell.norm5DoF{index} = tempNormMatrix5;
         end
 
-        gapCell.norm9DoF{index} = tempNormMatrix9;
-        gapCell.norm5DoF{index} = tempNormMatrix5;
 
-        
         % Title string
         titleStr = sprintf('Bode mag. plot for V = %d, pitch = %2.2f, and TSR = %2.4f',Vbar,beta_bar,Lambda_bar);
         titleCell = {titleStr, [legCell{1},legCell{2},strExtr]};
@@ -419,7 +429,7 @@ for index =  speedVec
         print(figFolderStr, '-dpng');
         print(figFolderStrEps, '-depsc');
 
-        
+
     end
 
 end

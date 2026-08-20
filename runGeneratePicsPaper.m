@@ -7,18 +7,28 @@ addpath(genpath('NonLinMdl'));
 addpath(genpath('LinMdl'));
 
 initWorkspace;
-onlyDissPics = 1;
-allPlots = 0;
-filteredPlots = 0;
+onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
+allPlots = 0; % generate all plots, including norm plots
+filteredPlots = 1; % plots with filter
+
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
 % Bode plots of two linearized non-linear wind turbine models with linearized
 % FAST models.
 
 % Create Bode plots for comparison
-speedVec = [1,8,9,22] ; %[1,8,9,22];
+speedVec = [1,8,9,22] ;
 figDirStr = 'figDir7';
-[sysOut,gapCell] = compareLinearModels(speedVec,figDirStr); %
+
+useActuatorStates = 0;
+figNoAdd = 0;
+createBodePlots = 1;
+plotVisible = 'on';
+noOut = 3;
+xWeights = [1,1,1];
+
+[sysOut,gapCell] = compareLinearModels(speedVec,figDirStr,...
+    useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,xWeights,allPlots); %
 
 if onlyDissPics ==  0
     plotNormBodePlots(gapCell,speedVec,figDirStr);
@@ -77,7 +87,7 @@ if filteredPlots == 1
     end
 end
 
-if onlyDissPics ==  0
+if onlyDissPics == 0
     figNo = figNo + 1;
     normStruct.EOG = runCompareModels('EOG',loadData,figNo,yAxCell,figDirStr);
     save('normsGapCell','gapCell', 'normStruct');
@@ -91,16 +101,17 @@ end
 % Run models in closed loop with qLPV MPC
 useFASTForComparison = 1;
 useTitle = [0,1]; % for thesis
-loadData = 0;
+loadDataCtrlTest = loadData; % this can be changed here
 figNo = figNo + 1;
 runCompareCtrl('Sweep',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 figNo = figNo + 1;
 runCompareCtrl('NTW18',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 
 %% For debugging
-varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
-    'NcIMUTAxs', 'NcIMUTAys'};
-OutDataTable13 = array2table(OutDataTest,'VariableNames',varnames);
+
+% varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
+%     'NcIMUTAxs', 'NcIMUTAys'};
+% OutDataTable13 = array2table(OutDataTest,'VariableNames',varnames);
 % time0 = OutTable.Time(1:length(OutDataTable.GenPwr));
 % idxT = time0 >= 30;
 % time1 = time0(idxT);
