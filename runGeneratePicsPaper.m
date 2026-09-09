@@ -9,7 +9,7 @@ addpath(genpath('LinMdl'));
 initWorkspace;
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots
-filteredPlots = 1; % plots with filter
+filteredPlots = 0; % plots with filter for turbulent wind
 
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
