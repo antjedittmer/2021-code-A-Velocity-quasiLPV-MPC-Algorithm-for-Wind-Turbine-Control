@@ -9,7 +9,7 @@ addpath(genpath('LinMdl'));
 initWorkspace;
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots
-filteredPlots = 0; % plots with filter for turbulent wind
+filteredPlots = 1; % plots with filter for turbulent wind
 
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
@@ -18,7 +18,7 @@ filteredPlots = 0; % plots with filter for turbulent wind
 
 % Create Bode plots for comparison
 speedVec = [1,8,9,22] ;
-figDirStr = 'figDir7';
+figDirStr = 'figDir';
 
 useActuatorStates = 0;
 figNoAdd = 0;
@@ -48,7 +48,9 @@ updateDDMdl1(0.75);
 yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch (°)', 'RotSpd (rpm)',...
     'GenPwr (MW)','TwrAcc_{FA} (m/s^2)', 'TwrAcc_{SW} (m/s^2)'};
 
-figNo = 2;
+figNo = 2; % 4 m/s -> 
+normStruct.Sweep = runCompareModels('Step',loadData,figNo,yAxCell,figDirStr,allPlots);
+figNo = figNo + 2;
 normStruct.Sweep = runCompareModels('Sweep',loadData,figNo,yAxCell,figDirStr,allPlots);
 figNo = figNo + 1;
 normStruct.NTM18 = runCompareModels(18,loadData,figNo,yAxCell,figDirStr,allPlots);
@@ -105,7 +107,7 @@ loadDataCtrlTest = loadData; % this can be changed here
 figNo = figNo + 1;
 runCompareCtrl('Sweep',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 figNo = figNo + 1;
-runCompareCtrl('NTW18',loadData,figNo,useFASTForComparison,figDirStr,useTitle);
+runCompareCtrl(18,loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 
 %% For debugging
 

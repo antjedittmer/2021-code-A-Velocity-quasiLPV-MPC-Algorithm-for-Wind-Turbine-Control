@@ -77,9 +77,14 @@ kVeFilt = 0.25;
 kVeFilt_tau = 0.75;
 
 if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
-    outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
+    outDataSimulationMat = 'OutDataSweep.mat'; %
     strFig = '';
     testCaseStr = 'Wind Sweep';
+    step_thresshold = 0;
+elseif strcmp(strWindType,'Step') == 1 % sweep from 4 to 25 in steps
+    outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
+    strFig = 'Step';
+    testCaseStr = 'Wind Step';
     step_thresshold = 0;
 elseif isa(strWindType,'double')  % wind with average 18 m/s
     outDataSimulationMat = sprintf('OutDataWind%02dNTW.mat',strWindType);
