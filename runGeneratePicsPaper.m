@@ -1,6 +1,7 @@
 %% Script to generate pictures for paper
 clc; clear; close all;
 
+Simulink.data.dictionary.closeAll('-discard');
 
 %% Set path to initialization script initWorkspace and run it
 addpath(genpath('NonLinMdl'));
@@ -9,7 +10,7 @@ addpath(genpath('LinMdl'));
 initWorkspace;
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots
-filteredPlots = 1; % plots with filter for turbulent wind
+filteredPlots = 0; % plots with filter for turbulent wind
 
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
@@ -121,4 +122,99 @@ runCompareCtrl(18,loadData,figNo,useFASTForComparison,figDirStr,useTitle);
 % subplot(2,1,2); plot(time1,OutDataTable13.NcIMUTAxs(idxT));
 % OutDataTable04= array2table(OutDataTest,'VariableNames',varnames);
 % OutDataTable08= array2table(OutDataTest,'VariableNames',varnames);
+
+
+%% Run baseline PI algorithm with different rate limits
+
+%-- define sldd to change
+%% Get Data Directory value of pitch actuator rate
+DDName = 'DD_Mdl1.sldd'; %'DD_MdlCtrl_qLPVMPC.sldd';
+try
+    myDictionaryObj = Simulink.data.dictionary.open(DDName);
+    if myDictionaryObj.HasUnsavedChanges
+        discardChanges(myDictionaryObj);
+    end
+    myDictionaryObj.close();
+catch
+    % Dictionary wasn't open, nothing to do
+end
+myDictionaryObj = Simulink.data.dictionary.open(DDName);
+dDataSectObj = getSection(myDictionaryObj,'Design Data');
+controlObj = getEntry(dDataSectObj,'controlValue');
+controlValue = getValue(controlObj);
+
+%% Set vector which pitch rate constraints to be test
+maxRateVector = 1:13;
+outDataSimulationMat = 'OutDataWind18NTW.mat';
+dataDirOut = fullfile(mfilename('fullpath'),'dataOut');
+
+%- MPC Loop over pitch rate constraint vector 
+nRate = length(maxRateVector);
+currentOutTableTestCell = cell(nRate,1); % cell with
+tictoc_LPVMPCcell = cell(nRate,1);
+GenPwrRefCell= cell(nRate,1);
+
+simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta'; %simMdlname = 'test_SimulinkMdl3LPV_MPC_a.slx';
+
+for idx = 1:13
+    maxRate = maxRateVector(idx);
+    controlValue.Pitch.Maxrate = maxRate;
+    controlValue.Pitch.Minrate = - maxRate;
+    setValue(controlObj,controlValue);
+    saveChanges(myDictionaryObj);
+
+   % Force model to pick up new dictionary values
+    if bdIsLoaded(simMdlname)
+        close_system(simMdlname, 0);  % close without saving
+    end
+    load_system(simMdlname);
+    
+    if strcmp(outDataSimulationMat,'OutDataWind18NTW.mat')
+        matFileOutTableTest1 = fullfile(dataDirOut,...
+            sprintf('OutTableTest_rate%02d_MPC.mat',maxRate));
+    else
+        matFileOutTableTest1 = fullfile(dataDirOut,...
+            sprintf('OutTableTest_rate%02d_MPC_NTW16.mat',maxRate));
+    end
+       
+   [currentOutTableTestCell{idx}, tictoc_LPVMPCcell{idx},GenPwrRefCell{idx}] = ...
+        getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname);
+end
+
+
+%% Get Data Directory value of pitch actuator rate
+DDNameCtrl = 'DD_CtrlBaseline.sldd';
+myDictionaryCtrlObj = Simulink.data.dictionary.open(DDNameCtrl);
+dDataSectCtrlObj = getSection(myDictionaryCtrlObj,'Design Data');
+controlCtrlObj = getEntry(dDataSectCtrlObj,'Control');
+controlValue = getValue(controlCtrlObj);
+
+currentOutTablePICell = cell(nRate,1); % cell with
+
+simMdlname = 'test_SimulinkMdl2_Baseline';
+loadData1 = loadData;
+
+for idx = 1 : nRate
+    maxRate = maxRateVector(idx);
+    controlValue = getValue(controlCtrlObj);
+    controlValue.Pitch.Maxrate = maxRate;
+    controlValue.Pitch.Minrate = - maxRate;
+    setValue(controlCtrlObj,controlValue);
+    saveChanges(myDictionaryCtrlObj)
+    clear controlValue; 
+   
+     if strcmp(outDataSimulationMat,'OutDataWind18NTW.mat')
+        matFileOutTableTest1 = fullfile(dataDirOut,...
+        sprintf('OutTableTest_rate%02d_PI.mat',maxRate));
+
+
+     else
+          matFileOutTableTest1 = fullfile(dataDirOut,...
+        sprintf('OutTableTest_rate%02d_PI_NTW16.mat',maxRate));
+    
+    end
+    
+    currentOutTablePICell{idx} = ...
+        getSimulationOutputTable(matFileOutTableTest1,loadData1,OutTable,simMdlname);
+end
 

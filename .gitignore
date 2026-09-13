@@ -5,6 +5,7 @@ figDir/
 
 *.asv
 *.csv
+*.tex
 *.m~
 
 *.mexa64
