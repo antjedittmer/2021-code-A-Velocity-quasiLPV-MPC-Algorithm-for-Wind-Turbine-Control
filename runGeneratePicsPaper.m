@@ -101,7 +101,7 @@ end
 % plotNormTimePlots(normStruct,figNo,figDirStr);
 
 % Run models in closed loop with qLPV MPC
-useFASTForComparison = 1;
+useFASTForComparison = 0; % compare with PI on the same simplified Simulink model (Mdl_BianchiOL)
 useTitle = [0,1]; % for thesis
 loadDataCtrlTest = loadData; % this can be changed here
 figNo = figNo + 1;
