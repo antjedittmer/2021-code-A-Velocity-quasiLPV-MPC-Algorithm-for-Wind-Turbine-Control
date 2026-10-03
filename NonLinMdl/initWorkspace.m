@@ -1,6 +1,13 @@
 %% Clear workspace
-clear; close all; clc; 
-restoredefaultpath;
+clear; close all; clc;
+% Remove only this repository's folders from the path (e.g. Sandbox copies).
+% restoredefaultpath would also remove user and add-on paths.
+dirRepo = fileparts(fileparts(mfilename('fullpath')));
+dirPathCell = strsplit(path, pathsep);
+dirPathCell = dirPathCell(startsWith(dirPathCell, dirRepo, 'IgnoreCase', ispc));
+if ~isempty(dirPathCell)
+    rmpath(dirPathCell{:});
+end
 bdclose all;
 clear ABgL_WT; % LUT variables saved as persistent variables
 Simulink.data.dictionary.closeAll;
