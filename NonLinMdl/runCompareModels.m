@@ -19,7 +19,7 @@ if ~nargin || isempty(strWindType)
 end
 
 if nargin < 2 || isempty(loadData)
-    loadData = 0; %load simulation output data if available;
+    loadData = 1; %load simulation output data if available;
 end
 
 if nargin < 3 || isempty(figNo1)
@@ -28,7 +28,7 @@ end
 figNo2 = figNo1 + 1;
 
 if nargin < 4 || isempty(yAxCell) % Axes labels for figure
-    yAxCell = {'Wind V (m/s)', 'GenTq T_g (kNm)', 'Pitch \beta (°)', 'RotSpd \omega_r (rpm)',...
+    yAxCell = {'Wind V (m/s)', 'GenTq T_g (kNm)', 'Pitch \beta (ï¿½)', 'RotSpd \omega_r (rpm)',...
         'GenPwr P_g (MW)','Twr_{FA} y_t (m/s^2)', 'Twr_{SW} x_t (m/s^2)'};
 end
 
@@ -303,7 +303,7 @@ axPlotAll(3) = nexttile; %axPlotAll(3) = subplot(nAx,1,3);
 plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),time,OutTableTest1.BlPitch1(idxTime),'k--');
 axis tight; grid on;
 if ~isempty(ylimVal), ylim(gca,ylimVal(3,:)); end
-ylabel(yAxCell{3}); %'Pitch \beta [°]')
+ylabel(yAxCell{3}); %'Pitch \beta [ï¿½]')
 
 axPlotAll(4) = nexttile; %axPlotAll(4) = subplot(nAx,1,4);
 plot(time,OutTableTest2.RotSpeed(idxTime), time,OutTable.RotSpeed(idxTime),time,OutTableTest1.RotSpeed(idxTime),'k--');

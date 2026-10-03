@@ -2,6 +2,7 @@ build/
 codegen/
 slprj/
 figDir/
+figDirConstr1/
 
 *.asv
 *.csv
