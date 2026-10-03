@@ -80,12 +80,18 @@ for idxDD = 1: length(DDNameCell)
         try
             tempObj = getEntry(dDataSectObj,DDDataNames{idx});
 
-            eval(['setValue(tempObj, ',DDDataNames{idx},')']);
+            % Only write changed values so unchanged dictionaries stay unmodified
+            newValue = eval(DDDataNames{idx});
+            if ~isequaln(getValue(tempObj), newValue)
+                setValue(tempObj, newValue);
+            end
         catch
         end
     end
 
-    saveChanges(myDictionaryObj)
+    if myDictionaryObj.HasUnsavedChanges
+        saveChanges(myDictionaryObj)
+    end
 end
 
 % listEntry(myDictionaryObj)

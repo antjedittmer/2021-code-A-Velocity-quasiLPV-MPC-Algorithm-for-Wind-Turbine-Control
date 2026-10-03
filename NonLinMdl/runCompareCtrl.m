@@ -8,7 +8,8 @@ function runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirS
 % - loadData: load simulation output data if available instead of running
 %   simulation (Default: 1)
 % - figNo1: Number of figure (Default: 1)
-% - useFASTForComparison: Uses FAST(1) or Simulink data for comparison
+% - useFASTForComparison: Uses FAST(1) or Simulink (0) PI data for comparison
+%   (Default: 0, PI on the same simplified Simulink model as the MPC)
 
 %% Handle optional inputs
 % The default inputs are provided here.
@@ -26,7 +27,7 @@ if nargin < 3 || isempty(figNo1)
 end
 
 if nargin < 4 || isempty(useFASTForComparison)
-    useFASTForComparison = 1;
+    useFASTForComparison = 0;
 end
 
 if nargin <5 || isempty(figDirStr)
@@ -62,7 +63,7 @@ varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
     'NcIMUTAxs', 'NcIMUTAys'};
 
 % Weight values (copied from MATLAB function)
-q_ = [1 10^4 0 10^3 10^3 0 0 0];
+q_ = [1 10^4 0 10^3 10^3 0 0 0 0 0];
 r_ = [1 10^4];
 p = 10^3;
 
@@ -193,10 +194,14 @@ dPitch_qLPV = diff(OutTableMPCPlot.BlPitch1)     / dt;
 metrics = {
     %  Label                      std_PI                                            std_qLPV                                          unit
     'Tower fore-aft acc.',        std(OutTableTest2Plot.NcIMUTAxs),                 std(OutTableMPCPlot.NcIMUTAxs),                  'm/s^2';
-    'Power tracking error',       std(abs(PGRef - OutTableTest2Plot.GenPwr)),       std(abs(PGRef - OutTableMPCPlot.GenPwr)),         'MW';
+    'Power tracking error',       std(abs(PGRef - OutTableTest2Plot.GenPwr)),       std(abs(PGRef - OutTableMPCPlot.GenPwr)),         'kW';
     'Generator torque rate',      std(dGenTq_PI),                                   std(dGenTq_qLPV),                                'kNm/s';
     'Blade pitch rate',           std(dPitch_PI),                                   std(dPitch_qLPV),                                'deg/s';
     };
+
+% Treat numerically constant signals (e.g. constant torque above rated) as
+% zero, so ratios become Inf/NaN instead of huge round-off values
+metrics(:,2:3) = cellfun(@(x) x * (x > 1e-6), metrics(:,2:3), 'UniformOutput', false);
 
 % --- Print variance ratios to console (for use in text) ---
 fprintf('\n--- Variance ratios (PI/qLMPC, for text) ---\n');
@@ -236,8 +241,12 @@ fprintf(fid, '\\midrule\n');
 for i = 1:size(metrics, 1)
     std_PI   = metrics{i,2};
     std_qLPV = metrics{i,3};
-    fprintf(fid, '%s & %s & %.4f & %.4f & %.2f \\\\\n', ...
-        metrics{i,1}, metrics{i,4}, std_PI, std_qLPV, std_PI/std_qLPV);
+    ratioStr = sprintf('%.2f', std_PI/std_qLPV);
+    if ~isfinite(std_PI/std_qLPV)
+        ratioStr = '{n/a}';
+    end
+    fprintf(fid, '%s & %s & %.4f & %.4f & %s \\\\\n', ...
+        metrics{i,1}, metrics{i,4}, std_PI, std_qLPV, ratioStr);
 end
 fprintf(fid, '\\bottomrule\n');
 fprintf(fid, '\\end{tabular}\n');

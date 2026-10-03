@@ -85,7 +85,7 @@ if filteredPlots == 1
         block = find_system(simMdlCell{idxM}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
         refModel = get_param(block{1}, 'ModelName');
         set_param(block{1}, 'ModelName', strrep(refModel, '_WindFiltered',''));
-
+        close_system(simMdlCell{idxM}, 0); % discard temporary edits (no .autosave)
     end
 end
 
@@ -101,7 +101,7 @@ end
 % plotNormTimePlots(normStruct,figNo,figDirStr);
 
 % Run models in closed loop with qLPV MPC
-useFASTForComparison = 1;
+useFASTForComparison = 0; % compare with PI on the same simplified Simulink model (Mdl_BianchiOL)
 useTitle = [0,1]; % for thesis
 loadDataCtrlTest = loadData; % this can be changed here
 figNo = figNo + 1;
