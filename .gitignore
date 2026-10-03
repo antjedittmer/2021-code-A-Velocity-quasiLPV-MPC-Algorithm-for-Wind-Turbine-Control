@@ -13,3 +13,6 @@ figDir/
 *.mexw32
 *.mexw64
 *.slxc
+*.autosave
+NonLinMdl/dataOut/
+results_table*.tex

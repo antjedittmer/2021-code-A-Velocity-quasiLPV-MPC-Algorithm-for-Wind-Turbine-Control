@@ -8,6 +8,8 @@ function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs)
 %
 % Outputs: * A: Augmented system matrix A(rho) at current rho
 %          * B: Augmented Input matrix B(rho) at current rho
+%          State order: [Tg, beta, dThetaS, dOmegaR, dOmegaG, dTg, dBeta, dV,
+%          dTg_ref(k-1), dBeta_ref(k-1)]
 
 % Pablo S.G. Cisneros, Herbert Werner, ICS TUHH
 % modified for WECS simulation: Antje Dittmer
@@ -33,13 +35,20 @@ nuvec = 2:3; % B: columns control input
 Cdiag = eye(ny); %diag([97,1]); %eye(ny); %diag([97,1]);
 
 
+nu = length(nuvec);
+
 A = [eye(2) Cdiag * Ak(nyvec,:);
     zeros(size(Ak,1),ny), Ak];
 B = [Cdiag * Bk(nyvec,nuvec); Bk(:,nuvec)];
 Bv1 = [Cdiag * Bk(nyvec,nd); Bk(:,nd)];
 
-Av = [A,Bv1; [zeros(nd,(nx+ny)) 0*eye(nd)]];
-Bv = [B; zeros(nd, size(B,2))];
+% Augmented state [y; dx; dV; dU_{k-1}]: the actuators receive the
+% reference with a one-sample delay (Delay blocks in Mdl_Actuator), so the
+% control increment acts on the plant one step later.
+Av = [A, Bv1, B;
+    zeros(nd, nx+ny), 0*eye(nd), zeros(nd, nu);
+    zeros(nu, nx+ny+nd+nu)];
+Bv = [zeros(nx+ny+nd, nu); eye(nu)];
 
 
 end
