@@ -10,7 +10,7 @@ addpath(genpath('LinMdl'));
 initWorkspace;
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots
-filteredPlots = 0; % plots with filter for turbulent wind
+filteredPlots = 1; % plots with filter for turbulent wind
 
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
@@ -41,7 +41,7 @@ end
 % mat-files in dataIn folder.
 
 %Load data if available from previous simulation.
-loadData = 1;
+loadData = 0;
 updateDDMdl1(0.75);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
@@ -63,7 +63,7 @@ for idxA = numel(ax):-1:1
 end
 ylimVal = flipud(yl);
 
-% For tests with filtered wind speed
+%% For tests with filtered wind speed
 if filteredPlots == 1
     simMdlname1 = 'test_SimulinkMdl1_Baseline';
     simMdlname2 = 'test_SimulinkMdl2_Baseline';
@@ -102,7 +102,7 @@ end
 % plotNormTimePlots(normStruct,figNo,figDirStr);
 
 % Run models in closed loop with qLPV MPC
-useFASTForComparison = 0;
+useFASTForComparison = 1;
 useTitle = [0,1]; % for thesis
 loadDataCtrlTest = loadData; % this can be changed here
 figNo = figNo + 1;
@@ -188,7 +188,7 @@ for idx = 1:length(maxRateVector)
 end
 
 
-%--- Get Data Directory value of pitch actuator rate
+%% --- Get Data Directory value of pitch actuator rate
 DDNameCtrl = 'DD_CtrlBaseline.sldd';
 myDictionaryCtrlObj = Simulink.data.dictionary.open(DDNameCtrl);
 dDataSectCtrlObj = getSection(myDictionaryCtrlObj,'Design Data');
@@ -197,12 +197,12 @@ controlValue = getValue(controlCtrlObj);
 
 currentOutTablePICell = cell(nRate,1); % cell with
 
-simMdlname = 'test_SimulinkMdl2_Baseline';
-loadData1 = 0; % loadData;
+simMdlname = 'test_SimulinkMdl1_Baseline';
+loadData1 = 1; % loadData;
 
 maxRateVector1 = 1:13;
 
-for idx = 1 : 13
+for idx = maxRateVector1
     maxRate = maxRateVector1(idx);
     controlValue = getValue(controlCtrlObj);
     controlValue.Pitch.Maxrate = maxRate;
@@ -213,10 +213,10 @@ for idx = 1 : 13
 
     if strcmp(outDataSimulationMat,'OutDataWind18NTW.mat')
         matFileOutTableTest1 = fullfile(dataDirOut,...
-            sprintf('OutTableTest_rate%02d_PI.mat',maxRate));
+            sprintf('OutTableTest_rate%02d_PI_1.mat',maxRate));
     else
         matFileOutTableTest1 = fullfile(dataDirOut,...
-            sprintf('OutTableTest_rate%02d_PI_NTW16.mat',maxRate));
+            sprintf('OutTableTest_rate%02d_PI_NTW16_1.mat',maxRate));
     end
 
     currentOutTablePICell{idx} = ...
@@ -249,23 +249,7 @@ dDataSectCtrlObj = getSection(myDictionaryCtrlObj,'Design Data');
 controlCtrlObj = getEntry(dDataSectCtrlObj,'Control');
 controlValue = getValue(controlCtrlObj);
 
-currentOutTablePICell = cell(nRate,1); % cell with
 
-simMdlname = 'test_SimulinkMdl2_Baseline';
-loadData1 = 0; %loadData;
-
-% writeToExcel = 0;
-% if writeToExcel == 1
-%     for idxE = 1:3
-%         spreadsheet = sprintf('MPC_CPC_%02d',selR(idxE+1));
-%         writetable(tableForPlotMPC{idxE},'NREL5MW_NTW18.xlsx','FileType','spreadsheet','Sheet',spreadsheet);
-%     end
-% 
-%     for idxE = 1:3
-%         spreadsheet = sprintf('PI_CPC_%02d',selR(idxE+1));
-%         writetable(currentOutTablePICell{maxRateVector == selR(idxE+1)},'NREL5MW_NTW18.xlsx','FileType','spreadsheet','Sheet',spreadsheet);
-%     end
-% end
 
 % Plot qLmpc result
 OutTable4 = currentOutTablePICell{maxRateVector == 4};
@@ -301,6 +285,6 @@ saveas(fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), 'png');
 saveas(figDir, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), 'epsc');
 
 strFig = 'PINewLim';
-print(figDir, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
-print(figDir, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
+print(figNo2, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
+print(figNo2, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
 

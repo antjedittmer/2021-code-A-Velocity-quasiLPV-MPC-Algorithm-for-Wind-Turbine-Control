@@ -208,7 +208,7 @@ if scaleLoopUp == 1
     lookupTable = Cq;
     minValue = min(lookupTable(:));
     maxValue = max(lookupTable(:));
-    newMaxValue = maxValue * 0.9475; % Reduce the highest point by 0.95%  * 0.9475
+    newMaxValue = maxValue* 0.9475; % Reduce the highest point by 0.95%  * 0.9475
 
     % Cq: Apply linear scaling to adjust all values smoothly
     scaledTable = (lookupTable - minValue) / (maxValue - minValue); % Normalize to [0, 1]
