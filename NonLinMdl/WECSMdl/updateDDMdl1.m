@@ -42,6 +42,10 @@ else
         Lin_points.Torque(idx) = mean(OutTableT.GenTq(timeIdx));
 
     end
+%Lin_points.Pitch(round(Lin_points.V) == 12) = 2.17*pi/180;
+%Lin_points.Pitch(round(Lin_points.V) == 13) = 5.5*pi/180;
+%Lin_points.Pitch(round(Lin_points.V) == 14) = 7.8*pi/180;
+
 
 % Lin.RSpeed = Lin_points1.RSpeed;
 % Lin.Pitch = Lin_points1.Pitch;

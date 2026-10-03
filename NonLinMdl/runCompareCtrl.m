@@ -1,4 +1,4 @@
-function runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle)
+function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
