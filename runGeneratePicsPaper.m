@@ -41,7 +41,7 @@ end
 % mat-files in dataIn folder.
 
 %Load data if available from previous simulation.
-loadData = 0;
+loadData = 1;
 updateDDMdl1(0.75);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
@@ -78,7 +78,7 @@ if filteredPlots == 1
         end
     end
     figNo = figNo + 1;
-    runCompareModels(18,0,figNo,yAxCell,figDirStr,allPlots,ylimVal);
+    runCompareModels(18,loadData,figNo,yAxCell,figDirStr,allPlots,ylimVal);
 
     % Remove the filters again
     for idxM = 1: length(simMdlCell)
@@ -141,14 +141,14 @@ catch
 end
 myDictionaryObj = Simulink.data.dictionary.open(DDName);
 dDataSectObj = getSection(myDictionaryObj,'Design Data');
-controlObj = getEntry(dDataSectObj,'controlValue');
+controlObj = getEntry(dDataSectObj,'controlValue'); % read by MdlCtrl_qLPVMPC as controlValue.Pitch.Maxrate
 controlValue = getValue(controlObj);
 
 %--- Set vector which pitch rate constraints to be test
 maxRateVector = [1,3,4,5,8,13];
 outDataSimulationMat = 'OutDataWind18NTW.mat';
 %dataDirOut = fullfile(fileparts(mfilename('fullpath')),'dataOut');
-dataDirOut = fullfile(pwd,'dataOut');
+dataDirOut = fullfile(fileparts(mfilename('fullpath')),'NonLinMdl','dataOut'); % same folder as the other simulation results
 
 if strcmp(outDataSimulationMat, 'OutDataWind18NTW.mat')
     load(fullfile('dataIn',outDataSimulationMat),'OutTable');
@@ -197,7 +197,7 @@ controlValue = getValue(controlCtrlObj);
 
 currentOutTablePICell = cell(nRate,1); % cell with
 
-simMdlname = 'test_SimulinkMdl1_Baseline';
+simMdlname = 'test_SimulinkMdl2_Baseline'; % Bianchi model (includes blade state), same plant as the qLMPC runs
 loadData1 = 1; % loadData;
 
 maxRateVector1 = 1:13;
@@ -220,7 +220,8 @@ for idx = maxRateVector1
     end
 
     currentOutTablePICell{idx} = ...
-        getSimulationOutputTable(matFileOutTableTest1,loadData1,OutTable,simMdlname);
+        getSimulationOutputTable(matFileOutTableTest1,loadData1,OutTable,simMdlname,...
+        {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', 'NcIMUTAxs', 'NcIMUTAys','zetadotdot'}); % names are truncated to the number of logged signals
 end
 
 % Plot qLmpc result for different maximu rates
@@ -252,13 +253,13 @@ controlValue = getValue(controlCtrlObj);
 
 
 % Plot qLmpc result
-OutTable4 = currentOutTablePICell{maxRateVector == 4};
+OutTable4 = currentOutTablePICell{maxRateVector1 == 4}; % PI results are indexed by maxRateVector1
 OutTable4.Time = OutTable.Time(1:height(OutTable4));
 testCaseStr =  'PI Rate Constraints (°/s)';
 
 figNo2 = 200;
 strFig = 'testConstrPI';
-axPlotAll = plotOutTable(OutTable4,currentOutTablePICell{maxRateVector == 8},currentOutTablePICell{end},...
+axPlotAll = plotOutTable(OutTable4,currentOutTablePICell{maxRateVector1 == 8},currentOutTablePICell{end},...
    testCaseStr,testCaseCell,figNo2,figDir,strFig);
 
 % Set the axis for all axes
@@ -281,8 +282,10 @@ end
 figDir = figDirConstr;
 
 strFig = 'MPCNewLim';
-saveas(fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), 'png');
-saveas(figDir, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), 'epsc');
+figMPC = ancestor(axPlotAllMPC(isgraphics(axPlotAllMPC)), 'figure');
+if iscell(figMPC), figMPC = figMPC{1}; end
+saveas(figMPC, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), 'png');
+saveas(figMPC, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), 'epsc');
 
 strFig = 'PINewLim';
 print(figNo2, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
