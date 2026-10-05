@@ -31,6 +31,7 @@ fields = {
     'Rr', 1;
     'rb', 1;
     'etag', 1;
+    'cMx', 1; % torsional nacelle moment coefficient (side-to-side force)
 };
 
 % Create bus elements

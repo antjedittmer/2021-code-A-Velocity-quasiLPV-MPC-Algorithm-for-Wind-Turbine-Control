@@ -195,20 +195,20 @@ for index =  speedVec
     dCqdbetab = interp2(lambda,pitch,Cqdbeta,Lambda_bar,beta_bar,'cubic');
     dCtdbetab = interp2(lambda,pitch,Ctdbeta,Lambda_bar,beta_bar,'cubic');
 
-    %% Tip speed ratio lambda = (rb * omega)/Ve =  (rb * omega)/(V - ydotfa)
+    %% Tip speed ratio lambda = (Rr * omega)/Ve =  (Rr * omega)/(V - ydotfa)
     dlambdadomega = wecs.Rr/Vbar;
     dlambdadV = - omegabar*wecs.Rr/Vbar^2; %Vbar = Ve = V - ydot
     dlambdadydotfa =  - dlambdadV; %s/m   ydotfa m/s
     % dlambdaddelta =  - dlambdadV; %s/m   ydotfa m/s
 
-    %% Ft = 0.5*rho*pi*rb^2*Ct*v^2
+    %% Ft = 0.5*rho*pi*Rr^2*Ct*v^2
     kCT = 0.5*rho*pi*wecs.Rr^2; % constant for CT: 0.5*rho*A
     dFtdomega = kCT *dCtdlambdab*dlambdadomega*Vbar^2;
     dFtdV = kCT * Vbar * (dCtdlambdab*dlambdadV*Vbar + 2*Ctb); % dVe/dV = 1;
     dFtdydotfa = kCT * Vbar *(dCtdlambdab*dlambdadydotfa*Vbar - 2*Ctb); % dVe/dydot = -1;
     dFtdbeta = kCT*dCtdbetab*Vbar^2;
 
-    %% Tr = 0.5*rho*pi*rb^3*Cq*v^2
+    %% Tr = 0.5*rho*pi*Rr^3*Cq*v^2
     kCQ = kCT*wecs.Rr;
     dTrdomega = kCQ *dCqdlambdab*dlambdadomega*Vbar^2;
     dTrdV = kCQ *Vbar *(dCqdlambdab*dlambdadV*Vbar + 2*Cqb);
@@ -223,17 +223,22 @@ for index =  speedVec
     A12 = 1/wecs.Js * dTrdydotfa;
 
     % ydotdotfa = 1/Mt( -Bt * ydotfa - Kt* yfa +Ft)
-    wecs.mt = wecs.mtb;
+    % Mdl1 has no blade state: the tower-top mass wecs.mt already contains the
+    % full rotor mass (as in Mdl_TuDelftOL). The blade modal mass in
+    % wecs.mtb is only used in Mdl2, where the blade is a separate state.
     A21 = 1/wecs.mt * dFtdomega;
     A22 = 1/wecs.mt * dFtdydotfa;
 
-    % xdotdotsw = 1/Mt( -Bt * xdotsw - Kt* xsw + 3/(2*H)Tg)
-    A31 = ksw/wecs.mt * dTrdomega;
-    A32 = ksw/wecs.mt * dTrdydotfa;
+    % xdotdotsw = 1/Mt( -Btsw * xdotsw - Ktsw* xsw + F_Ty) with
+    % F_Ty = -3/(2*H)*M_x and the torsional nacelle moment
+    % M_x = (1 - cMx)*Tr + cMx*Ng*Tg, cMx = (Jr + Ng*Jg)/(Jr + Ng^2*Jg)
+    cMx = wecs.cMx;
+    A31 = -(1 - cMx)*ksw/wecs.mt * dTrdomega;
+    A32 = -(1 - cMx)*ksw/wecs.mt * dTrdydotfa;
 
     A = [A11  A12                  0                 0                0;
         A21 (A22 - wecs.Bt/wecs.mt) 0                -wecs.Kt/wecs.mt  0;
-        A31  A32                  -wecs.Bt/wecs.mt  0               -wecs.Kt/wecs.mt;
+        A31  A32                  -wecs.Btsw/wecs.mt  0               -wecs.Ktsw/wecs.mt;
         [0 1 0 0 0; 0 0 1 0 0]];
 
     % Inputs: Torque [Nm], pitch angle beta [rad], wind speed V [m/s]
@@ -241,12 +246,12 @@ for index =  speedVec
     B12 = 1/wecs.Js * dTrdbeta;
     B13 = 1/wecs.Js * dTrdV;
 
-    B22 = 1/wecs.mtb * dFtdbeta;
-    B23 = 1/wecs.mtb * dFtdV;
+    B22 = 1/wecs.mt * dFtdbeta;
+    B23 = 1/wecs.mt * dFtdV;
 
-    B31 = -ksw/wecs.mt * wecs.Ng;
-    B32 = ksw/wecs.mt * dTrdbeta;
-    B33 = ksw/wecs.mt * dTrdV;
+    B31 = -cMx*ksw/wecs.mt * wecs.Ng;
+    B32 = -(1 - cMx)*ksw/wecs.mt * dTrdbeta;
+    B33 = -(1 - cMx)*ksw/wecs.mt * dTrdV;
 
     B = [B11 B12 B13;
         0 B22 B23;
@@ -339,8 +344,8 @@ for index =  speedVec
     sysOut.Inputname = sysInputname;
 
     sysCell{index} = sysOut;
-    Torque_g_bar = 0.5*rho*pi*wecs.rb^3*Cqb*Vbar^2/wecs.Ng; % Nm
-    u_bar_cell{index} = [Torque_g_bar, beta_bar * pi/180,Vbar]';
+    Torque_g_bar = 0.5*rho*pi*wecs.Rr^3*Cqb*Vbar^2/wecs.Ng; % Nm, Tr = 0.5*rho*pi*Rr^3*Cq*V^2 (as kCQ)
+    u_bar_cell{index} = [Torque_g_bar, beta_bar,Vbar]'; % beta_bar is already in rad
     x_bar_cell{index}  = - sysLagrange.A\sysLagrange.B *u_bar_cell{index}; % X(s) = (sI - A)1 *B *U(s) (xdot = 0 = Ax +Bu)
     y_bar_cell{index}  = sysLagrange.C * x_bar_cell{index} + sysLagrange.D * u_bar_cell{index};
 

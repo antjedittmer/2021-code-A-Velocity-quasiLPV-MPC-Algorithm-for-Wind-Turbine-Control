@@ -26,7 +26,7 @@ function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] 
 %% Set path for input data and output figure directory
 
 debugOn = 0; % this is only used to check that cQ = cP/lambda
-scaleLoopUp = 1; % this gives the possibility to scale cQ
+scaleLoopUp = 1; % this gives the possibility to scale cQ (0: original cQ look-up table)
 
 % Set path to input data directory
 workDir = fileparts(mfilename('fullpath'));
@@ -89,7 +89,7 @@ wecs.mtb = wecs.mt + wecs.N * wecs.mb; %tower modal mass + modal mass of blades
 wecs.H =  90; % 87.6;
 
 wecs.Jg = 534.116; %  kg*m^2; Inertia of the generator
-wecs.Jr = x(2)* 3.8759e+07; %115926 + 3 * 11.776e6; % kg*m^2; Inertia of the rotor (Hub inertia + 3 blades) 3.8759e+07; %
+wecs.Jr = x(2)* 38759228; % kg*m^2; rotor inertia about the low-speed shaft (NREL/TP-500-38060, Sec. 7): hub + blades referred to the rotor axis, incl. precone
 wecs.Js = wecs.Jr + wecs.Ng^2*wecs.Jg;
 f0 = 0.324;  % Hz, First natural tower fore-aft frequency
 f0sw = 0.3120;% ; % First natural tower sidewards frequency
@@ -115,8 +115,15 @@ wecs.rb = wecs.Rr*multRb; %*0.75; % m aerodynamic center on blade radius
 wecs.etag = 0.944; %Drivetrain.Generator.Efficiency: 0.944;
 
 %% Lagrange's Model matrices
-% Force input w = [Ft_fa,Ft_sw,Tr,Tg]; Ft_fa = Ft, Ft_sw = 3/2*Tg
+% Force input w = [Ft_fa,Ft_sw,Tr,Tg]; Ft_fa = Ft
 % States q: xdot_fa, zeta, xdot_sw, omega_r, omega_gr
+% Side-to-side force: the torsional nacelle moment M_x acts as an equivalent
+% tower-top force F_Ty = -3/(2H)*M_x (cantilever, equal tip deflection; y_t
+% points to the left looking downwind). With the rigid drivetrain,
+% M_x = Tr - (Jr + Ng*Jg)*domega_r = (1 - cMx)*Tr + cMx*Ng*Tg,
+% cMx = (Jr + Ng*Jg)/(Jr + Ng^2*Jg). In steady state M_x = Tr = Ng*Tg.
+wecs.cMx = (wecs.Jr + wecs.Ng*wecs.Jg)/(wecs.Jr + wecs.Ng^2*wecs.Jg);
+cSw = 3/(2*wecs.H); % tip moment -> equivalent tip force
 
 M =[wecs.mtb wecs.N*wecs.mb*wecs.rb 0 0 0; %
     wecs.N*wecs.mb*wecs.rb  wecs.N*wecs.mb*wecs.rb^2 0 0 0;
@@ -138,13 +145,13 @@ K = [wecs.Kt 0 0 0;
 
 Q = [1 0 0 0;
     wecs.rb 0 0 0;
-    0 1 0 -wecs.Ng;
+    0 -(1 - wecs.cMx) 0 -wecs.cMx*wecs.Ng; % M_x terms; scaled with 3/(2H) in compareLinearModels
     0 0 1 0;
     0 0 0  -wecs.Ng];
 
 Q3 = [1 0 0;
     wecs.rb 0 0;
-    0 2/(3*wecs.H) -2*wecs.Ng/(3*wecs.H);
+    0 -cSw*(1 - wecs.cMx) -cSw*wecs.cMx*wecs.Ng; % F_Ty = -3/(2H)*M_x
     0 1 0;
     0 0 -wecs.Ng];
 

@@ -41,7 +41,7 @@ end
 % mat-files in dataIn folder.
 
 %Load data if available from previous simulation.
-loadData = 1;
+loadData = 0;
 updateDDMdl1(0.75);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
@@ -198,7 +198,7 @@ controlValue = getValue(controlCtrlObj);
 currentOutTablePICell = cell(nRate,1); % cell with
 
 simMdlname = 'test_SimulinkMdl2_Baseline'; % Bianchi model (includes blade state), same plant as the qLMPC runs
-loadData1 = 1; % loadData;
+loadData1 = 0; % loadData;
 
 maxRateVector1 = 1:13;
 
