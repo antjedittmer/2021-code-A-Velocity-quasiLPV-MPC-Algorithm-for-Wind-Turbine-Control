@@ -19,7 +19,7 @@ if ~nargin || isempty(strWindType)
 end
 
 if nargin < 2 || isempty(loadData)
-    loadData = 1; %load simulation output data if available;
+    loadData = 0; %load simulation output data if available;
 end
 
 if nargin < 3 || isempty(figNo1)
