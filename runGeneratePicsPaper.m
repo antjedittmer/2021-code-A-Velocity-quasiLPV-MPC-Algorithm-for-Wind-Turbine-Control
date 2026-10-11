@@ -9,7 +9,7 @@ addpath(genpath('LinMdl'));
 
 initWorkspace;
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
-allPlots = 0; % generate all plots, including norm plots
+allPlots = 0; % generate all plots, including norm plots}
 filteredPlots = 1; % plots with filter for turbulent wind
 
 
@@ -198,7 +198,7 @@ controlValue = getValue(controlCtrlObj);
 currentOutTablePICell = cell(nRate,1); % cell with
 
 simMdlname = 'test_SimulinkMdl2_Baseline'; % Bianchi model (includes blade state), same plant as the qLMPC runs
-loadData1 = 0; % loadData;
+loadData1 = loadData;
 
 maxRateVector1 = 1:13;
 
