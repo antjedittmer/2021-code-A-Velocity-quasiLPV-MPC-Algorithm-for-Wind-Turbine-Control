@@ -50,6 +50,9 @@ DT = 0.008; % one sample time
 step_thresshold = 0; % per default filter wind
 kVeFilt = 0;
 kVeFilt_tau = 0.75;
+% Rotor-effective wind filter at the qLPV-MPC wind input: time constant
+% wecs.Rr*kVeFiltCtrl/V (0: filter off, the measured wind is passed through)
+kVeFiltCtrl = 0.25;
 load(fullfile(dataInPath,'OutDataSweep.mat'),'OutTable');
 %load(fullfile(dataInPath,'OutDataWind18NTM.mat'),'OutTable');
 
