@@ -57,9 +57,23 @@ kVeFiltCtrl = 0.75;
 % qLPV-MPC weights: stage cost x'Qx + u'Ru, terminal weight P = pMPC*Q
 % x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg, dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)],
 % u = [dTg_ref, dBeta_ref]; references [Tg_ss, beta_ss, OmegaR_ss](V_filt)
-qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0]; % beta weight 0: rotor speed instead of pitch tracking (experiments E50, E66)
-rMPC = [1 1e6];
-pMPC = 10; % small terminal weight; 10 is more robust over two wind seeds than 1 (experiments S01-S08)
+% Two designs:
+% - 'beta' (default): original design (paper/thesis), tracks Tg and beta
+% - 'omega': tracks Tg and the rotor speed instead of the pitch (experiments
+%   E50, E66, S01-S08). Better on FAST in turbulent wind (the beta design
+%   has no rotor speed feedback); needs the large pitch weight, lower values
+%   (rMPC(2) <= 1e5) excite the tower.
+ctrlDesign = 'beta';
+switch ctrlDesign
+    case 'omega'
+        qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0];
+        rMPC = [1 1e6];
+        pMPC = 10; % small terminal weight; 10 is more robust over two wind seeds than 1
+    otherwise
+        qMPC = [1 1e4 0 0 1e3 1e3 0 0 0 0 0];
+        rMPC = [1 1e4];
+        pMPC = 1e3;
+end
 % First-order low-pass filters of the measured speeds in the qLPV-MPC [Hz]
 % (Inf: no filter): rotor speed for scheduling and the tracked rotor speed,
 % rotor and generator speed for the state increments
