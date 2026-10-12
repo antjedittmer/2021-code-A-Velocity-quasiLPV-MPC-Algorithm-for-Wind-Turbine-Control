@@ -93,6 +93,19 @@ for idxDD = 1: length(DDNameCell)
         end
     end
 
+    % The bus object wecsBus (data type of the wecs parameter in the
+    % controller) must have the same fields in the same order as wecs
+    if exist(dDataSectObj, 'wecsBus')
+        busInfo = Simulink.Bus.createObject(wecs); % creates the bus object in the base workspace
+        newBus = evalin('base', busInfo.busName);
+        evalin('base', ['clear ', busInfo.busName]);
+        busObj = getEntry(dDataSectObj, 'wecsBus');
+        oldBus = getValue(busObj);
+        if ~isequal({oldBus.Elements.Name}, {newBus.Elements.Name})
+            setValue(busObj, newBus);
+        end
+    end
+
     if myDictionaryObj.HasUnsavedChanges
         saveChanges(myDictionaryObj)
     end

@@ -57,6 +57,12 @@ Bs = wecs.Bs; %6215000;  %Nm/rad/sec        %Damping of the transmission
 tau_g = 0.05; % pitch actuator time constant, as tau in DD_Mdl_Actuator.sldd
 kappa_g = 0.01; % generator torque actuator time constant, as kappa in DD_Mdl_Actuator.sldd
 
+% Rotor-effective wind for the aerodynamics, as in the WECS models:
+% Ve = kWindEff*V (V: hub height wind)
+kWind = 1;
+if isfield(wecs, 'kWindEff'), kWind = wecs.kWindEff; end
+Vbar = kWind*Vbar;
+
 %% Lambda 
 Lambda_bar = omegabar*Rr/Vbar;
 dlambdadomega= Rr/Vbar;
@@ -69,8 +75,8 @@ dCqdbetab = interp2(lambdaVec,pitchVec,Cqdbeta,Lambda_bar,beta_bar);
 %% Tr=0.5*pi*Rr^3*Cq*v^2
 dTrdomega = 0.5*rho*pi*Rr^3*(dCqdlambdab*dlambdadomega)*Vbar^2;% br = dTr/domega
 dTrdbeta = 0.5*rho*pi*Rr^3*dCqdbetab*Vbar^2;% KRr = dTr/dbeta
-dTrdV =  2*0.5*rho*pi*Rr^3*Vbar*Cqb + ...
-    0.5*rho*pi*Rr^3*Vbar^2*dCqdlambdab*dlambdadV;
+dTrdV =  kWind*(2*0.5*rho*pi*Rr^3*Vbar*Cqb + ...
+    0.5*rho*pi*Rr^3*Vbar^2*dCqdlambdab*dlambdadV); % w.r.t. the hub height wind V (dVe/dV = kWind)
 
 %% Create system matrix A:
 % States: [Theta_s [rad], omega_r [rad/s], omega_gr [rad/s], T_g [Nm]]

@@ -7,8 +7,8 @@ function [Aeval,Beval] = ABqL_WT_tower(rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,Ro
 %   x = [ThetaS, OmegaR, OmegaG, Tg, beta, x_t, v_t]
 %   u = [V, Tg_ref, beta_ref]
 %
-%   Jr*dOmegaR  = -Ks*ThetaS - Bs*(OmegaR - OmegaG) + Tr(V - v_t, OmegaR, beta)
-%   mtb*dv_t    = -Kt*x_t - Bt*v_t + Ft(V - v_t, OmegaR, beta)
+%   Jr*dOmegaR  = -Ks*ThetaS - Bs*(OmegaR - OmegaG) + Tr(kWindEff*V - v_t, OmegaR, beta)
+%   mtb*dv_t    = -Kt*x_t - Bt*v_t + Ft(kWindEff*V - v_t, OmegaR, beta)
 %   dx_t        = v_t
 %
 % Tr = 0.5*rho*pi*Rr^3*cQ(lambda,beta)*Ve^2, Ft = 0.5*rho*pi*Rr^2*cT(lambda,beta)*Ve^2,
@@ -34,6 +34,11 @@ end
 omegabar = rhoP(1);
 beta_bar = rhoP(2);
 Vbar = rhoP(3);
+% Rotor-effective wind for the aerodynamics, as in the WECS models:
+% Ve = kWindEff*V (V: hub height wind)
+kWind = 1;
+if isfield(wecs, 'kWindEff'), kWind = wecs.kWindEff; end
+Vbar = kWind*Vbar;
 
 %% Physical and model constants
 rho = 1.2250;
@@ -68,27 +73,27 @@ kQ = 0.5*rho*pi*Rr^3;
 kT = 0.5*rho*pi*Rr^2;
 dTrdomega = kQ*dCqdlambdab*dlambdadomega*Vbar^2;
 dTrdbeta = kQ*dCqdbetab*Vbar^2;
-dTrdV = 2*kQ*Vbar*Cqb + kQ*Vbar^2*dCqdlambdab*dlambdadV;
+dTrdVe = 2*kQ*Vbar*Cqb + kQ*Vbar^2*dCqdlambdab*dlambdadV; % w.r.t. Ve (tower velocity: dVe/dv_t = -1)
 dFtdomega = kT*dCtdlambdab*dlambdadomega*Vbar^2;
 dFtdbeta = kT*dCtdbetab*Vbar^2;
-dFtdV = 2*kT*Vbar*Ctb + kT*Vbar^2*dCtdlambdab*dlambdadV;
+dFtdVe = 2*kT*Vbar*Ctb + kT*Vbar^2*dCtdlambdab*dlambdadV;
 
 %% System matrix: x = [ThetaS, OmegaR, OmegaG, Tg, beta, x_t, v_t]
 Aeval = zeros(7);
 Aeval(1,2) = 1;
 Aeval(1,3) = -1;
-Aeval(2,:) = [-Ks, -Bs + dTrdomega, Bs, 0, dTrdbeta, 0, -dTrdV]/Jr;
+Aeval(2,:) = [-Ks, -Bs + dTrdomega, Bs, 0, dTrdbeta, 0, -dTrdVe]/Jr;
 Aeval(3,:) = [Ks, Bs, -Bs, -Ng, 0, 0, 0]/Jgr;
 Aeval(4,4) = -1/kappa_g;
 Aeval(5,5) = -1/tau_g;
 Aeval(6,7) = 1;
-Aeval(7,:) = [0, dFtdomega, 0, 0, dFtdbeta, -Kt, -Bt - dFtdV]/mtb;
+Aeval(7,:) = [0, dFtdomega, 0, 0, dFtdbeta, -Kt, -Bt - dFtdVe]/mtb;
 
 %% Input matrix: u = [V, Tg_ref, beta_ref]
 Beval = zeros(7,3);
-Beval(2,1) = dTrdV/Jr;
+Beval(2,1) = kWind*dTrdVe/Jr;   % hub height wind input: dVe/dV = kWind
 Beval(4,2) = 1/kappa_g;
 Beval(5,3) = 1/tau_g;
-Beval(7,1) = dFtdV/mtb;
+Beval(7,1) = kWind*dFtdVe/mtb;
 
 end

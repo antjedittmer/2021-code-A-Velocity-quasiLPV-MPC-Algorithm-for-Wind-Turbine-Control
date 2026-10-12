@@ -113,6 +113,12 @@ wecs.Bs = 6215000;  %Nm/rad/sec %Damping of the transmission
 wecs.Rr = 63; % m length rotor radius
 wecs.rb = wecs.Rr*multRb; %*0.75; % m aerodynamic center on blade radius
 wecs.etag = 0.944; %Drivetrain.Generator.Efficiency: 0.944;
+% Effective wind factor: the aerodynamics of the simplified models use the
+% rotor-effective wind Ve = kWindEff*V (hub height wind V). It accounts for
+% rotor tilt (5 deg) and precone (2.5 deg), cos(5)*cos(2.5) = 0.995, and the
+% remaining difference to FAST (rotor averaging, blade flexibility); 0.985
+% matches the FAST steady states and step responses of the wind sweep.
+wecs.kWindEff = 0.985;
 
 %% Lagrange's Model matrices
 % Force input w = [Ft_fa,Ft_sw,Tr,Tg]; Ft_fa = Ft
