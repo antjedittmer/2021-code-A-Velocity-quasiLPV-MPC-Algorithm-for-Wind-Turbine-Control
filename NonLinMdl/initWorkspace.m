@@ -51,8 +51,22 @@ step_thresshold = 0; % per default filter wind
 kVeFilt = 0;
 kVeFilt_tau = 0.75;
 % Rotor-effective wind filter at the qLPV-MPC wind input: time constant
-% wecs.Rr*kVeFiltCtrl/V (0: filter off, the measured wind is passed through)
-kVeFiltCtrl = 0.25;
+% wecs.Rr*kVeFiltCtrl/V (0: filter off, the measured wind is passed through).
+% Same as the filter for the aerodynamic torque in Mdl_*_WindFiltered.
+kVeFiltCtrl = 0.75;
+% qLPV-MPC weights: stage cost x'Qx + u'Ru, terminal weight P = pMPC*Q
+% x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg, dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)],
+% u = [dTg_ref, dBeta_ref]; references [Tg_ss, beta_ss, OmegaR_ss](V_filt)
+qMPC = [1 1e4 1e3 0 1e3 1e3 0 0 0 0 0];
+rMPC = [1 1e4];
+pMPC = 1e3;
+% First-order low-pass filters of the measured speeds in the qLPV-MPC [Hz]
+% (Inf: no filter): rotor speed for scheduling and the tracked rotor speed,
+% rotor and generator speed for the state increments
+fcOmegaCtrl = Inf;
+fcOmegaStatesCtrl = Inf;
+% Sample time of the qLPV-MPC (multiple of DT); the prediction horizon is 40*DTc
+DTc = DT;
 load(fullfile(dataInPath,'OutDataSweep.mat'),'OutTable');
 %load(fullfile(dataInPath,'OutDataWind18NTM.mat'),'OutTable');
 

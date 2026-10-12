@@ -1,0 +1,21 @@
+start E01_old_b1e4_w0
+start E02_b1e4_w1e3
+start E03_b0_w1e3
+start E04_b0_w1e4
+start E05_b0_w1e3_f025
+done E04_b0_w1e4 (2.7 min, result)
+start E06_b0_w1e3_f025all
+done E03_b0_w1e3 (5.3 min, result)
+done E05_b0_w1e3_f025 (5.3 min, result)
+done E06_b0_w1e3_f025all (2.7 min, result)
+start E07_b0_w1e3_rb1e6
+start E08_b0_w1e4_rb1e6_f025
+start E09_b1e4_w1e3_f025
+done E08_b0_w1e4_rb1e6_f025 (3.0 min, result)
+start E10_b0_w1e2
+done E01_old_b1e4_w0 (8.7 min, result)
+done E07_b0_w1e3_rb1e6 (3.3 min, result)
+done E02_b1e4_w1e3 (9.0 min, result)
+done E10_b0_w1e2 (2.0 min, result)
+done E09_b1e4_w1e3_f025 (7.5 min, result)
+queue finished

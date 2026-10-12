@@ -26,9 +26,12 @@ ni = 2; %;
 %disp(wecs.Rr)
 
 %p1 = NaN(length(Xk)/nx,1);
-p1 = [rhoP(1);cumsum(Xk(4:nx:end)) + rhoP(1)]; %repmat(rhoP(1), size(p1,1),1); % %rho1: omega_g: omega_r/Ng [rad/s] % p1 = [xk(1);Xk(1:nx:end)];
+p1 = [rhoP(1); Xk(3:nx:end)]; % predicted rotor speed (state 3) %[rhoP(1);cumsum(Xk(4:nx:end)) + rhoP(1)]; %repmat(rhoP(1), size(p1,1),1); % %rho1: omega_g: omega_r/Ng [rad/s] % p1 = [xk(1);Xk(1:nx:end)];
 p2 = [rhoP(2); Xk(2:nx:end)];%[rhoP(2);cumsum(Udot(2:ni:end)) + rhoP(2)]; %repmat(rhoP(2), size(p1,1),1); %[rhoP(2); cumsum(Udot(2:ni:end)) + rhoP(2)]; %rho2: beta [rad] + betaDot: % p2 = [xk(3);Xk(3:nx:end)]; %rho2: beta [rad]
 p3 = repmat(rhoP(3), size(p1,1),1); %V:  % p3 = [xk(4);Xk(4:nx:end)]; % V
+% keep the predicted scheduling parameters within the range of the cQ table
+p1 = min(max(p1, 0.3), 2);    % rotor speed [rad/s]
+p2 = min(max(p2, 0), pi/2);   % pitch [rad]
 
 %%%%%%%%% Build L, S matrices Xk = L*xk+S*Uk%%
 [Aj,Bj] = ABqLd_WT_beta(DT,[p1(1),p2(1),p3(1)],lambdaVec,pitchVec,cQ,wecs);

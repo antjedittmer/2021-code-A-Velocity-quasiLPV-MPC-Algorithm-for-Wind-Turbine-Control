@@ -1,0 +1,21 @@
+start E42_E39_dw0
+start E43_E39_dw1e2
+start E44_E39_rb1e7
+start E45_E39_w3e2
+start E46_E39_w3e3
+done E43_E39_dw1e2 (201.1 min, result)
+start E47_E39_f025
+done E42_E39_dw0 (201.3 min, result)
+done E44_E39_rb1e7 (201.3 min, result)
+done E45_E39_w3e2 (201.3 min, result)
+start E48_E39_f05
+start E49_E39_b1e2
+start E50_E39_p1
+done E46_E39_w3e3 (201.6 min, result)
+start E51_E39_rTg1e2
+done E47_E39_f025 (6.2 min, result)
+done E48_E39_f05 (6.3 min, result)
+done E49_E39_b1e2 (6.3 min, result)
+done E50_E39_p1 (6.3 min, result)
+done E51_E39_rTg1e2 (6.2 min, result)
+queue finished

@@ -1,0 +1,21 @@
+start E32_DTc040_b0_w1e3
+start E33_DTc040_b0_w1e4
+start E34_DTc040_b1e4_w1e3_rb1e5
+start E35_DTc040_b1e4_w1e3_rb1e6
+start E36_DTc040_b1e4_w1e3_f025
+done E35_DTc040_b1e4_w1e3_rb1e6 (6.8 min, result)
+start E37_DTc080_b1e4_w1e3
+done E34_DTc040_b1e4_w1e3_rb1e5 (7.2 min, result)
+start E38_DTc080_b0_w1e3
+done E32_DTc040_b0_w1e3 (7.5 min, result)
+done E36_DTc040_b1e4_w1e3_f025 (7.5 min, result)
+start E39_DTc040_b0_w1e3_rb1e6
+start E40_DTc040_b1e3_w1e3
+done E33_DTc040_b0_w1e4 (8.0 min, result)
+start E41_DTc040_b1e4_w1e3_f025all
+done E37_DTc080_b1e4_w1e3 (6.0 min, result)
+done E38_DTc080_b0_w1e3 (6.0 min, result)
+done E39_DTc040_b0_w1e3_rb1e6 (6.0 min, result)
+done E40_DTc040_b1e3_w1e3 (6.5 min, result)
+done E41_DTc040_b1e4_w1e3_f025all (6.5 min, result)
+queue finished

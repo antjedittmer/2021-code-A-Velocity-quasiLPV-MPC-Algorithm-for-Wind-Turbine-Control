@@ -1,0 +1,16 @@
+start E11_check_DTc008
+start E12_DTc040_b1e4_w1e3
+start E13_DTc040_b0_w1e3
+start E14_DTc040_b0_w1e4
+start E15_DTc040_b0_w1e2
+done E14_DTc040_b0_w1e4 (1.8 min, result)
+done E15_DTc040_b0_w1e2 (1.8 min, result)
+start E16_DTc080_b1e4_w1e3
+start E17_DTc080_b0_w1e3
+done E12_DTc040_b1e4_w1e3 (5.3 min, result)
+done E13_DTc040_b0_w1e3 (5.3 min, result)
+done E16_DTc080_b1e4_w1e3 (3.5 min, result)
+start E18_DTc080_b0_w1e4
+start E19_DTc040_old_b1e4_w0
+start E20_SimFilt_DTc040_b0_w1e3
+done E17_DTc080_b0_w1e3 (3.7 min, result)

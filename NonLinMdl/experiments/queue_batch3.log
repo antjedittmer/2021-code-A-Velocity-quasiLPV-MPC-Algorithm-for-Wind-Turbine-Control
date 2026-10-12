@@ -1,0 +1,13 @@
+start E21_expm_DTc008_b1e4_w1e3
+start E22_expm_DTc040_b1e4_w1e3
+start E23_expm_DTc040_b0_w1e3
+start E24_expm_DTc040_b0_w1e4
+start E25_expm_DTc040_b0_w1e2
+done E22_expm_DTc040_b1e4_w1e3 (2.0 min, result)
+done E23_expm_DTc040_b0_w1e3 (2.0 min, result)
+done E24_expm_DTc040_b0_w1e4 (2.0 min, result)
+done E25_expm_DTc040_b0_w1e2 (2.0 min, result)
+start E26_expm_DTc080_b1e4_w1e3
+start E27_expm_DTc080_b0_w1e3
+start E28_expm_DTc080_b0_w1e4
+start E29_expm_DTc040_old_b1e4_w0

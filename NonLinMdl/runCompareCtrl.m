@@ -1,4 +1,4 @@
-function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle)
+function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,plantMdl)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
@@ -10,6 +10,12 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 % - figNo1: Number of figure (Default: 1)
 % - useFASTForComparison: Uses FAST(1) or Simulink (0) PI data for comparison
 %   (Default: 0, PI on the same simplified Simulink model as the MPC)
+% - plantMdl: WECS model in the closed loop of both controllers: 'Simulink'
+%   (simplified model, Default) or 'FAST' (FAST v8.16 S-function, input
+%   files in FASTinputfiles; 'Sweep': FAST.fst, 18: FAST_NTW18.fst with a
+%   TurbSim wind field, so the FAST 18 m/s wind differs from the
+%   OutDataWind18NTW.mat wind, which is only used for initial values, the
+%   stop time and the power reference)
 
 %% Handle optional inputs
 % The default inputs are provided here.
@@ -38,6 +44,10 @@ if nargin < 6 || isempty(useTitle)
     useTitle = [0,1]; %[0,0];
 end
 
+if nargin < 7 || isempty(plantMdl)
+    plantMdl = 'Simulink';
+end
+
 %% Set path to directories
 
 % Set path to inputdata directory
@@ -63,7 +73,7 @@ varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
     'NcIMUTAxs', 'NcIMUTAys'};
 
 % Weight values (copied from MATLAB function)
-q_ = [1 10^4 0 10^3 10^3 0 0 0 0 0];
+q_ = [1 10^4 10^6 0 10^3 10^3 0 0 0 0 0];
 r_ = [1 10^4];
 p = 10^3;
 
@@ -95,6 +105,29 @@ end
 
 
 
+% Switch between the Simulink and the FAST WECS model
+switch plantMdl
+    case 'Simulink'
+        simMdlname2 = 'test_SimulinkMdl2_Baseline';
+        simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta.slx';
+        FAST_InputFileName = '';
+        strPlant = '';
+        strFigPlant = 'Simulink';
+    case 'FAST'
+        simMdlname2 = 'test_FAST_Baseline';
+        simMdlname = 'test_FAST_qLPVMPCbeta.slx';
+        if strcmp(strWindType,'Sweep') == 1
+            FAST_InputFileName = fullfile(workDir,'FASTinputfiles','FAST.fst');
+        elseif isequal(strWindType,18)
+            FAST_InputFileName = fullfile(workDir,'FASTinputfiles','FAST_NTW18.fst');
+        else
+            error('No FAST input files for wind type %s.', string(strWindType));
+        end
+        strPlant = 'FAST';
+        strFigPlant = 'FAST';
+    otherwise
+        error('Unknown plant model %s (Simulink or FAST).', plantMdl);
+end
 
 %% Load baseline and MPC data or run simulations
 
@@ -106,9 +139,8 @@ if useFASTForComparison % from FAST
     OutTableTest2 = OutTable;
 else % from Simulink
     loadBaseline = 1; %always load if available
-    matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strFig,'.mat']);
-    simMdlname2 = 'test_SimulinkMdl2_Baseline';
-    OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadBaseline,OutTable,simMdlname2);
+    matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strPlant,strFig,'.mat']);
+    OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadBaseline,OutTable,simMdlname2,[],FAST_InputFileName);
 end
 
 % Check that SI units are used (can be removed,
@@ -121,14 +153,13 @@ if mean(OutTableTest2.RotSpeed) >1
 end
 
 % Run or load qLPV controller
-simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta.slx'; %
-matFileOutTableTest1 = fullfile(dataDirOut,['OutTableMPC',strFig,'.mat']);
-[OutTableMPC, tictoc_LPVMPC,GenPwrRef] = getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname,varnames);
+matFileOutTableTest1 = fullfile(dataDirOut,['OutTableMPC',strPlant,strFig,'.mat']);
+[OutTableMPC, tictoc_LPVMPC,GenPwrRef] = getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname,varnames,FAST_InputFileName);
 
 %% Prepare information for plots and plot data
 
 % Information for plot
-figStr = ['RefSimulinkClosedLoop',strFig,'_beta'];
+figStr = ['Ref',strFigPlant,'ClosedLoop',strFig,'_beta'];
 meanOpt = strrep(sprintf(' mean cputime MPC: %1.2e s',mean(tictoc_LPVMPC.Data)),'e-0','e-');
 timeForPlot = [15,400];
 DT = 0.008;
