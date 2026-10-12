@@ -101,14 +101,23 @@ end
 % figNo = figNo + 1;
 % plotNormTimePlots(normStruct,figNo,figDirStr);
 
-% Run models in closed loop with qLPV MPC
-useFASTForComparison = 0; % compare with PI on the same simplified Simulink model (Mdl_BianchiOL)
+%% Comparison qLPV MPC vs. PI in closed loop
+% Both controllers run on the same plant model:
+% - 'Simulink': simplified model Mdl_BianchiOL (uniform wind sweep)
+% - 'SimFilt':  simplified model with rotor-effective wind filter
+%               (Mdl_BianchiOL_WindFiltered) for the turbulent wind
+% - 'FAST':     FAST v8.16 (NonLinMdl/FASTinputfiles; the 18 m/s case uses
+%               the TurbSim file wind18_TurbKlasseA.bts)
+% The qLPV-MPC settings are set in initWorkspace (qMPC, rMPC, pMPC, DTc, ...).
+useFASTForComparison = 0; % compare with the PI on the same plant model
 useTitle = [0,1]; % for thesis
 loadDataCtrlTest = loadData; % this can be changed here
-figNo = figNo + 1;
-runCompareCtrl('Sweep',loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle);
-figNo = figNo + 1;
-runCompareCtrl(18,loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle);
+ctrlCases = {'Sweep', 'Simulink'; 18, 'SimFilt'; 'Sweep', 'FAST'; 18, 'FAST'};
+for idxC = 1:size(ctrlCases, 1)
+    figNo = figNo + 1;
+    runCompareCtrl(ctrlCases{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
+        figDirStr, useTitle, ctrlCases{idxC,2});
+end
 
 %% For debugging
 
@@ -125,6 +134,11 @@ runCompareCtrl(18,loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle
 
 
 %% Run baseline PI algorithm with different rate limits
+% Note: with loadData = 1 the qLPV-MPC results for the different rate
+% limits (dataOut/OutTableTest_rate*_MPC.mat) are loaded if available; set
+% loadData = 0 to recompute them with the current controller settings.
+% The loops below leave the pitch rate limits in DD_Mdl1.sldd and
+% DD_CtrlBaseline.sldd at the last value (13 deg/s).
 
 %-- define sldd to change
 %% Get Data Directory value of pitch actuator rate

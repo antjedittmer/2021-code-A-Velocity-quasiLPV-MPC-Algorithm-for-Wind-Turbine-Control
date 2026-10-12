@@ -11,7 +11,9 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 % - useFASTForComparison: Uses FAST(1) or Simulink (0) PI data for comparison
 %   (Default: 0, PI on the same simplified Simulink model as the MPC)
 % - plantMdl: WECS model in the closed loop of both controllers: 'Simulink'
-%   (simplified model, Default) or 'FAST' (FAST v8.16 S-function, input
+%   (simplified model Mdl_BianchiOL, Default), 'SimFilt' (simplified model
+%   with the rotor-effective wind filter, Mdl_BianchiOL_WindFiltered, for
+%   turbulent wind) or 'FAST' (FAST v8.16 S-function, input
 %   files in FASTinputfiles; 'Sweep': FAST.fst, 18: FAST_NTW18.fst with a
 %   TurbSim wind field, so the FAST 18 m/s wind differs from the
 %   OutDataWind18NTW.mat wind, which is only used for initial values, the
@@ -107,12 +109,30 @@ end
 
 % Switch between the Simulink and the FAST WECS model
 switch plantMdl
-    case 'Simulink'
+    case {'Simulink', 'SimFilt'}
         simMdlname2 = 'test_SimulinkMdl2_Baseline';
-        simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta.slx';
+        simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta';
         FAST_InputFileName = '';
-        strPlant = '';
-        strFigPlant = 'Simulink';
+        if strcmp(plantMdl, 'Simulink')
+            wecsMdl = 'Mdl_BianchiOL';
+            strPlant = '';
+            strFigPlant = 'Simulink';
+        else
+            % Rotor-effective wind in the plant aerodynamics, as in runCompareModels
+            wecsMdl = 'Mdl_BianchiOL_WindFiltered';
+            assignin('base', 'step_thresshold', 1);
+            assignin('base', 'kVeFilt', 0.25);
+            assignin('base', 'kVeFilt_tau', 0.75);
+            strPlant = 'SimFilt';
+            strFigPlant = 'SimulinkFiltered';
+        end
+        % Same plant for both controllers (changed in memory only)
+        for mdlCell = {simMdlname2, simMdlname}
+            load_system(mdlCell{1});
+            blk = find_system(mdlCell{1}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+            set_param(blk{1}, 'ModelName', wecsMdl);
+        end
+        cleanupMdl = onCleanup(@() cellfun(@(m) close_system(m, 0), {simMdlname2, simMdlname}));
     case 'FAST'
         simMdlname2 = 'test_FAST_Baseline';
         simMdlname = 'test_FAST_qLPVMPCbeta.slx';
@@ -126,7 +146,7 @@ switch plantMdl
         strPlant = 'FAST';
         strFigPlant = 'FAST';
     otherwise
-        error('Unknown plant model %s (Simulink or FAST).', plantMdl);
+        error('Unknown plant model %s (Simulink, SimFilt or FAST).', plantMdl);
 end
 
 %% Load baseline and MPC data or run simulations
