@@ -183,3 +183,24 @@ available along the trade-off curve (e.g. E65: ± 0.10 rpm, tower 0.257).
 Not tried yet: a notch filter for 3P / drivetrain mode in the speed
 measurement, a better tower/blade model, estimating the rotor-effective
 wind speed instead of measuring the hub wind.
+
+## Second wind field (seed B)
+
+FAST, `FASTinputfiles/FAST_NTW18b.fst` (TurbSim NTM class A, new seed,
+`wind18_TurbKlasseA_NewSeed.bts`, hub height mean 17.8 m/s, TI 15.4 %; the
+.bts file is not in the repository). PI: `dataOut/OutTableTest2FASTNTW18b.mat`.
+S04 (defaults on seed A) reproduces E50 exactly.
+
+| | RotSpd [rpm] | Power std [kW] | Tower FA [m/s^2] | Pitch rate std [deg/s] |
+|---|---|---|---|---|
+| PI | 11.98 ± 0.25, max 12.69 | 105 | 0.200 | 0.61 |
+| S01 defaults (E50 setting) | 11.98 ± 0.20, max 13.23 | 86 | 0.215 | 1.0 |
+| S02 E65 setting (omega 3e3) | 11.98 ± 0.11, max 12.76 | 47 | 0.278 | 1.9 |
+| S03 E44 setting (rMPC(2) 1e7, pMPC 1e3) | 12.00 ± 0.10, max 12.49 | 43 | 0.280 | 2.1 |
+
+The default setting generalizes only partly (speed std 19 % below the PI,
+but a higher maximum speed). The faster settings E44/E65 reduce the speed and
+power scatter by a factor of about 2.5 on both seeds, at about 40 % more
+tower fore-aft acceleration and three times the pitch activity. The pitch
+rate excess comes mainly from 2-6 Hz (step-wise reference at DTc = 0.04 s),
+3P and the drivetrain mode.

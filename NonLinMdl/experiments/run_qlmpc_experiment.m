@@ -46,6 +46,9 @@ switch wind
     case 'NTW18'
         S = load(fullfile(mainDir, 'dataIn', 'OutDataWind18NTW.mat'), 'OutTable');
         fst = 'FAST_NTW18.fst';
+    case 'NTW18b' % second TurbSim seed (FAST only): TurbKlasseA/18mpsNewSeed.bts
+        S = load(fullfile(mainDir, 'dataIn', 'OutDataWind18NTW.mat'), 'OutTable');
+        fst = 'FAST_NTW18b.fst';
     case 'Sweep'
         S = load(fullfile(mainDir, 'dataIn', 'OutDataSweep.mat'), 'OutTable');
         fst = 'FAST.fst';
