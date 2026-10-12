@@ -230,6 +230,18 @@ if scaleLoopUp == 1
 
 end
 
+% Local Cq correction near rated, just above fine pitch (lambda about 6.65,
+% beta about 1 deg): +5 %. After the 11 to 12 m/s step the FAST rotor
+% accelerates more, so the pitch passes the 1 deg threshold of the PI torque
+% switch at once; without the correction the models stay just below it for
+% about 5 s with torque above rated. Zero at fine pitch (0.11 deg), so the
+% steady states below rated are unchanged.
+kCqRated = 0.05;
+[betaGrid, lambdaGrid] = ndgrid(betaDeg(:), lambda(:));
+CqBump = exp(-0.5*((lambdaGrid - 6.65)/0.3).^2) .* exp(-0.5*((betaGrid - 1)/0.5).^2) ...
+    .* min(max((betaGrid - 0.11)/0.4, 0), 1);
+Cq = Cq .* (1 + kCqRated*CqBump);
+
 
 %% Plot aerodynamic torque and force dependent on pitch and tip speed ratio
 
