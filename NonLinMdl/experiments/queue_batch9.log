@@ -1,0 +1,13 @@
+start T10_vt1e1
+start T11_vt1e2
+start T12_vt3e2
+start T13_SimFilt_vt1e2
+start T14_vt1e2_w3e3
+start T15_vt1e1_w3e3
+done T13_SimFilt_vt1e2 (1.2 min, result)
+done T10_vt1e1 (5.8 min, result)
+done T11_vt1e2 (5.8 min, result)
+done T12_vt3e2 (5.8 min, result)
+done T14_vt1e2_w3e3 (5.8 min, result)
+done T15_vt1e1_w3e3 (5.8 min, result)
+queue finished

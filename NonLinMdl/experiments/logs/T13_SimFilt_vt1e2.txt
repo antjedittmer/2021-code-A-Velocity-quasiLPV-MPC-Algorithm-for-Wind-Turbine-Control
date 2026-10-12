@@ -1,0 +1,67 @@
+
+Simulink Agentic Toolkit - Installation Check
+===============================================
+
+Prerequisites
+  ✓ MATLAB 9.14.0.2891782 (R2023a) Update 8
+  ✓ Simulink installed and licensed
+
+MATLAB Environment
+  ✓ All 9 tool entry points on path
+  ✓ Package resolution correct (+sage, +mbd inside SATK)
+
+MCP Server
+  ✓ matlab-mcp-server.exe found: C:\Users\jdi\.matlab\agentic-toolkits\bin\matlab-mcp-server.exe
+
+MCP Connectivity
+  ✓ shareMATLABSession available (MATLAB-side MCP components installed)
+  ✓ MATLAB connector running (port 31519)
+
+===============================================
+Result: PASS
+
+                 name: 'T13_SimFilt_vt1e2'
+                plant: 'SimFilt'
+                 wind: 'NTW18'
+               status: "ok"
+                  msg: ""
+          ctrlVariant: 'tower'
+           wallTime_s: 43.7353
+          simulated_s: 600.0080
+        RotSpeed_mean: 11.9747
+         RotSpeed_std: 0.2582
+         RotSpeed_max: 12.7388
+          GenPwr_mean: 4.9982e+03
+           GenPwr_std: 108.0315
+            TwrFA_std: 0.1313
+        PitchRate_std: 0.8098
+    PitchRate_meanAbs: 0.6359
+        GenTqRate_std: 6.6410e-08
+                n_err: 0
+          tictoc_mean: 0.0013
+
+
+ans = 
+
+  struct with fields:
+
+                 name: 'T13_SimFilt_vt1e2'
+                plant: 'SimFilt'
+                 wind: 'NTW18'
+               status: "ok"
+                  msg: ""
+          ctrlVariant: 'tower'
+           wallTime_s: 43.7353
+          simulated_s: 600.0080
+        RotSpeed_mean: 11.9747
+         RotSpeed_std: 0.2582
+         RotSpeed_max: 12.7388
+          GenPwr_mean: 4.9982e+03
+           GenPwr_std: 108.0315
+            TwrFA_std: 0.1313
+        PitchRate_std: 0.8098
+    PitchRate_meanAbs: 0.6359
+        GenTqRate_std: 6.6410e-08
+                n_err: 0
+          tictoc_mean: 0.0013
+

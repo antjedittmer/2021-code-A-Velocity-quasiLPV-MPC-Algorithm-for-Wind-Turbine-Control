@@ -1,0 +1,11 @@
+start T20_neg_vt1e3
+start T21_neg_vt1e4
+start T22_neg_vt1e2
+start T23_SimFilt_neg_vt1e3
+start T24_SimFilt_pos_vt1e3
+done T23_SimFilt_neg_vt1e3 (1.3 min, result)
+done T24_SimFilt_pos_vt1e3 (1.3 min, result)
+done T20_neg_vt1e3 (4.7 min, result)
+done T21_neg_vt1e4 (4.7 min, result)
+done T22_neg_vt1e2 (4.7 min, result)
+queue finished

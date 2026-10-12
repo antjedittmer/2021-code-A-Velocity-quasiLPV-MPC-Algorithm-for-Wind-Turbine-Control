@@ -1,0 +1,21 @@
+start E62_p1_rb1e7
+start E63_p1_rb1e6_f025
+start E64_p10_rb1e6
+start E65_p1_w3e3_rb1e6
+start E66_p0_rb1e6
+done E66_p0_rb1e6 (5.7 min, result)
+start E67_p1_rb1e5
+done E62_p1_rb1e7 (5.8 min, result)
+done E63_p1_rb1e6_f025 (5.8 min, result)
+done E64_p10_rb1e6 (5.8 min, result)
+done E65_p1_w3e3_rb1e6 (5.8 min, result)
+start E68_p1_w1e4_rb1e6
+start E69_p1_rb1e6_DTc080
+start E70_p1_rb1e6_dw0
+start E71_p1_b1e4_w1e3_rb1e6
+done E67_p1_rb1e5 (5.7 min, result)
+done E69_p1_rb1e6_DTc080 (5.5 min, result)
+done E68_p1_w1e4_rb1e6 (5.7 min, result)
+done E70_p1_rb1e6_dw0 (5.7 min, result)
+done E71_p1_b1e4_w1e3_rb1e6 (5.7 min, result)
+queue finished

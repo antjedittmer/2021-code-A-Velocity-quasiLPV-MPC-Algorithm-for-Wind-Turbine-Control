@@ -73,9 +73,9 @@ varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
     'NcIMUTAxs', 'NcIMUTAys'};
 
 % Weight values (copied from MATLAB function)
-q_ = [1 10^4 10^6 0 10^3 10^3 0 0 0 0 0];
-r_ = [1 10^4];
-p = 10^3;
+q_ = [1 0 10^3 0 10^3 10^3 0 0 0 0 0]; % copy of qMPC (initWorkspace), only for the plot titles
+r_ = [1 10^6];
+p = 1;
 
 % Switch between Sweep and NTW18
 % if strcmp(strWindType,'Sweep') == 1 % sweep 4-23m/s in 20s steps
@@ -186,7 +186,13 @@ timeVecPlot = timeVec(idxPlot);
 OutTableTest2Plot = OutTableTest2(idxPlot,:);
 OutTableMPCPlot = OutTableMPC(idxPlot,:);
 
-PGRef = r.Data(idxPlot);
+rData = squeeze(r.Data);
+if numel(rData) == numel(timeVec)
+    PGRef = rData(idxPlot);
+else % reference logged at the controller sample time DTc
+    PGRef = interp1(r.Time, rData, timeVecPlot(:), 'previous', 'extrap');
+end
+PGRef = PGRef(:);
 
 %% Title strings
 % Display optimization weights and calculate decrease in tower movement and

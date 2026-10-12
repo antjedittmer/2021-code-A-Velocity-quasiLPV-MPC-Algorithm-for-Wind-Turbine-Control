@@ -93,3 +93,56 @@ name mismatch' option to 'None'.]
 mismatch' option to 'None'.] 
 [> In run_qlmpc_experiment (line 89)] 
   Timestep: 0 of 600 seconds.
+
+
+  Total Real Time:       5.1247 minutes
+  Total CPU Time:        9.0281 minutes
+  Simulation CPU Time:   8.1414 minutes
+  Simulated Time:        10 minutes
+  Time Ratio (Sim/CPU):  1.2283
+
+  FAST completed.
+
+                 name: 'E53_b0_w1e3_rb1e8'
+                plant: 'FAST'
+                 wind: 'NTW18'
+               status: "ok"
+                  msg: ""
+           wallTime_s: 328.9398
+          simulated_s: 600.0080
+        RotSpeed_mean: 11.9723
+         RotSpeed_std: 0.2858
+         RotSpeed_max: 12.8772
+          GenPwr_mean: 4.9972e+03
+           GenPwr_std: 119.8015
+            TwrFA_std: 0.1939
+        PitchRate_std: 0.7296
+    PitchRate_meanAbs: 0.5706
+        GenTqRate_std: 6.4666e-04
+                n_err: 0
+          tictoc_mean: 0.0019
+
+
+ans = 
+
+  struct with fields:
+
+                 name: 'E53_b0_w1e3_rb1e8'
+                plant: 'FAST'
+                 wind: 'NTW18'
+               status: "ok"
+                  msg: ""
+           wallTime_s: 328.9398
+          simulated_s: 600.0080
+        RotSpeed_mean: 11.9723
+         RotSpeed_std: 0.2858
+         RotSpeed_max: 12.8772
+          GenPwr_mean: 4.9972e+03
+           GenPwr_std: 119.8015
+            TwrFA_std: 0.1939
+        PitchRate_std: 0.7296
+    PitchRate_meanAbs: 0.5706
+        GenTqRate_std: 6.4666e-04
+                n_err: 0
+          tictoc_mean: 0.0019
+

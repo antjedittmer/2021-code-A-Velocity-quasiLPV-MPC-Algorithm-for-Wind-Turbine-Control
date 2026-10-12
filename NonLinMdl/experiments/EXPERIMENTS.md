@@ -93,3 +93,93 @@ Findings:
 - Filtering the speed increments of the state (fcOmegaStatesCtrl) is harmful.
 - The computer was in sleep mode from 00:22 to 03:38 during batch 5 (runs
   paused, results not affected).
+
+## Batch 6: ratio of speed weight and pitch increment weight
+
+With beta weight 0 the result depends mainly on the ratio q_omega / r_beta
+(E54, E55, E56 have the same ratio 3e-5 and practically identical results).
+FAST, DTc = 0.04 s, pMPC = 1000:
+
+| q_omega / r_beta | RotSpd std / max [rpm] | Power std [kW] | Tower FA [m/s^2] | Pitch rate std [deg/s] |
+|---|---|---|---|---|
+| 1e-3 (E39) | 0.12 / 12.47 | 54 | 0.489 | 3.9 |
+| 1e-4 (E44) | 0.10 / 12.35 | 43 | 0.252 | 2.1 |
+| 3e-5 (E52, E54-E56) | 0.14-0.15 / 12.43 | 60-63 | 0.215 | 1.3 |
+| 1e-5 (E53) | 0.29 / 12.88 | 120 | 0.194 | 0.73 |
+| PI | 0.29 / 12.89 | 120 | 0.191 | 0.63 |
+
+For small ratios the qLPV-MPC approaches the PI behaviour; pMPC = 1 (E50)
+gives a better trade-off.
+
+## Tower model (Mdl2 without blade flap and tower side-side)
+
+`MdlCtrl_qLPVMPCtower` (test models `test_FAST_qLPVMPCtower`,
+`test_SimulinkMdl2_qLPVMPCtower`, runner option `'ctrlVariant','tower'`):
+prediction model `ABqL_WT_tower` = Mdl2 (`initModel5MWNREL`) without the blade
+flap and the tower side-side states,
+x = [ThetaS, OmegaR, OmegaG, Tg, beta, x_t, v_t],
+mtb*dv_t = -Kt*x_t - Bt*v_t + Ft(V - v_t, OmegaR, beta), aerodynamic torque
+with the relative wind V - v_t, thrust sensitivities from the cT table.
+Outputs y = [Tg, beta, OmegaR, v_t] (v_t with reference 0 for tower damping);
+qMPC has 14 elements
+[Tg beta OmegaR v_t | dThetaS dOmegaR dOmegaG dTg dBeta dx_t dv_t | dV | dU].
+The tower velocity and displacement increments are estimated from the
+measured fore-aft acceleration by leaky integration (`fcTowerCtrl` = 0.02 Hz).
+At 18 m/s the model has the tower mode at 0.318 Hz (damping 5.2 %) and the
+drivetrain mode at 2.22 Hz.
+
+## Batch 7: small terminal weight (pMPC = 1)
+
+FAST, DTc = 0.04 s, beta weight 0:
+
+| Name | Change | RotSpd [rpm] | Power std [kW] | Tower FA [m/s^2] | Pitch rate std [deg/s] |
+|---|---|---|---|---|---|
+| E50 / E66 | omega 1e3, rMPC(2) 1e6, pMPC 1 / 0 | 11.98 ± 0.18-0.19, max 12.55 | 77-80 | 0.205 | 1.0 |
+| E64 | pMPC 10 | 11.98 ± 0.14, max 12.44 | 61 | 0.218 | 1.2 |
+| E65 | omega 3e3 | 11.98 ± 0.10, max 12.34 | 43 | 0.257 | 1.9 |
+| E63 | speed filter 0.25 Hz | 11.97 ± 0.27, max 12.88 | 112 | 0.198 | 1.05 |
+| E62 | rMPC(2) 1e7 | 11.87 ± 0.83, max 14.53 | 345 | 0.182 | 0.36 |
+| E67 / E68 | rMPC(2) 1e5 / omega 1e4 | 12.00 ± 0.32 | 134 | 1.40-1.44 | 7.1 |
+| E69 | DTc 0.08 s | 11.97 ± 0.21, max 12.63 | 87 | 0.204 | 1.0 |
+| E71 | beta weight 1e4 added | 11.57 ± 0.98, max 14.60 | 408 | 0.201 | 0.79 |
+
+All variants without a tower model lie on one trade-off curve between speed
+regulation and tower load; the weights select the point on the curve. The
+beta reference (E71) brings back the speed offset: beta weight 0 is the
+right choice.
+
+Wind sweep on FAST (E60: beta 0, omega 1e3, rMPC(2) 1e7, pMPC 1000) against
+the PI: below rated practically equal; above rated (13-23 m/s) rotor speed
+11.99 ± 0.05 rpm (PI 12.03 ± 0.11), max 12.19 (PI 12.32), tower FA 0.086
+(PI 0.061) m/s^2, pitch rate std 0.45 (PI 0.23) deg/s.
+
+## Batches 8-10: tower model
+
+| Name | Plant | Tower weight v_t | Result |
+|---|---|---|---|
+| T01 | FAST | 0 | 11.98 ± 0.19 rpm, tower 0.206, pitch rate 0.99 (as E50) |
+| T10 / T11 / T12 | FAST | 1e1 / 1e2 / 3e2 | tower 0.207 / 0.228 / 0.549 |
+| T02-T06 | FAST | 1e3 ... 1e6 | diverge (tower oscillation at 0.29 Hz) |
+| T00 / T13 / T24 | SimFilt | 0 / 1e2 / 1e3 | tower 0.139 / 0.131 / 0.151 (speed std 0.22 / 0.26 / 0.48) |
+| T20-T22 | FAST | sign of the acceleration inverted | worse (1e3, 1e4 diverge; 1e2: tower 0.273) |
+| T23 | SimFilt | inverted sign, 1e3 | tower 0.190 (positive sign: 0.151) |
+
+The tower model works (T01 = E50), and on the Simulink plant (Mdl2) the
+tower velocity weight damps the tower. On FAST it increases the tower
+acceleration with either sign of the measurement: the reduced tower model
+(without blade flexibility) does not represent the FAST tower/rotor coupling
+well enough for active damping. Not pursued further.
+
+## Recommendation (new defaults in initWorkspace.m)
+
+beta weight 0 (rotor speed tracking instead of the beta reference),
+`qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0]`, `rMPC = [1 1e6]`, `pMPC = 1`,
+`DTc = 0.04` s, `kVeFiltCtrl = 0.75`, no speed filters.
+On FAST (18 m/s, E50): rotor speed 11.98 ± 0.18 rpm (PI ± 0.29), max 12.55
+(PI 12.89), power std 77 kW (PI 120), tower fore-aft acceleration 0.207 m/s^2
+(PI 0.191), pitch rate std 1.0 deg/s (PI 0.63). More speed precision is
+available along the trade-off curve (e.g. E65: ± 0.10 rpm, tower 0.257).
+
+Not tried yet: a notch filter for 3P / drivetrain mode in the speed
+measurement, a better tower/blade model, estimating the rotor-effective
+wind speed instead of measuring the hub wind.

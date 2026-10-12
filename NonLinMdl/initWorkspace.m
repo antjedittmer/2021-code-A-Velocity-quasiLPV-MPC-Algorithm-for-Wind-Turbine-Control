@@ -57,16 +57,16 @@ kVeFiltCtrl = 0.75;
 % qLPV-MPC weights: stage cost x'Qx + u'Ru, terminal weight P = pMPC*Q
 % x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg, dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)],
 % u = [dTg_ref, dBeta_ref]; references [Tg_ss, beta_ss, OmegaR_ss](V_filt)
-qMPC = [1 1e4 1e3 0 1e3 1e3 0 0 0 0 0];
-rMPC = [1 1e4];
-pMPC = 1e3;
+qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0]; % beta weight 0: rotor speed instead of pitch tracking (experiments E50, E66)
+rMPC = [1 1e6];
+pMPC = 1;
 % First-order low-pass filters of the measured speeds in the qLPV-MPC [Hz]
 % (Inf: no filter): rotor speed for scheduling and the tracked rotor speed,
 % rotor and generator speed for the state increments
 fcOmegaCtrl = Inf;
 fcOmegaStatesCtrl = Inf;
 % Sample time of the qLPV-MPC (multiple of DT); the prediction horizon is 40*DTc
-DTc = DT;
+DTc = 0.04; % horizon 1.6 s; DTc = DT (0.32 s horizon) is unstable on FAST
 load(fullfile(dataInPath,'OutDataSweep.mat'),'OutTable');
 %load(fullfile(dataInPath,'OutDataWind18NTM.mat'),'OutTable');
 

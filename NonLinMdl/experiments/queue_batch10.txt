@@ -1,0 +1,5 @@
+T20_neg_vt1e3	FAST	NTW18	struct('qMPC',[1 0 1e3 1e3  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1,'towerSignCtrl',-1)
+T21_neg_vt1e4	FAST	NTW18	struct('qMPC',[1 0 1e3 1e4  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1,'towerSignCtrl',-1)
+T22_neg_vt1e2	FAST	NTW18	struct('qMPC',[1 0 1e3 1e2  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1,'towerSignCtrl',-1)
+T23_SimFilt_neg_vt1e3	SimFilt	NTW18	struct('qMPC',[1 0 1e3 1e3  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1,'towerSignCtrl',-1)
+T24_SimFilt_pos_vt1e3	SimFilt	NTW18	struct('qMPC',[1 0 1e3 1e3  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1,'towerSignCtrl',1)

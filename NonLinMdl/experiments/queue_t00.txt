@@ -1,0 +1,1 @@
+T00_smoke_SimFilt_vt0	SimFilt	NTW18	struct('qMPC',[1 0 1e3 0  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)

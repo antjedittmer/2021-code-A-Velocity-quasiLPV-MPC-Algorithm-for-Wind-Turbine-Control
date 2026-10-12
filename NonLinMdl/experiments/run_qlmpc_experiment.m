@@ -29,10 +29,16 @@ cache = fullfile(tempdir, 'qlmpc_experiments', name);
 if ~isfolder(cache), mkdir(cache); end
 Simulink.fileGenControl('set', 'CacheFolder', cache, 'CodeGenFolder', cache, 'createDir', true);
 
-% Parameter overrides
+% Parameter overrides; ctrlVariant 'tower' selects the controller with the
+% tower fore-aft model (MdlCtrl_qLPVMPCtower, qMPC with 14 elements)
+ctrlVariant = 'beta';
 fn = fieldnames(params);
 for k = 1:numel(fn)
-    assignin('base', fn{k}, params.(fn{k}));
+    if strcmp(fn{k}, 'ctrlVariant')
+        ctrlVariant = params.ctrlVariant;
+    else
+        assignin('base', fn{k}, params.(fn{k}));
+    end
 end
 
 % Wind data (stop time, initial values and power reference)
@@ -77,8 +83,30 @@ switch plant
         error('Unknown plant %s.', plant);
 end
 
+if strcmp(ctrlVariant, 'tower')
+    if strcmp(plant, 'FAST')
+        mdl = 'test_FAST_qLPVMPCtower';
+    else
+        close_system(mdl, 0);
+        mdl = 'test_SimulinkMdl2_qLPVMPCtower';
+        load_system(mdl);
+        blk = find_system(mdl, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+        if strcmp(plant, 'SimFilt')
+            set_param(blk{1}, 'ModelName', 'Mdl_BianchiOL_WindFiltered');
+        else
+            set_param(blk{1}, 'ModelName', 'Mdl_BianchiOL');
+        end
+    end
+    if ~evalin('base', 'exist(''fcTowerCtrl'', ''var'')')
+        assignin('base', 'fcTowerCtrl', 0.02);
+    end
+    if ~evalin('base', 'exist(''towerSignCtrl'', ''var'')')
+        assignin('base', 'towerSignCtrl', 1);
+    end
+end
+
 % Simulation
-M = struct('name', name, 'plant', plant, 'wind', wind, 'status', "ok", 'msg', "");
+M = struct('name', name, 'plant', plant, 'wind', wind, 'status', "ok", 'msg', "", 'ctrlVariant', ctrlVariant);
 t0 = tic;
 T = table();
 errSig = [];
