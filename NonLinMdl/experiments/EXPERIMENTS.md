@@ -204,3 +204,17 @@ power scatter by a factor of about 2.5 on both seeds, at about 40 % more
 tower fore-aft acceleration and three times the pitch activity. The pitch
 rate excess comes mainly from 2-6 Hz (step-wise reference at DTc = 0.04 s),
 3P and the drivetrain mode.
+
+## Final tuning over both seeds (S05-S08)
+
+| | Seed A: RotSpd std / max [rpm], tower [m/s^2] | Seed B: RotSpd std / max [rpm], tower [m/s^2] | Pitch rate std [deg/s] |
+|---|---|---|---|
+| PI | 0.29 / 12.89, 0.191 | 0.25 / 12.69, 0.200 | 0.6 |
+| pMPC 1 (E50, S01) | 0.18 / 12.55, 0.207 | 0.20 / 13.23, 0.215 | 1.0 |
+| **pMPC 10 (S05, S06)** | **0.14 / 12.44, 0.218** | **0.15 / 12.91, 0.230** | 1.2 |
+| omega 2e3, pMPC 1 (S07, S08) | 0.12 / 12.38, 0.234 | 0.13 / 12.88, 0.246 | 1.5 |
+
+New default: pMPC = 10 (speed and power scatter about half of the PI on
+both seeds, maximum speed about as the PI, tower fore-aft acceleration
++14-15 %, pitch activity twice the PI).
+Note: dataOut/OutTableMPC*.mat (runCompareCtrl) were generated with pMPC = 1.

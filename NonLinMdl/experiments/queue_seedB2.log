@@ -1,0 +1,9 @@
+start S05_seedA_p10
+start S06_seedB_p10
+start S07_seedA_w2e3
+start S08_seedB_w2e3
+done S05_seedA_p10 (5.3 min, result)
+done S06_seedB_p10 (5.3 min, result)
+done S07_seedA_w2e3 (5.5 min, result)
+done S08_seedB_w2e3 (5.5 min, result)
+queue finished

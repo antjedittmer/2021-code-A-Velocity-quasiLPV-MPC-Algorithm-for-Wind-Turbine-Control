@@ -75,7 +75,7 @@ varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
 % Weight values (copied from MATLAB function)
 q_ = [1 0 10^3 0 10^3 10^3 0 0 0 0 0]; % copy of qMPC (initWorkspace), only for the plot titles
 r_ = [1 10^6];
-p = 1;
+p = 10;
 
 % Switch between Sweep and NTW18
 % if strcmp(strWindType,'Sweep') == 1 % sweep 4-23m/s in 20s steps
