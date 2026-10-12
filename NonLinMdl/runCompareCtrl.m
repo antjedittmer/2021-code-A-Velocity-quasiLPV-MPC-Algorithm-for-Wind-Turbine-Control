@@ -18,6 +18,9 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 %   TurbSim wind field, so the FAST 18 m/s wind differs from the
 %   OutDataWind18NTW.mat wind, which is only used for initial values, the
 %   stop time and the power reference)
+%
+% Evaluation window (figures, ratios, LaTeX table): 15 to 400 s for the
+% Simulink plant models, 60 to 600 s for FAST (limited by the data length).
 
 %% Handle optional inputs
 % The default inputs are provided here.
@@ -181,7 +184,13 @@ matFileOutTableTest1 = fullfile(dataDirOut,['OutTableMPC',strPlant,strFig,'.mat'
 % Information for plot
 figStr = ['Ref',strFigPlant,'ClosedLoop',strFig,'_beta'];
 meanOpt = strrep(sprintf(' mean cputime MPC: %1.2e s',mean(tictoc_LPVMPC.Data)),'e-0','e-');
-timeForPlot = [15,400];
+% Evaluation window: the transients of the simplified models decay fast;
+% for FAST the first 60 s are disregarded
+if strcmp(plantMdl, 'FAST')
+    timeForPlot = [60,600];
+else
+    timeForPlot = [15,400];
+end
 DT = 0.008;
 r = GenPwrRef;
 

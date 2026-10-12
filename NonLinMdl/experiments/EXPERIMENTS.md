@@ -218,3 +218,22 @@ New default: pMPC = 10 (speed and power scatter about half of the PI on
 both seeds, maximum speed about as the PI, tower fore-aft acceleration
 +14-15 %, pitch activity twice the PI).
 Note: dataOut/OutTableMPC*.mat (runCompareCtrl) were generated with pMPC = 1.
+
+## Evaluation window
+
+From now on the metrics are evaluated over 15-400 s for the Simulink plant
+models (fast decaying transients) and over 60-600 s for FAST (runCompareCtrl,
+run_qlmpc_experiment, summarize_experiments). The tables above were computed
+for t >= 15 s; results_summary.md re-evaluates all experiments from the stored
+time series (0.04 s resolution) with the new windows. The rankings do not
+change, e.g. FAST 18 m/s, 60-600 s:
+
+| | Seed A: RotSpd std / max [rpm], tower [m/s^2] | Seed B: RotSpd std / max [rpm], tower [m/s^2] | Pitch rate std [deg/s] |
+|---|---|---|---|
+| PI | 0.286 / 12.89, 0.190 | 0.246 / 12.68, 0.200 | 0.62 |
+| default (pMPC 10, S05/S06) | 0.144 / 12.44, 0.215 | 0.155 / 12.91, 0.229 | 1.17 |
+| pMPC 1 (E50/S01) | 0.182 / 12.55, 0.205 | 0.208 / 13.23, 0.216 | 0.96 |
+
+runCompareCtrl (std ratio PI/qLPV-MPC, > 1: qLPV-MPC better), FAST 18 m/s
+60-600 s: tower 0.88, power tracking error 1.96, pitch rate 0.50; FAST sweep
+60-400 s: tower 0.91, power 1.09, pitch rate 0.63.

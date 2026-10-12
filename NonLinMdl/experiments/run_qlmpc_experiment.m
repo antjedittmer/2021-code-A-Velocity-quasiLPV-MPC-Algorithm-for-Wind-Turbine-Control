@@ -10,7 +10,8 @@ function M = run_qlmpc_experiment(name, plant, wind, params)
 % - params: struct with base workspace variables that override the values
 %           from initWorkspace, e.g. struct('qMPC', [...], 'fcOmegaCtrl', 0.25)
 %
-% The metrics are evaluated for t >= 15 s and appended to
+% The metrics are evaluated for 15 to 400 s (Simulink plants) or 60 to
+% 600 s (FAST) and appended to
 % experiments/results_log.txt.
 
 if nargin < 4 || isempty(params)
@@ -136,12 +137,18 @@ end
 M.wallTime_s = toc(t0);
 close_system(mdl, 0);
 
-% Evaluation (t >= 15 s)
+% Evaluation window: 15 to 400 s for the Simulink plant models (fast
+% decaying transients), 60 to 600 s for FAST
 DT = 0.008;
+if strcmp(plant, 'FAST')
+    M.tEval = [60 600];
+else
+    M.tEval = [15 400];
+end
 M.simulated_s = height(T) * DT;
 if ~isempty(T)
     t = (0:height(T)-1)' * DT;
-    idx = t >= 15;
+    idx = t >= M.tEval(1) & t <= M.tEval(2);
     dPitch = diff(T.BlPitch1(idx)) / DT;
     M.RotSpeed_mean = mean(T.RotSpeed(idx));
     M.RotSpeed_std  = std(T.RotSpeed(idx));
