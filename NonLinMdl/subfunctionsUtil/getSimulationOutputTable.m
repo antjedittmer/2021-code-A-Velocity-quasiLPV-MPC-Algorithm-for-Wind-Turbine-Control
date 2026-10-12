@@ -34,7 +34,14 @@ tictoc_LPVMPC = [];
 GenPwrRef = [];
 if exist(matFileOutTableTest1,'file') == 2 && loadData
     tmp = load(matFileOutTableTest1);
-    currentOutTableTest = tmp.(strTable);
+    if isfield(tmp, strTable)
+        currentOutTableTest = tmp.(strTable);
+    else
+        % renamed or copied file: use the table stored under another name
+        tmpNames = fieldnames(tmp);
+        idxTab = find(cellfun(@(n) istable(tmp.(n)), tmpNames), 1);
+        currentOutTableTest = tmp.(tmpNames{idxTab});
+    end
     if isfield(tmp,'tictoc_LPVMPC')
         tictoc_LPVMPC = tmp.tictoc_LPVMPC;
         GenPwrRef = tmp.GenPwrRef;
