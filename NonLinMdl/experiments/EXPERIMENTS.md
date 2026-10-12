@@ -237,3 +237,37 @@ change, e.g. FAST 18 m/s, 60-600 s:
 runCompareCtrl (std ratio PI/qLPV-MPC, > 1: qLPV-MPC better), FAST 18 m/s
 60-600 s: tower 0.88, power tracking error 1.96, pitch rate 0.50; FAST sweep
 60-400 s: tower 0.91, power 1.09, pitch rate 0.63.
+
+## Batch U: tower model with the omega design after kWindEff and the Cq correction
+
+Omega weights, pMPC = 10, tower variant `qMPC = [1 0 1e3 vt 0 1e3 1e3 0 ...]`
+(14 elements), 18 m/s, metrics as above (SimFilt 15-400 s, FAST 60-600 s).
+SimFilt PI (dataOut/OutTableTest2SimFiltNTW18.mat): speed std 0.375 rpm,
+power std 157 kW, tower 0.125 m/s^2, pitch rate 0.72 deg/s.
+
+| Name | Plant | vt | rMPC(2) | DTc | RotSpd std / max | Power std | Tower FA | Pitch rate std |
+|---|---|---|---|---|---|---|---|---|
+| U00 (no tower model) | SimFilt | - | 1e6 | 0.04 | 0.186 / 12.51 | 78 | 0.141 | 0.99 |
+| U vt0 | SimFilt | 0 | 1e6 / 1e5 | 0.04 | 0.189 / 0.476 | 79 / 201 | 0.140 / 0.979 | 0.98 / 7.8 |
+| U vt1e2 | SimFilt | 1e2 | 1e6 / 1e5 | 0.04 | 0.210 / 1.196 | 88 / 500 | 0.134 / 0.968 | 0.91 / 6.1 |
+| U vt1e3 | SimFilt | 1e3 | 1e6 / 1e5 | 0.04 | 0.349 / 0.681 | 146 / 285 | 0.165 / 0.409 | 0.79 / 2.3 |
+| DTc08 | SimFilt | 0 / 1e2 | 1e5 | 0.08 | 0.144 / 0.127 | 61 / 53 | 0.214 / 0.208 | 1.76 / 1.49 |
+| DTc12 | SimFilt | 0 / 1e2 / 1e3 / 3e3 | 1e5 | 0.12 | 0.150-0.155 | 63-65 | 0.152 / 0.147 / 0.170 / 0.197 | 1.32 / 1.15 / 1.01 / 0.98 |
+| A (SimFilt) | SimFilt | 1e2 | 1e6 | 0.12 | 0.297 / 12.78 | 124 | 0.120 | 0.74 |
+| C (SimFilt) | SimFilt | 1e3 | 1e5 | 0.16 | 0.188 / 12.52 | 79 | 0.141 | 0.92 |
+| rb3e4 | SimFilt | 1e2 / 1e3 | 3e4 | 0.12 / 0.16 | 0.132 / 0.136 | 56 / 57 | 0.231 / 0.173 | 1.90 / 1.13 |
+| U_FAST_omega_noTower | FAST | - | 1e6 | 0.04 | 0.144 / 12.44 | 61 | 0.216 | 1.24 |
+| U_FAST_A | FAST | 1e2 | 1e6 | 0.12 | 0.255 / 12.72 | 107 | 0.204 | 1.07 |
+| U_FAST_B | FAST | 1e2 | 1e5 | 0.12 | 0.341 / 14.35 | 142 | 0.409 | 5.5 |
+| U_FAST_C | FAST | 1e3 | 1e5 | 0.16 | 0.472 / 14.47 | 198 | 0.613 | 3.5 |
+
+- With the 1.6 s horizon (DTc = 0.04) a lower pitch weight (1e5) gives a
+  limit cycle at 0.24 Hz (rotor speed loop coupled with the tower, below the
+  tower mode at 0.34 Hz). A longer horizon (DTc = 0.12, 4.8 s) removes it on
+  the Simulink plant.
+- On FAST the low pitch weight still destabilizes the tower mode (0.32 Hz)
+  even with the tower model and the long horizon (B, C). The reduced tower
+  model does not represent the FAST tower/rotor coupling well enough.
+- Tower weights above 1e2 do not reduce the tower acceleration.
+- Best FAST trade-off of this batch: A (between the PI and the omega design
+  without tower model in all metrics).
