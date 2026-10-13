@@ -325,3 +325,39 @@ with the true state in the linear model 0.9-1.0). Runner option
   reference every 0.12 s).
 - Next: notch filters for the drivetrain mode and 3P in the measured rotor
   speed, and a smooth (interpolated) pitch reference for DTc = 0.12.
+
+## Batch N: notch filters and smooth pitch reference (flap model, FAST 18 m/s)
+
+Flap model, omega weights, vt = 0, rMPC = [1 1e5], pMPC = 10; notch at
+[0.605 1.64] Hz (3P at rated speed, FAST drivetrain mode), zetaNotchCtrl =
+0.1 (depth 0.1, phase at the tower mode -10 deg).
+
+| Name | DTc | Notch | Smooth | RotSpd std / max | Power std | Tower FA | Pitch rate std |
+|---|---|---|---|---|---|---|---|
+| PI | | | | 0.286 / 12.89 | 120 | 0.190 | 0.62 |
+| U_FAST_omega_noTower (candidate omega) | 0.04 | | | 0.144 / 12.44 | 61 | 0.216 | 1.24 |
+| F_FAST_vt0_rb1e5_DTc04 (candidate flap) | 0.04 | | | 0.106 / 12.43 | 51 | 0.315 | 6.2 |
+| N_FAST_rb1e5_DTc04_notch | 0.04 | x | | 0.086 / 12.29 | 38 | 0.290 | 3.6 |
+| N_FAST_rb1e5_DTc04_notch_smooth | 0.04 | x | x | 0.087 / 12.30 | 39 | 0.298 | 3.2 |
+| N_FAST_rb1e5_DTc12_smooth | 0.12 | | x | 0.150 / 12.42 | 63 | 0.244 | 1.8 |
+| N_FAST_rb1e5_DTc12_notch_smooth | 0.12 | x | x | 0.155 / 12.40 | 66 | 0.233 | 1.65 |
+
+Variance per band (pitch rate [deg/s]^2 and tower acc. [m/s^2]^2 in
+0-0.25 / 0.25-0.4 / 0.4-0.8 / 0.8-1.4 / 1.4-2.4 / 2.4-6.25 Hz):
+
+| Name | Pitch rate | Tower acc. |
+|---|---|---|
+| PI | | 0.0010 / 0.0074 / 0.0184 / 0.0015 / 0.0007 / 0.0073 |
+| omega candidate | 0.43 / 0.02 / 0.27 / 0.01 / 0.15 / 0.53 | 0.0016 / 0.0111 / 0.0248 / 0.0015 / 0.0007 / 0.0069 |
+| flap candidate | 0.51 / 0.25 / 8.35 / 0.75 / 18.2 / 6.5 | 0.0026 / 0.0296 / 0.0547 / 0.0023 / 0.0016 / 0.0067 |
+| DTc04 notch | 0.54 / 0.33 / 2.01 / 0.45 / 0.61 / 7.6 | 0.0036 / 0.0335 / 0.0356 / 0.0022 / 0.0007 / 0.0065 |
+| DTc12 notch smooth | 0.47 / 0.09 / 0.31 / 0.06 / 0.11 / 1.5 | 0.0020 / 0.0163 / 0.0241 / 0.0015 / 0.0007 / 0.0071 |
+
+- The notch filters remove the drivetrain-mode pitch activity (18.2 -> 0.6)
+  and most of the 3P activity (8.4 -> 2.0). With DTc = 0.04 the rest is at
+  2.4-6 Hz and the tower mode (0.25-0.4 Hz) stays 4.5 times the PI value.
+- The smooth reference removes most of the 2.4-6 Hz content with DTc = 0.12
+  (pitch rate 5.2 -> 1.8 deg/s).
+- Best of this batch: DTc 0.12, notch and smooth reference (speed and power
+  scatter about half of the PI, pitch rate 2.7 times, tower FA +23 %; the
+  tower-mode band is still 2.2 times the PI value).
