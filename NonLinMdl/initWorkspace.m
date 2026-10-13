@@ -62,7 +62,10 @@ kVeFiltCtrl = 0.75;
 % - 'omega': tracks Tg and the rotor speed instead of the pitch (experiments
 %   E50, E66, S01-S08). Better on FAST in turbulent wind (the beta design
 %   has no rotor speed feedback); needs the large pitch weight, lower values
-%   (rMPC(2) <= 1e5) excite the tower.
+%   (rMPC(2) <= 1e5) excite the tower. Controller candidate for FAST
+%   (experiments/EXPERIMENTS.md, batch U), FAST 18 m/s, 60-600 s: rotor
+%   speed std 0.144 rpm (PI 0.286), power std 61 kW (PI 120), tower
+%   fore-aft acc. 0.216 m/s^2 (PI 0.190), pitch rate std 1.24 deg/s (PI 0.62).
 ctrlDesign = 'beta';
 switch ctrlDesign
     case 'omega'

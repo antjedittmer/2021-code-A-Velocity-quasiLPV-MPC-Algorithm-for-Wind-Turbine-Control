@@ -271,3 +271,10 @@ power std 157 kW, tower 0.125 m/s^2, pitch rate 0.72 deg/s.
 - Tower weights above 1e2 do not reduce the tower acceleration.
 - Best FAST trade-off of this batch: A (between the PI and the omega design
   without tower model in all metrics).
+
+## Controller candidates
+
+| Name | Selection | Use |
+|---|---|---|
+| beta (default) | `ctrlDesign = 'beta'` in initWorkspace: `qMPC = [1 1e4 0 0 1e3 1e3 0 0 0 0 0]`, `rMPC = [1 1e4]`, `pMPC = 1e3` | original paper/thesis design; Simulink plant models (fails on FAST in turbulent wind) |
+| omega (candidate for FAST) | `ctrlDesign = 'omega'`: `qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0]`, `rMPC = [1 1e6]`, `pMPC = 10`, `DTc = 0.04` | FAST 18 m/s (U_FAST_omega_noTower): speed std 0.144 rpm, power std 61 kW, tower 0.216 m/s^2, pitch rate 1.24 deg/s (PI 0.286 / 120 / 0.190 / 0.62) |
