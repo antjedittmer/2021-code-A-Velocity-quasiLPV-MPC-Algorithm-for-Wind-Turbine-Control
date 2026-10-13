@@ -382,3 +382,32 @@ The tower weight 1e2 reduces the tower acceleration by 6 % at 19 % more speed
 scatter; larger weights increase it again. None of the flap variants reaches
 the PI tower level on FAST, and the omega design (without tower model) is
 at least as good in all four metrics.
+
+## Batch K: Kalman filter for the tower and blade flap states (flap_kalman)
+
+`towerKFCtrl = 1`: [y_t, delta, v_t, ddelta] from a Kalman filter on the
+blade flap model (measurement: tower acceleration; process noise: wind error
+kfSigmaVCtrl, default 0.5 m/s; measurement noise kfSigmaACtrl 0.05 m/s^2)
+instead of the leaky integration and flap_observer. In the linear model the
+estimates are about as good as before (v_t corr. 0.99-1.0 both, delta 0.93
+instead of 0.91). With towerKFCtrl = 0 the results are unchanged (flap
+design identical to batch F).
+
+| Name | Plant | RotSpd std / max | Power std | Tower FA | Pitch rate std |
+|---|---|---|---|---|---|
+| PI | SimFilt | 0.375 / 12.94 | 157 | 0.125 | 0.72 |
+| flapNotchSmooth12KF | SimFilt | 0.142 / 12.37 | 59 | 0.137 | 0.75 |
+| flapNotchSmooth12TowerKF | SimFilt | 0.158 / 12.39 | 66 | 0.118 | 0.62 |
+| PI | FAST | 0.286 / 12.89 | 120 | 0.190 | 0.62 |
+| flapNotchSmooth12 (leaky) | FAST | 0.155 / 12.40 | 66 | 0.233 | 1.65 |
+| flapNotchSmooth12KF | FAST | 0.156 / 12.40 | 66 | 0.247 | 1.70 |
+| flapNotchSmooth12Tower (leaky) | FAST | 0.185 / 12.48 | 78 | 0.219 | 1.67 |
+| flapNotchSmooth12TowerKF (sigmaV 0.5) | FAST | 0.188 / 12.54 | 79 | 0.234 | 1.80 |
+| flapNotchSmooth12TowerKF, sigmaV 0.2 | FAST | 0.187 / 12.50 | 79 | 0.221 | 1.64 |
+| flapNotchSmooth12TowerKF, sigmaV 1.0 | FAST | 0.187 / 12.55 | 79 | 0.245 | 2.11 |
+
+On the Simulink plant the Kalman filter design beats the PI in all four
+metrics. On FAST it is slightly worse than the leaky integration; the more
+it trusts the measured acceleration (larger sigmaV), the higher the tower
+acceleration. The tower state estimate is not what limits the tower
+damping on FAST.
