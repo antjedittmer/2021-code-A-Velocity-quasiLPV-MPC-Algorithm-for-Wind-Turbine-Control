@@ -93,6 +93,14 @@ end
 % rotor and generator speed for the state increments
 fcOmegaCtrl = Inf;
 fcOmegaStatesCtrl = Inf;
+% Only MdlCtrl_qLPVMPCflap: notch filters in the speed filters at the
+% frequencies fNotchCtrl [Hz] (0: off; e.g. [0.605 1.64] for 3P at rated
+% speed and the FAST drivetrain mode) with the pole damping zetaNotchCtrl,
+% and the pitch reference ramped at DT between the controller updates
+% (smoothPitchCtrl = 1) instead of step-wise (0)
+fNotchCtrl = 0;
+zetaNotchCtrl = 0.1;
+smoothPitchCtrl = 0;
 % Sample time of the qLPV-MPC (multiple of DT); the prediction horizon is 40*DTc
 DTc = 0.04; % horizon 1.6 s; DTc = DT (0.32 s horizon) is unstable on FAST
 load(fullfile(dataInPath,'OutDataSweep.mat'),'OutTable');
