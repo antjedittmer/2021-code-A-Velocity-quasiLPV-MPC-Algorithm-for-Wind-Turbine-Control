@@ -278,3 +278,49 @@ power std 157 kW, tower 0.125 m/s^2, pitch rate 0.72 deg/s.
 |---|---|---|
 | beta (default) | `ctrlDesign = 'beta'` in initWorkspace: `qMPC = [1 1e4 0 0 1e3 1e3 0 0 0 0 0]`, `rMPC = [1 1e4]`, `pMPC = 1e3` | original paper/thesis design; Simulink plant models (fails on FAST in turbulent wind) |
 | omega (candidate for FAST) | `ctrlDesign = 'omega'`: `qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0]`, `rMPC = [1 1e6]`, `pMPC = 10`, `DTc = 0.04` | FAST 18 m/s (U_FAST_omega_noTower): speed std 0.144 rpm, power std 61 kW, tower 0.216 m/s^2, pitch rate 1.24 deg/s (PI 0.286 / 120 / 0.190 / 0.62) |
+
+## Model check at the tower mode (check_tower_fit.m)
+
+Frequency response pitch -> tower fore-aft acceleration and rotor speed at
+12/18/22 m/s (linearized FAST vs. Mdl1, Mdl2, the tower model of the
+qLPV-MPC and the new model with blade flap). The magnitudes agree within
+about +-20 % around the tower peak (as in the thesis Bode plots, which show
+only magnitudes), but the phase of the tower model (and Mdl1) leads FAST by
+15-27 deg (acceleration) and 18-35 deg (rotor speed) in 0.2-0.32 Hz, the band
+of the FAST oscillations. Mdl2 and the blade flap model ABqL_WT_flap stay
+within -8...+8 deg (acceleration) and -6...-12 deg (rotor speed).
+
+## Batch F: prediction model with blade flap (MdlCtrl_qLPVMPCflap)
+
+`ABqL_WT_flap` = Mdl2 without tower side-side, x = [ThetaS, OmegaR, OmegaG,
+Tg, beta, y_t, delta, v_t, ddelta]; velocity form `ABqLd_WT_flap`,
+`HSqLd_WT_flap` (16 augmented states, qMPC with 16 elements
+[Tg beta OmegaR v_t | dThetaS dOmegaR dOmegaG dTg dBeta dy_t ddelta dv_t dddelta | dV | dU]).
+The blade flap state is not measured: `flap_observer` integrates the Mdl2
+blade equation driven by the measured tower acceleration and velocity and the
+deviations of rotor speed, pitch and wind from their 0.02 Hz means (stable
+through the aerodynamic blade damping, about 66 % at 18 m/s; correlation
+with the true state in the linear model 0.9-1.0). Runner option
+`'ctrlVariant','flap'`. Omega weights, pMPC = 10, 18 m/s:
+
+| Name | Plant | vt | rMPC(2) | DTc | RotSpd std / max | Power std | Tower FA | Pitch rate std |
+|---|---|---|---|---|---|---|---|---|
+| F vt0 rb1e6 | SimFilt | 0 | 1e6 | 0.04 | 0.212 / 12.60 | 89 | 0.122 | 0.75 |
+| F vt0 rb1e5 | SimFilt | 0 | 1e5 | 0.04 | 0.077 / 12.26 | 33 | 0.178 | 1.12 |
+| F vt0 rb1e5 | SimFilt | 0 | 1e5 | 0.12 | 0.140 / 12.38 | 59 | 0.124 | 0.88 |
+| F vt1e2 rb1e5 | SimFilt | 1e2 | 1e5 | 0.12 | 0.153 / 12.37 | 64 | 0.112 | 0.75 |
+| F vt0 rb1e6 | FAST | 0 | 1e6 | 0.04 | 0.193 / 12.56 | 81 | 0.205 | 1.13 |
+| F vt0 rb1e5 | FAST | 0 | 1e5 | 0.04 | 0.106 / 12.43 | 51 | 0.315 | 6.2 |
+| F vt0 rb1e5 | FAST | 0 | 1e5 | 0.12 | 0.315 / 13.50 | 132 | 0.243 | 5.2 |
+| F vt1e2 rb1e5 | FAST | 1e2 | 1e5 | 0.12 | 0.307 / 13.49 | 128 | 0.244 | 5.7 |
+
+- On the Simulink plant the blade flap model allows the lower pitch weight
+  (stable even with DTc = 0.04) and beats the PI in speed, power and tower
+  (vt 1e2, DTc 0.12).
+- On FAST the tower oscillation of batch U is gone (tower 0.24-0.31 instead
+  of 0.41-0.61), but the low pitch weight now excites other modes: with
+  DTc = 0.04 the pitch rate variance is at the drivetrain mode (1.4-2.4 Hz)
+  and 3P (0.4-0.8 Hz); with DTc = 0.12 at 2.4-6 Hz (step-wise pitch
+  reference every 0.12 s).
+- Next: notch filters for the drivetrain mode and 3P in the measured rotor
+  speed, and a smooth (interpolated) pitch reference for DTc = 0.12.

@@ -1,4 +1,4 @@
-function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder,useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,xWeights,allPlots)
+function [sysOut,gapCell,sysCmp] = compareLinearModels(speedVec,figFolder,useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,xWeights,allPlots)
 % compareLinearModels compares two sets of linearized turbine models with
 % linearized FASTTool models at different wind speeds.
 % All inputs are optional.
@@ -29,6 +29,13 @@ function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder,useActuatorSt
 %   inertia, and damping ratio of blade (Default: [1,1,1])
 % - allPlots: Generate all plots, including norm plots (Default: 0)
 % - plotOnCpCt: Plot the Cp and Ct
+%
+% Outputs:
+% - sysOut: Mdl2 with actuator states and outputs beta, Tg (last wind speed)
+% - gapCell: gap metrics (allPlots = 1)
+% - sysCmp: cell (index of the wind speed) with struct V, Mdl1, Mdl2, FAST:
+%   linear models with the inputs [Tg (kNm), beta (rad), V (m/s)] and the
+%   outputs [omega_r (rad/s), TwrAcc_fa (m/s^2), TwrAcc_sw (m/s^2)]
 
 % Bindu Sharan, Antje Dittmer, ICS TUHH
 % TU Delft model (ll. 175- 222): Atindriyo K. Pamososuryo and Jan-Willem
@@ -176,6 +183,7 @@ gapCell.gap5DoF = cell(noVelMdl,1);
 gapCell.nugap5DoF = cell(noVelMdl,1);
 gapCell.norm9DoF = cell(noVelMdl,1);
 gapCell.norm5DoF = cell(noVelMdl,1);
+sysCmp = cell(lenLinV,1);
 
 
 %% Loop over all air speeds in LinV
@@ -349,6 +357,11 @@ for index =  speedVec
     sysOut.Inputname = sysInputname;
 
     sysCell{index} = sysOut;
+    % Linear models for further comparisons (third output): Mdl1, Mdl2 and FAST
+    modelFAST = diag(multFASTOutput)*sysmCell{1}{index}(idxFASTOutput,idxFASTInput)*diag(multFASTInput);
+    modelFAST.OutputName = sysOutputname;
+    modelFAST.InputName = sysInputname;
+    sysCmp{index} = struct('V', Vbar, 'Mdl1', sys5DoF, 'Mdl2', sysLagrange, 'FAST', modelFAST);
     Torque_g_bar = 0.5*rho*pi*wecs.Rr^3*Cqb*Vebar^2/wecs.Ng; % Nm, Tr = 0.5*rho*pi*Rr^3*Cq*V^2 (as kCQ)
     u_bar_cell{index} = [Torque_g_bar, beta_bar,Vbar]'; % beta_bar is already in rad
     x_bar_cell{index}  = - sysLagrange.A\sysLagrange.B *u_bar_cell{index}; % X(s) = (sI - A)1 *B *U(s) (xdot = 0 = Ax +Bu)

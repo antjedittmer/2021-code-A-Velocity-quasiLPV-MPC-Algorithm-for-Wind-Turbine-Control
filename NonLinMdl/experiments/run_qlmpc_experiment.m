@@ -31,7 +31,9 @@ if ~isfolder(cache), mkdir(cache); end
 Simulink.fileGenControl('set', 'CacheFolder', cache, 'CodeGenFolder', cache, 'createDir', true);
 
 % Parameter overrides; ctrlVariant 'tower' selects the controller with the
-% tower fore-aft model (MdlCtrl_qLPVMPCtower, qMPC with 14 elements)
+% tower fore-aft model (MdlCtrl_qLPVMPCtower, qMPC with 14 elements),
+% 'flap' the one with tower fore-aft and blade flap model
+% (MdlCtrl_qLPVMPCflap, qMPC with 16 elements)
 ctrlVariant = 'beta';
 fn = fieldnames(params);
 for k = 1:numel(fn)
@@ -87,12 +89,12 @@ switch plant
         error('Unknown plant %s.', plant);
 end
 
-if strcmp(ctrlVariant, 'tower')
+if any(strcmp(ctrlVariant, {'tower', 'flap'}))
     if strcmp(plant, 'FAST')
-        mdl = 'test_FAST_qLPVMPCtower';
+        mdl = ['test_FAST_qLPVMPC' ctrlVariant];
     else
         close_system(mdl, 0);
-        mdl = 'test_SimulinkMdl2_qLPVMPCtower';
+        mdl = ['test_SimulinkMdl2_qLPVMPC' ctrlVariant];
         load_system(mdl);
         blk = find_system(mdl, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
         if strcmp(plant, 'SimFilt')
