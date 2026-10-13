@@ -278,6 +278,7 @@ power std 157 kW, tower 0.125 m/s^2, pitch rate 0.72 deg/s.
 |---|---|---|
 | beta (default) | `ctrlDesign = 'beta'` in initWorkspace: `qMPC = [1 1e4 0 0 1e3 1e3 0 0 0 0 0]`, `rMPC = [1 1e4]`, `pMPC = 1e3` | original paper/thesis design; Simulink plant models (fails on FAST in turbulent wind) |
 | omega (candidate for FAST) | `ctrlDesign = 'omega'`: `qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0]`, `rMPC = [1 1e6]`, `pMPC = 10`, `DTc = 0.04` | FAST 18 m/s (U_FAST_omega_noTower): speed std 0.144 rpm, power std 61 kW, tower 0.216 m/s^2, pitch rate 1.24 deg/s (PI 0.286 / 120 / 0.190 / 0.62) |
+| flap (candidate) | `ctrlDesign = 'flap'`: MdlCtrl_qLPVMPCflap (test_*_qLPVMPCflap), `qMPC = [1 0 1e3 0 0 1e3 1e3 0 0 0 0 0 0 0 0 0]`, `rMPC = [1 1e5]`, `pMPC = 10`, `DTc = 0.04` | FAST 18 m/s (F_FAST_vt0_rb1e5_DTc04): speed std 0.106 rpm, power std 51 kW, tower 0.315 m/s^2, pitch rate 6.2 deg/s (drivetrain mode and 3P); SimFilt: 0.077 / 33 / 0.178 / 1.12 |
 
 ## Model check at the tower mode (check_tower_fit.m)
 

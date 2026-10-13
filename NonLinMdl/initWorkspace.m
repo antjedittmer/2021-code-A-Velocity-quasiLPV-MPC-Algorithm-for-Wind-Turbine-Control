@@ -66,12 +66,23 @@ kVeFiltCtrl = 0.75;
 %   (experiments/EXPERIMENTS.md, batch U), FAST 18 m/s, 60-600 s: rotor
 %   speed std 0.144 rpm (PI 0.286), power std 61 kW (PI 120), tower
 %   fore-aft acc. 0.216 m/s^2 (PI 0.190), pitch rate std 1.24 deg/s (PI 0.62).
+% - 'flap': omega design with the tower fore-aft and blade flap prediction
+%   model and a lower pitch weight; needs the controller MdlCtrl_qLPVMPCflap
+%   (test_SimulinkMdl2_qLPVMPCflap, test_FAST_qLPVMPCflap; qMPC with 16
+%   elements [Tg beta OmegaR v_t | dThetaS dOmegaR dOmegaG dTg dBeta dy_t
+%   ddelta dv_t dddelta | dV | dU]). Controller candidate (batch F), FAST
+%   18 m/s: rotor speed std 0.106 rpm, power std 51 kW, tower fore-aft acc.
+%   0.315 m/s^2, pitch rate std 6.2 deg/s (drivetrain mode and 3P).
 ctrlDesign = 'beta';
 switch ctrlDesign
     case 'omega'
         qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0];
         rMPC = [1 1e6];
         pMPC = 10; % small terminal weight; 10 is more robust over two wind seeds than 1
+    case 'flap'
+        qMPC = [1 0 1e3 0 0 1e3 1e3 0 0 0 0 0 0 0 0 0];
+        rMPC = [1 1e5];
+        pMPC = 10;
     otherwise
         qMPC = [1 1e4 0 0 1e3 1e3 0 0 0 0 0];
         rMPC = [1 1e4];
