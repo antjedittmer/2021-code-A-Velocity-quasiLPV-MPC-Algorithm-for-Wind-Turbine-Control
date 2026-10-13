@@ -5,7 +5,8 @@ function P = qlmpcDesign(name)
 %
 % Fields: ctrlVariant ('beta': MdlCtrl_qLPVMPC, test_*_qLPVMPCbeta; 'flap':
 % MdlCtrl_qLPVMPCflap, test_*_qLPVMPCflap), qMPC, rMPC, pMPC, DTc,
-% fNotchCtrl, zetaNotchCtrl, smoothPitchCtrl.
+% fNotchCtrl, zetaNotchCtrl, smoothPitchCtrl, towerKFCtrl, kfSigmaVCtrl,
+% kfSigmaACtrl.
 %
 % Designs (results: experiments/EXPERIMENTS.md, FAST 18 m/s, 60-600 s,
 % rotor speed std / power std / tower fore-aft acc. std / pitch rate std;
@@ -26,6 +27,8 @@ function P = qlmpcDesign(name)
 %   (0.155 / 66 / 0.233 / 1.65)
 % - 'flapNotchSmooth12Tower': flapNotchSmooth12 with the tower velocity
 %   weight 1e2 (0.185 / 78 / 0.219 / 1.67)
+% - 'flapNotchSmooth12KF', 'flapNotchSmooth12TowerKF': as above with the
+%   Kalman filter for the tower and blade flap states (flap_kalman)
 %
 % qMPC: 'beta' model x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg,
 % dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)]; 'flap' model [Tg beta OmegaR v_t
@@ -37,7 +40,8 @@ end
 
 % Defaults: no notch filter, step-wise pitch reference, DTc = 0.04 s
 P = struct('ctrlVariant', 'beta', 'qMPC', [], 'rMPC', [], 'pMPC', [], ...
-    'DTc', 0.04, 'fNotchCtrl', 0, 'zetaNotchCtrl', 0.1, 'smoothPitchCtrl', 0);
+    'DTc', 0.04, 'fNotchCtrl', 0, 'zetaNotchCtrl', 0.1, 'smoothPitchCtrl', 0, ...
+    'towerKFCtrl', 0, 'kfSigmaVCtrl', 0.5, 'kfSigmaACtrl', 0.05);
 qFlap = [1 0 1e3 0 0 1e3 1e3 0 0 0 0 0 0 0 0 0];
 fNotch = [0.605 1.64]; % 3P at rated rotor speed, FAST drivetrain mode
 
@@ -51,7 +55,7 @@ switch name
         P.rMPC = [1 1e6];
         P.pMPC = 10;
     case {'flap', 'flapNotch', 'flapNotchSmooth', 'flapSmooth12', 'flapNotchSmooth12', ...
-            'flapNotchSmooth12Tower'}
+            'flapNotchSmooth12Tower', 'flapNotchSmooth12KF', 'flapNotchSmooth12TowerKF'}
         P.ctrlVariant = 'flap';
         P.qMPC = qFlap;
         P.rMPC = [1 1e5];
@@ -59,7 +63,8 @@ switch name
         if contains(name, 'Notch'), P.fNotchCtrl = fNotch; end
         if contains(name, 'Smooth'), P.smoothPitchCtrl = 1; end
         if contains(name, '12'), P.DTc = 0.12; end
-        if endsWith(name, 'Tower'), P.qMPC(4) = 1e2; end % tower velocity v_t
+        if contains(name, 'Tower'), P.qMPC(4) = 1e2; end % tower velocity v_t
+        if endsWith(name, 'KF'), P.towerKFCtrl = 1; end
     otherwise
         error('Unknown qLPV-MPC design %s.', name);
 end

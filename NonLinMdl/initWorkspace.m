@@ -80,6 +80,15 @@ DTc = designMPC.DTc; % 0.04: horizon 1.6 s; DTc = DT (0.32 s horizon) is unstabl
 fNotchCtrl = designMPC.fNotchCtrl;
 zetaNotchCtrl = designMPC.zetaNotchCtrl;
 smoothPitchCtrl = designMPC.smoothPitchCtrl;
+% Only MdlCtrl_qLPVMPCflap: tower and blade flap states from a Kalman filter
+% (towerKFCtrl = 1, flap_kalman; process noise: hub/rotor-effective wind
+% difference kfSigmaVCtrl [m/s], measurement noise of the tower acceleration
+% kfSigmaACtrl [m/s^2]) instead of the leaky integration of the tower
+% acceleration (corner frequency fcTowerCtrl [Hz]) and flap_observer (0)
+towerKFCtrl = designMPC.towerKFCtrl;
+kfSigmaVCtrl = designMPC.kfSigmaVCtrl;
+kfSigmaACtrl = designMPC.kfSigmaACtrl;
+fcTowerCtrl = 0.02;
 % First-order low-pass filters of the measured speeds in the qLPV-MPC [Hz]
 % (Inf: no filter): rotor speed for scheduling and the tracked rotor speed,
 % rotor and generator speed for the state increments
