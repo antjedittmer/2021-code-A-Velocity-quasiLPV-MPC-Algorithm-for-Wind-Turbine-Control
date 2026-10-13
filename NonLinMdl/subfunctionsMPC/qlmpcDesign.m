@@ -24,6 +24,8 @@ function P = qlmpcDesign(name)
 %   (0.150 / 63 / 0.244 / 1.8)
 % - 'flapNotchSmooth12': flapSmooth12 with notch filters
 %   (0.155 / 66 / 0.233 / 1.65)
+% - 'flapNotchSmooth12Tower': flapNotchSmooth12 with the tower velocity
+%   weight 1e2 (0.185 / 78 / 0.219 / 1.67)
 %
 % qMPC: 'beta' model x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg,
 % dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)]; 'flap' model [Tg beta OmegaR v_t
@@ -48,14 +50,16 @@ switch name
         P.qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0];
         P.rMPC = [1 1e6];
         P.pMPC = 10;
-    case {'flap', 'flapNotch', 'flapNotchSmooth', 'flapSmooth12', 'flapNotchSmooth12'}
+    case {'flap', 'flapNotch', 'flapNotchSmooth', 'flapSmooth12', 'flapNotchSmooth12', ...
+            'flapNotchSmooth12Tower'}
         P.ctrlVariant = 'flap';
         P.qMPC = qFlap;
         P.rMPC = [1 1e5];
         P.pMPC = 10;
         if contains(name, 'Notch'), P.fNotchCtrl = fNotch; end
         if contains(name, 'Smooth'), P.smoothPitchCtrl = 1; end
-        if endsWith(name, '12'), P.DTc = 0.12; end
+        if contains(name, '12'), P.DTc = 0.12; end
+        if endsWith(name, 'Tower'), P.qMPC(4) = 1e2; end % tower velocity v_t
     otherwise
         error('Unknown qLPV-MPC design %s.', name);
 end

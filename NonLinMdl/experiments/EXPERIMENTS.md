@@ -361,3 +361,24 @@ Variance per band (pitch rate [deg/s]^2 and tower acc. [m/s^2]^2 in
 - Best of this batch: DTc 0.12, notch and smooth reference (speed and power
   scatter about half of the PI, pitch rate 2.7 times, tower FA +23 %; the
   tower-mode band is still 2.2 times the PI value).
+
+## Batch W: tower velocity weight on flapNotchSmooth12 (FAST 18 m/s)
+
+Stored designs: `qlmpcDesign` (subfunctionsMPC), selected in initWorkspace
+with `ctrlDesign` or passed to run_qlmpc_experiment as params. The rerun of
+flapNotchSmooth12 from qlmpcDesign (R_FAST_flapNotchSmooth12) is identical to
+N_FAST_rb1e5_DTc12_notch_smooth (max pitch difference 0).
+
+| vt | RotSpd std / max | Power std | Tower FA | Pitch rate std |
+|---|---|---|---|---|
+| 0 | 0.155 / 12.40 | 66 | 0.233 | 1.65 |
+| 1e2 (design flapNotchSmooth12Tower) | 0.185 / 12.48 | 78 | 0.219 | 1.67 |
+| 3e2 | 0.208 / 12.60 | 88 | 0.228 | 2.04 |
+| 1e3 | 0.259 / 12.70 | 109 | 0.260 | 2.98 |
+| PI | 0.286 / 12.89 | 120 | 0.190 | 0.62 |
+| omega design | 0.144 / 12.44 | 61 | 0.216 | 1.24 |
+
+The tower weight 1e2 reduces the tower acceleration by 6 % at 19 % more speed
+scatter; larger weights increase it again. None of the flap variants reaches
+the PI tower level on FAST, and the omega design (without tower model) is
+at least as good in all four metrics.
