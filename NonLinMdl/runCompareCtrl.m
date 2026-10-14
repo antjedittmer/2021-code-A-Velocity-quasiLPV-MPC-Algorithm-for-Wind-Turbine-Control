@@ -1,4 +1,4 @@
-function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle)
+function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,useFiltered)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
@@ -38,6 +38,10 @@ if nargin < 6 || isempty(useTitle)
     useTitle = [0,1]; %[0,0];
 end
 
+if nargin < 7
+    useFiltered = 1;
+end
+
 %% Set path to directories
 
 % Set path to inputdata directory
@@ -68,14 +72,6 @@ r_ = [1 10^4];
 p = 10^3;
 
 % Switch between Sweep and NTW18
-% if strcmp(strWindType,'Sweep') == 1 % sweep 4-23m/s in 20s steps
-%     outDataSimulationMat = 'OutDataSweep.mat';
-%     strFig = '';
-% else % wind with average 18 m/s
-%     outDataSimulationMat = 'OutDataWind18NTW.mat';
-%     strFig = 'NTW18';
-% end
-
 if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataSweep.mat'; 
     strFig = '';
@@ -92,10 +88,6 @@ else
 end
 
 
-
-
-
-
 %% Load baseline and MPC data or run simulations
 
 %For FASTtool simulation data
@@ -107,6 +99,10 @@ if useFASTForComparison % from FAST
 else % from Simulink
     loadBaseline = 1; %always load if available
     matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strFig,'.mat']);
+    matFileOutTableTest2Filt = strrep(matFileOutTableTest2,'.mat','_kVe0dot25_kVeTau0dot75.mat');
+    if useFiltered == 1 && exist(matFileOutTableTest2Filt,"file") == 2
+        matFileOutTableTest2 = matFileOutTableTest2Filt;
+    end
     simMdlname2 = 'test_SimulinkMdl2_Baseline';
     OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadBaseline,OutTable,simMdlname2);
 end

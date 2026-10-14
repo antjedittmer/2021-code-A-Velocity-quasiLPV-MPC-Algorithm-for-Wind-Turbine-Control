@@ -11,6 +11,12 @@ initWorkspace;
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots}
 filteredPlots = 1; % plots with filter for turbulent wind
+useFiltered = 1; % use Pi with filtered (more realistic) wind for qLMPC comparison
+
+% Load data if available from previous simulation.
+loadData = 1; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
+loadDataCtrlTest = loadData; % for runCompareCtrl (PI and qLMPC based on Mdl2)
+loadData1 = loadData; % for runCompareModels with qLMPC and PI at different rates
 
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
@@ -40,8 +46,6 @@ end
 % FAST simulation results obtained with FASTTool (Tu Delft) are provided as
 % mat-files in dataIn folder.
 
-%Load data if available from previous simulation.
-loadData = 0;
 updateDDMdl1(0.75);
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
@@ -104,14 +108,14 @@ end
 % Run models in closed loop with qLPV MPC
 useFASTForComparison = 0; % compare with PI on the same simplified Simulink model (Mdl_BianchiOL)
 useTitle = [0,1]; % for thesis
-loadDataCtrlTest = loadData; % this can be changed here
+
 figNo = figNo + 1;
-runCompareCtrl('Sweep',loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle);
+noFilterStepped = 1; % no filter needed here
+runCompareCtrl('Sweep',loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle,noFilterStepped);
 figNo = figNo + 1;
-runCompareCtrl(18,loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle);
+runCompareCtrl(18,loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle,useFiltered);
 
 %% For debugging
-
 % varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
 %     'NcIMUTAxs', 'NcIMUTAys'};
 % OutDataTable13 = array2table(OutDataTest,'VariableNames',varnames);
@@ -124,9 +128,6 @@ runCompareCtrl(18,loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle
 % OutDataTable08= array2table(OutDataTest,'VariableNames',varnames);
 
 
-%% Run baseline PI algorithm with different rate limits
-
-%-- define sldd to change
 %% Get Data Directory value of pitch actuator rate
 DDName = 'DD_Mdl1.sldd'; %'DD_MdlCtrl_qLPVMPC.sldd';
 loadData = loadDataCtrlTest;
@@ -139,6 +140,7 @@ try
 catch
     % Dictionary wasn't open, nothing to do
 end
+
 myDictionaryObj = Simulink.data.dictionary.open(DDName);
 dDataSectObj = getSection(myDictionaryObj,'Design Data');
 controlObj = getEntry(dDataSectObj,'controlValue'); % read by MdlCtrl_qLPVMPC as controlValue.Pitch.Maxrate
@@ -184,7 +186,7 @@ for idx = 1:length(maxRateVector)
     end
        
    [currentOutTableTestCell{idx}, tictoc_LPVMPCcell{idx},GenPwrRefCell{idx}] = ...
-        getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname);
+        getSimulationOutputTable(matFileOutTableTest1,loadData1,OutTable,simMdlname);
 end
 
 
@@ -198,7 +200,6 @@ controlValue = getValue(controlCtrlObj);
 currentOutTablePICell = cell(nRate,1); % cell with
 
 simMdlname = 'test_SimulinkMdl2_Baseline'; % Bianchi model (includes blade state), same plant as the qLMPC runs
-loadData1 = loadData;
 
 maxRateVector1 = 1:13;
 
