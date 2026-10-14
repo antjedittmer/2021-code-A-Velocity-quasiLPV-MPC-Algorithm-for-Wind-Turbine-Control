@@ -89,6 +89,7 @@ towerKFCtrl = designMPC.towerKFCtrl;
 kfSigmaVCtrl = designMPC.kfSigmaVCtrl;
 kfSigmaACtrl = designMPC.kfSigmaACtrl;
 fcTowerCtrl = 0.02;
+towerSignCtrl = 1; % sign of the measured tower acceleration in the controller
 % First-order low-pass filters of the measured speeds in the qLPV-MPC [Hz]
 % (Inf: no filter): rotor speed for scheduling and the tracked rotor speed,
 % rotor and generator speed for the state increments
