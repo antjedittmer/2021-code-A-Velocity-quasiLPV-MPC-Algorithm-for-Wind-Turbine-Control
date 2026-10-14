@@ -34,11 +34,12 @@ loadData = 1; % load the stored simulation results if available
 maxRate = 13; % pitch rate limit (deg/s) for PI and qLMPC
 
 % qLPV-MPC designs (qlmpcDesign.m, results in NonLinMdl/experiments/EXPERIMENTS.md)
+% - 'beta': original design (paper/thesis), tracks Tg and the pitch
 % - 'omega': rotor speed tracking, lowest pitch activity and tower acceleration
 % - 'flapNotch': tower/blade flap model with notch filters, best speed and power
 % - 'flapNotchSmooth12': DTc = 0.12 s, smooth pitch reference, balanced
 % - 'flapNotchSmooth12Tower': as above with the tower velocity weight
-designNames = {'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmooth12Tower'};
+designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmooth12Tower'};
 
 % Wind cases: name, FASTTool data (initial values, stop time), FAST input file
 windCases = {'NTW18', 'OutDataWind18NTW.mat', 'FAST_NTW18.fst', '18 m/s turbulent';
@@ -81,10 +82,17 @@ for idxW = 1:size(windCases, 1)
 
     % Power reference of the qLMPC (depends on the measured wind only, the
     % FAST wind field is the same for all controllers); used for all runs
-    idxRef = find(cellfun(@(R) ~isempty(R.GenPwrRef), runs), 1);
-    if isempty(idxRef)
+    % (taken from the longest run, an aborted run has a shorter reference)
+    refEnd = -Inf(size(runs));
+    for idxC = 1:numel(runs)
+        if ~isempty(runs{idxC}.GenPwrRef)
+            refEnd(idxC) = runs{idxC}.GenPwrRef(end, 1);
+        end
+    end
+    if all(isinf(refEnd))
         error('No power reference logged for wind case %s.', windName);
     end
+    [~, idxRef] = max(refEnd);
     GenPwrRef = runs{idxRef}.GenPwrRef;
 
     % Metrics
@@ -299,7 +307,7 @@ for k = 1:numel(yAxCell)
     ax(k) = nexttile; hold on; grid on;
     ylabel(yAxCell{k});
 end
-lineStyles = {'-', '-.', '--', ':', '-.'};
+lineStyles = {'-', '-.', '--', ':', '-.', '--'};
 for idxC = 1:numel(runs)
     [T, t] = runTable(runs{idxC}, DT);
     if isempty(T), continue, end
