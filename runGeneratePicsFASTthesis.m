@@ -1,7 +1,8 @@
 %% Script to compare the PI and the most promising qLPV-MPC designs on FAST
 % Closed-loop runs of the baseline PI controller and the stored qLPV-MPC
 % designs (subfunctionsMPC/qlmpcDesign.m) with FAST v8.16 as the WECS model
-% for the turbulent 18 m/s wind (FAST_NTW18.fst, TurbSim) and the wind sweep
+% for the turbulent 18 m/s wind (FAST_NTM18B.fst: TurbSim, IEC class B, NTM,
+% shear 0.2, 660 s, the wind field of dataIn/OutDataWind18NTW.mat) and the wind sweep
 % (FAST.fst). Pitch rate limit of both controllers: 13 deg/s.
 %
 % The simulation results are stored in NonLinMdl/dataOut/FASTthesis and
@@ -15,7 +16,8 @@
 %   resultsFASTthesis_<wind>.csv and .tex, NonLinMdl/dataOut/FASTthesis/
 %   resultsFASTthesis.mat (variable resultsFAST)
 %
-% Metrics (evaluation window 60 to 600 s, limited by the data length): std
+% Metrics (evaluation window from 60 s: 60 to 660 s for the 18 m/s wind, 60 s to
+% the end of the data for the sweep): std
 % of the rotor speed, the power tracking error |P_g,ref - P_g|, the tower
 % fore-aft acceleration, the generator torque rate, the (collective) pitch
 % rate and the blade 1 pitch rate; from the FAST output file the std of the
@@ -49,11 +51,13 @@ ipcMaxRateCtrl = maxRate;
 designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmooth12Tower', ...
     'flapNotchIPC'};
 
-% Wind cases: name, FASTTool data (initial values, stop time), FAST input file
-windCases = {'NTW18', 'OutDataWind18NTW.mat', 'FAST_NTW18.fst', '18 m/s turbulent';
+% Wind cases: name, reference data (initial values, stop time), FAST input file,
+% label. NTM18B: the same class B wind field as OutDataWind18NTW.mat (660 s);
+% the earlier case NTW18 (FAST_NTW18.fst, class A, 600 s) is no longer run.
+windCases = {'NTM18B', 'OutDataWind18NTW.mat', 'FAST_NTM18B.fst', '18 m/s turbulent (class B)';
     'Sweep', 'OutDataSweep.mat', 'FAST.fst', 'sweep'};
 
-timeEval = [60, 600]; % evaluation window (s), the first 60 s are disregarded
+tEvalStart = 60; % evaluation from 60 s to the end of the wind data (s)
 figDirStr = 'figDirFASTthesis';
 
 %% Directories
@@ -80,6 +84,8 @@ for idxW = 1:size(windCases, 1)
     S = load(fullfile(mainDir, 'dataIn', windCases{idxW, 2}), 'OutTable');
     OutTable = S.OutTable;
     fstFile = fullfile(workDir, 'FASTinputfiles', windCases{idxW, 3});
+    timeEval = [tEvalStart, OutTable.Time(end)]; % evaluation window (s)
+    timeEvalCase.(windName) = timeEval;
 
     % Run or load the simulations
     runs = cell(size(ctrlNames));
@@ -112,7 +118,7 @@ for idxW = 1:size(windCases, 1)
     plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windCases{idxW, 4}, fstFile, maxRate);
     figNo = figNo + 1;
 end
-save(fullfile(dataDirOut, 'resultsFASTthesis.mat'), 'resultsFAST', 'designNames', 'windCases', 'maxRate', 'timeEval');
+save(fullfile(dataDirOut, 'resultsFASTthesis.mat'), 'resultsFAST', 'designNames', 'windCases', 'maxRate', 'timeEvalCase');
 
 %% Local functions
 function setPitchRateLimit(DDName, entryName, maxRate)
