@@ -16,8 +16,8 @@
 %   resultsFASTthesis_<wind>.csv and .tex, NonLinMdl/dataOut/FASTthesis/
 %   resultsFASTthesis.mat (variable resultsFAST)
 %
-% Metrics (evaluation window from 60 s: 60 to 660 s for the 18 m/s wind, 60 s to
-% the end of the data for the sweep): std
+% Metrics (evaluation window: 60 to 660 s for the 18 m/s wind, 15 to 400 s for
+% the sweep): std
 % of the rotor speed, the power tracking error |P_g,ref - P_g|, the tower
 % fore-aft acceleration, the generator torque rate, the (collective) pitch
 % rate and the blade 1 pitch rate; from the FAST output file the std of the
@@ -57,7 +57,9 @@ designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmoo
 windCases = {'NTM18B', 'OutDataWind18NTW.mat', 'FAST_NTM18B.fst', '18 m/s turbulent (class B)';
     'Sweep', 'OutDataSweep.mat', 'FAST.fst', 'sweep'};
 
-tEvalStart = 60; % evaluation from 60 s to the end of the wind data (s)
+% Evaluation from 15 s for the stepped wind sweep (start-up transient decayed
+% within the first 20 s wind level), from 60 s otherwise, to the end of the data
+tEvalStart = struct('NTM18B', 60, 'Sweep', 15); % (s)
 figDirStr = 'figDirFASTthesis';
 
 %% Directories
@@ -84,7 +86,7 @@ for idxW = 1:size(windCases, 1)
     S = load(fullfile(mainDir, 'dataIn', windCases{idxW, 2}), 'OutTable');
     OutTable = S.OutTable;
     fstFile = fullfile(workDir, 'FASTinputfiles', windCases{idxW, 3});
-    timeEval = [tEvalStart, OutTable.Time(end)]; % evaluation window (s)
+    timeEval = [tEvalStart.(windName), OutTable.Time(end)]; % evaluation window (s)
     timeEvalCase.(windName) = timeEval;
 
     % Run or load the simulations

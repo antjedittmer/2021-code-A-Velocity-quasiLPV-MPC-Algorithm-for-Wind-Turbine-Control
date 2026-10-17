@@ -29,9 +29,9 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 %   rotor-effective wind filter (OutTableTest2*_kVe0dot25_kVeTau0dot75.mat
 %   of runCompareModels) if available, as in the paper
 %
-% Evaluation window (figures, ratios, LaTeX table): turbulent wind (18 m/s)
-% from 60 s to the end of the wind data (660 s); wind sweep 15 to 400 s for
-% the Simulink plant models, 60 to 600 s for FAST (limited by the data length).
+% Evaluation window (figures, ratios, LaTeX table): stepped wind sweeps from
+% 15 s, all other wind cases (turbulent 18 m/s) from 60 s, to the end of the
+% wind data (sweep 400 s, turbulent 660 s); Simulink and FAST plant.
 
 %% Handle optional inputs
 % The default inputs are provided here.
@@ -243,14 +243,12 @@ figStr = ['Ref',strFigPlant,'ClosedLoop',strFig,'_beta',strCtrl];
 if ischar(strWindType), strWind = strWindType; else, strWind = sprintf('%g m/s turbulent', strWindType); end
 figLabel = sprintf('%s vs. PI | WECS: %s | wind: %s', ctrlLabel, wecsLabel, strWind);
 meanOpt = strrep(sprintf(' mean cputime MPC: %1.2e s',mean(tictoc_LPVMPC.Data)),'e-0','e-');
-% Evaluation window: the first 60 s are disregarded for the turbulent wind
-% and for FAST; the transients of the simplified models in the sweep decay fast
-if isnumeric(strWindType)
-    timeForPlot = [60, OutTable.Time(end)];
-elseif strcmp(plantMdl, 'FAST')
-    timeForPlot = [60,600];
+% Evaluation window: stepped wind sweeps from 15 s (the start-up transient
+% has decayed within the first 20 s wind level), otherwise from 60 s
+if ischar(strWindType) && any(strcmp(strWindType, {'Sweep', 'Step'}))
+    timeForPlot = [15, OutTable.Time(end)];
 else
-    timeForPlot = [15,400];
+    timeForPlot = [60, OutTable.Time(end)];
 end
 DT = 0.008;
 r = GenPwrRef;
