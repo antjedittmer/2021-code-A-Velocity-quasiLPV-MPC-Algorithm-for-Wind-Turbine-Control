@@ -24,7 +24,7 @@ filteredPlots = 1; % plots with filter for turbulent wind
 useFiltered = 1; % use Pi with filtered (more realistic) wind for qLMPC comparison
 
 % Load data if available from previous simulation.
-loadData = 1; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
+loadData = 0; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
 loadDataCtrlTest = loadData; % for runCompareCtrl (PI and qLMPC based on Mdl2)
 loadData1 = loadData; % for runCompareModels with qLMPC and PI at different rates
 
@@ -283,12 +283,13 @@ tableForPlotMPC{1}.Time = OutTable.Time(1:heightT); % Time assigned to this tabl
 tableForPlotMPC{2} = currentOutTableTestCell{idx8};
 tableForPlotMPC{3} = currentOutTableTestCell{end};
 
-% input plotOutTable:OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig)
+% input plotOutTable:OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig,timeEval)
+timeEvalRate = [60, OutTable.Time(end)]; % evaluation window of the 18 m/s wind (60 to 660 s)
 figDir = 'figDir';
 testCaseStrMPC =  'qLMPC Rate Constraints (°/s)';
 testCaseCell = {'standard (8)  ','high (13) ', 'low (4) '};
 axPlotAllMPC = plotOutTable(tableForPlotMPC{1},tableForPlotMPC{2},tableForPlotMPC{3},...
-   testCaseStrMPC,testCaseCell,[],figDir);
+   testCaseStrMPC,testCaseCell,[],figDir,[],timeEvalRate);
 
 DDNameCtrl = 'DD_CtrlBaseline.sldd';
 myDictionaryCtrlObj = Simulink.data.dictionary.open(DDNameCtrl);
@@ -306,7 +307,7 @@ testCaseStr =  'PI Rate Constraints (°/s)';
 figNo2 = 200;
 strFig = 'testConstrPI';
 axPlotAll = plotOutTable(OutTable4,currentOutTablePICell{maxRateVector1 == 8},currentOutTablePICell{end},...
-   testCaseStr,testCaseCell,figNo2,figDir,strFig);
+   testCaseStr,testCaseCell,figNo2,figDir,strFig,timeEvalRate);
 
 % Set the axis for all axes
 % xPlotAllMPC = axPlotAllMPC(isgraphics(axPlotAll, 'axes'));
