@@ -1,4 +1,4 @@
-function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs)
+function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs,paperMPC)
 % ABqLd calculates system (A) and input (B) matrix for quasiLPV
 % representation from ABgL and augments the states with integrating
 % disturbances.
@@ -18,14 +18,22 @@ function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs)
 [Arho,Brho] = ABqL_WT_beta(rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs);
 
 %% Calculate discrete forms of A,B (zero-order hold, exact)
-% The 4th order Taylor series used before diverges for DT larger than the
-% fast actuator time constants (kappa_g = 0.01 s, tau_g = 0.05 s), e.g.
-% for a controller sample time DTc = 0.04 s.
-nxc = size(Arho,1);
-nuc = size(Brho,2);
-Md = expm([Arho, Brho; zeros(nuc, nxc + nuc)]*DT);
-Ak = Md(1:nxc, 1:nxc);
-Bk = Md(1:nxc, nxc+1:end);
+% The 4th order Taylor series of the paper (paperMPC = 1) diverges for DT
+% larger than the fast actuator time constants (kappa_g = 0.01 s, tau_g =
+% 0.05 s), e.g. for a controller sample time DTc = 0.04 s.
+if nargin > 6 && paperMPC
+    A2 = Arho*Arho;
+    A3 = Arho*A2;
+    Apre = (1.0/24.0)*DT^4*A3+(1.0/6.0)*DT^3*A2+0.5*DT^2*Arho+DT*eye(size(Arho));
+    Ak = Apre*Arho + eye(size(Arho));
+    Bk = Apre*Brho;
+else
+    nxc = size(Arho,1);
+    nuc = size(Brho,2);
+    Md = expm([Arho, Brho; zeros(nuc, nxc + nuc)]*DT);
+    Ak = Md(1:nxc, 1:nxc);
+    Bk = Md(1:nxc, nxc+1:end);
+end
 
 %% Calculate new matrices augmented system
 ny = 3; % outputs y = [Tg, beta, OmegaR]: the absolute rotor speed is tracked

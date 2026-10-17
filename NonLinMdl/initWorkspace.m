@@ -53,7 +53,7 @@ kVeFilt_tau = 0.75;
 % Rotor-effective wind filter at the qLPV-MPC wind input: time constant
 % wecs.Rr*kVeFiltCtrl/V (0: filter off, the measured wind is passed through).
 % Same as the filter for the aerodynamic torque in Mdl_*_WindFiltered.
-kVeFiltCtrl = 0.75;
+% Set by the design below (default 0.75).
 % qLPV-MPC weights: stage cost x'Qx + u'Ru, terminal weight P = pMPC*Q
 % x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg, dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)],
 % u = [dTg_ref, dBeta_ref]; references [Tg_ss, beta_ss, OmegaR_ss](V_filt)
@@ -64,8 +64,11 @@ kVeFiltCtrl = 0.75;
 % (tower fore-aft and blade flap prediction model; need the controller
 % MdlCtrl_qLPVMPCflap, i.e. test_SimulinkMdl2_qLPVMPCflap or
 % test_FAST_qLPVMPCflap). ctrlVariant names the controller model variant.
+% 'paper': the qLPV-MPC of the paper (runGeneratePicsPaper).
 ctrlDesign = 'beta';
 designMPC = qlmpcDesign(ctrlDesign);
+kVeFiltCtrl = designMPC.kVeFiltCtrl;
+paperMPCCtrl = designMPC.paperMPCCtrl; % 1: original qLPV-MPC formulation of the paper
 ctrlVariant = designMPC.ctrlVariant;
 qMPC = designMPC.qMPC;
 rMPC = designMPC.rMPC;
@@ -102,6 +105,14 @@ fcOmegaCtrl = Inf;
 fcOmegaStatesCtrl = Inf;
 load(fullfile(dataInPath,'OutDataSweep.mat'),'OutTable');
 %load(fullfile(dataInPath,'OutDataWind18NTM.mat'),'OutTable');
+
+%% Version of the simplified WECS models (getWecsModelVersion)
+% 'FAST': matched to FAST v8.16 of this repository (effective wind factor,
+% Cq correction near rated, FAST v8.16 step reference); 'paper': original
+% models of the paper/thesis (runGeneratePicsPaper). The data dictionaries
+% are updated to the version (only changed values are written).
+wecsModelVersion = 'FAST';
+updateDDMdl1(0.75);
 
 %% Clean-up
 clear RESTORE*

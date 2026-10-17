@@ -15,8 +15,9 @@ if nargin <3
 end
 
 
-% Update DD
-nameCell = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs';'Lin_points'};
+% Update DD (the model version, FAST or paper, is set by getWecsModelVersion)
+% qLPVMPC_RefLUT: reference table of the qLPV-MPC (DD_Mdl1), same as Lin_points
+nameCell = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs';'Lin_points';'qLPVMPC_RefLUT'};
 
 loadEqPoints = 0; % load equilibrium/reference points for wind speeds from file
 if  loadEqPoints == 1
@@ -24,7 +25,8 @@ if  loadEqPoints == 1
     Lin_points = Lin;
     nameCell{end+1} = 'Lin_points';
 else
-    load('OutDataStep.mat', 'OutTable');
+    [~, stepDataMat] = getWecsModelVersion;
+    load(stepDataMat, 'OutTable');
     idxT = OutTable.Time >= 100;
     OutTableT = OutTable(idxT,:);
 
@@ -55,6 +57,8 @@ else
 % Lin_points = Lin;
 
 end
+
+qLPVMPC_RefLUT = Lin_points;
 
 plotOn = 0;
 Rotor_Lamda = ''; Rotor_Pitch = ''; Rotor_cQ = ''; Rotor_cT = '';

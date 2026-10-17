@@ -8,6 +8,14 @@ addpath(genpath('NonLinMdl'));
 addpath(genpath('LinMdl'));
 
 initWorkspace;
+
+% Original models and qLPV-MPC of the paper (same results as the code of the
+% paper): WECS model version 'paper' (getWecsModelVersion: no effective wind
+% factor and Cq correction, FASTTool step reference; results in
+% NonLinMdl/dataOut/paper) and the qLPV-MPC design 'paper' (qlmpcDesign:
+% DTc = DT, no wind filter at the controller input, original formulation).
+% initWorkspace sets the default version 'FAST' again.
+setModelVersionPaper('paper');
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots}
 filteredPlots = 1; % plots with filter for turbulent wind
@@ -42,7 +50,7 @@ end
 
 %Load data if available from previous simulation.
 loadData = 1;
-updateDDMdl1(0.75);
+updateDDMdl1(0.75); % data dictionaries of the paper models
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
 % k-omega-squared, Pitch controller: Gainscheduled Pi)
@@ -102,7 +110,11 @@ end
 % plotNormTimePlots(normStruct,figNo,figDirStr);
 
 %% Comparison qLPV MPC vs. PI in closed loop
-% Both controllers run on the same plant model:
+% As in the paper ('SimulinkPaper'): test models as saved, PI on
+% Mdl_BianchiOL_WindFiltered, qLPV-MPC on Mdl_BianchiOL.
+% Additional comparisons (runFASTComparison = 1) with the FAST-matched models
+% (version 'FAST') and the qLPV-MPC design 'beta' of initWorkspace; both
+% controllers run on the same plant model:
 % - 'Simulink': simplified model Mdl_BianchiOL (uniform wind sweep)
 % - 'SimFilt':  simplified model with rotor-effective wind filter
 %               (Mdl_BianchiOL_WindFiltered) for the turbulent wind
@@ -112,11 +124,23 @@ end
 useFASTForComparison = 0; % compare with the PI on the same plant model
 useTitle = [0,1]; % for thesis
 loadDataCtrlTest = loadData; % this can be changed here
-ctrlCases = {'Sweep', 'Simulink'; 18, 'SimFilt'; 'Sweep', 'FAST'; 18, 'FAST'};
+ctrlCases = {'Sweep', 'SimulinkPaper'; 18, 'SimulinkPaper'};
 for idxC = 1:size(ctrlCases, 1)
     figNo = figNo + 1;
     runCompareCtrl(ctrlCases{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
         figDirStr, useTitle, ctrlCases{idxC,2});
+end
+
+runFASTComparison = 0; % 1: additional comparisons on the FAST-matched models and FAST
+if runFASTComparison
+    setModelVersionPaper('FAST');
+    ctrlCasesFAST = {'Sweep', 'Simulink'; 18, 'SimFilt'; 'Sweep', 'FAST'; 18, 'FAST'};
+    for idxC = 1:size(ctrlCasesFAST, 1)
+        figNo = figNo + 1;
+        runCompareCtrl(ctrlCasesFAST{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
+            figDirStr, useTitle, ctrlCasesFAST{idxC,2});
+    end
+    setModelVersionPaper('paper');
 end
 
 %% For debugging
@@ -162,7 +186,8 @@ controlValue = getValue(controlObj);
 maxRateVector = [1,3,4,5,8,13];
 outDataSimulationMat = 'OutDataWind18NTW.mat';
 %dataDirOut = fullfile(fileparts(mfilename('fullpath')),'dataOut');
-dataDirOut = fullfile(fileparts(mfilename('fullpath')),'NonLinMdl','dataOut'); % same folder as the other simulation results
+[~, ~, dataOutSub] = getWecsModelVersion;
+dataDirOut = fullfile(fileparts(mfilename('fullpath')),'NonLinMdl','dataOut',dataOutSub); % same folder as the other simulation results
 
 if strcmp(outDataSimulationMat, 'OutDataWind18NTW.mat')
     load(fullfile('dataIn',outDataSimulationMat),'OutTable');
@@ -305,3 +330,22 @@ strFig = 'PINewLim';
 print(figNo2, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
 print(figNo2, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
 
+function setModelVersionPaper(modelVersion)
+% setModelVersionPaper sets the WECS model version ('paper' or 'FAST',
+% getWecsModelVersion) with the corresponding qLPV-MPC design ('paper' or
+% 'beta', qlmpcDesign) in the base workspace and updates the data dictionaries
+assignin('base', 'wecsModelVersion', modelVersion);
+if strcmp(modelVersion, 'paper')
+    ctrlDesign = 'paper';
+else
+    ctrlDesign = 'beta';
+end
+designMPC = qlmpcDesign(ctrlDesign);
+fn = fieldnames(designMPC);
+for idxF = 1:numel(fn)
+    assignin('base', fn{idxF}, designMPC.(fn{idxF}));
+end
+assignin('base', 'ctrlDesign', ctrlDesign);
+assignin('base', 'designMPC', designMPC);
+updateDDMdl1(0.75);
+end

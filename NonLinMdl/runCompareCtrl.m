@@ -17,7 +17,10 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 %   files in FASTinputfiles; 'Sweep': FAST.fst, 18: FAST_NTW18.fst with a
 %   TurbSim wind field, so the FAST 18 m/s wind differs from the
 %   OutDataWind18NTW.mat wind, which is only used for initial values, the
-%   stop time and the power reference)
+%   stop time and the power reference) or 'SimulinkPaper' (as in the paper:
+%   the test models as saved, i.e. the PI on Mdl_BianchiOL_WindFiltered
+%   with the wind filter settings of the base workspace and the qLPV-MPC
+%   on Mdl_BianchiOL)
 % - ctrlOpts: qLPV-MPC variant, struct with the optional fields qMPC, rMPC,
 %   pMPC (weights, replace the initWorkspace values during the run) and
 %   name (suffix of the result files and figures). Default: the
@@ -75,8 +78,9 @@ if ~isfolder(figDir)
     mkdir(figDir)
 end
 
-% Set path to data output directory
-dataDirOut = fullfile(workDir, 'dataOut');
+% Set path to data output directory (results of the paper models in dataOut/paper)
+[~, ~, dataOutSub] = getWecsModelVersion;
+dataDirOut = fullfile(workDir, 'dataOut', dataOutSub);
 if ~isfolder(dataDirOut)
     mkdir(dataDirOut)
 end
@@ -122,7 +126,7 @@ if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataSweep.mat'; 
     strFig = '';
 elseif strcmp(strWindType,'Step') == 1 % sweep from 4 to 25 in steps
-    outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
+    [~, outDataSimulationMat] = getWecsModelVersion; % FAST step reference of the model version
     strFig = 'Step';
 elseif isa(strWindType,'double')  % wind with average 18 m/s
     outDataSimulationMat = sprintf('OutDataWind%02dNTW.mat',strWindType);
@@ -139,6 +143,22 @@ end
 
 % Switch between the Simulink and the FAST WECS model
 switch plantMdl
+    case 'SimulinkPaper'
+        simMdlname2 = 'test_SimulinkMdl2_Baseline';
+        simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta';
+        FAST_InputFileName = '';
+        strPlant = '';
+        strFigPlant = 'Simulink';
+        % WECS models as saved in the test models (discard edits in memory)
+        wecsMdlCell = cell(1, 2);
+        mdlCellPaper = {simMdlname2, simMdlname};
+        for idxM = 1:2
+            if bdIsLoaded(mdlCellPaper{idxM}), close_system(mdlCellPaper{idxM}, 0); end
+            load_system(mdlCellPaper{idxM});
+            blk = find_system(mdlCellPaper{idxM}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+            wecsMdlCell{idxM} = strrep(get_param(blk{1}, 'ModelName'), '.slx', '');
+        end
+        wecsLabel = sprintf('Mdl2 (PI: %s, qLMPC: %s)', wecsMdlCell{:});
     case {'Simulink', 'SimFilt'}
         simMdlname2 = 'test_SimulinkMdl2_Baseline';
         simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta';
@@ -179,7 +199,7 @@ switch plantMdl
         [~, fstName] = fileparts(FAST_InputFileName);
         wecsLabel = ['FAST v8.16 (', fstName, '.fst)'];
     otherwise
-        error('Unknown plant model %s (Simulink, SimFilt or FAST).', plantMdl);
+        error('Unknown plant model %s (Simulink, SimulinkPaper, SimFilt or FAST).', plantMdl);
 end
 
 %% Load baseline and MPC data or run simulations

@@ -143,7 +143,17 @@ wecs.etag = 0.944; %Drivetrain.Generator.Efficiency: 0.944;
 % rotor tilt (5 deg) and precone (2.5 deg), cos(5)*cos(2.5) = 0.995, and the
 % remaining difference to FAST (rotor averaging, blade flexibility); 0.985
 % matches the FAST steady states and step responses of the wind sweep.
-wecs.kWindEff = 0.985;
+% kWindEffFilt: factor in the rotor-effective wind filter (Lib_WindFilter).
+% The original paper/thesis models (getWecsModelVersion 'paper') have no
+% effective wind factor and cos(5 deg) in the wind filter.
+isPaperMdl = strcmp(getWecsModelVersion, 'paper');
+if isPaperMdl
+    wecs.kWindEff = 1;
+    wecs.kWindEffFilt = cos(5/180*pi);
+else
+    wecs.kWindEff = 0.985;
+    wecs.kWindEffFilt = wecs.kWindEff;
+end
 
 %% Lagrange's Model matrices
 % Force input w = [Ft_fa,Ft_sw,Tr,Tg]; Ft_fa = Ft
@@ -235,8 +245,8 @@ end
 % accelerates more, so the pitch passes the 1 deg threshold of the PI torque
 % switch at once; without the correction the models stay just below it for
 % about 5 s with torque above rated. Zero at fine pitch (0.11 deg), so the
-% steady states below rated are unchanged.
-kCqRated = 0.05;
+% steady states below rated are unchanged. Not in the paper models.
+kCqRated = 0.05*~isPaperMdl;
 [betaGrid, lambdaGrid] = ndgrid(betaDeg(:), lambda(:));
 CqBump = exp(-0.5*((lambdaGrid - 6.65)/0.3).^2) .* exp(-0.5*((betaGrid - 1)/0.5).^2) ...
     .* min(max((betaGrid - 0.11)/0.4, 0), 1);

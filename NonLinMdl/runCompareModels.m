@@ -61,8 +61,9 @@ if ~isfolder(figDir)
     mkdir(figDir)
 end
 
-% Set path to data output directory
-dataDirOut = fullfile(workDir, 'dataOut');
+% Set path to data output directory (results of the paper models in dataOut/paper)
+[~, ~, dataOutSub] = getWecsModelVersion;
+dataDirOut = fullfile(workDir, 'dataOut', dataOutSub);
 if ~isfolder(dataDirOut)
     mkdir(dataDirOut)
 end
@@ -82,7 +83,7 @@ if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     testCaseStr = 'Wind Sweep';
     step_thresshold = 0;
 elseif strcmp(strWindType,'Step') == 1 % sweep from 4 to 25 in steps
-    outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
+    [~, outDataSimulationMat] = getWecsModelVersion; % FAST step reference of the model version
     strFig = 'Step';
     testCaseStr = 'Wind Step';
     step_thresshold = 0;

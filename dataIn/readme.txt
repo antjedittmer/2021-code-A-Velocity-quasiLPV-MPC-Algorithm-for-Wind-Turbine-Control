@@ -31,3 +31,6 @@ The mat files are:
   Replaces the earlier FASTTool simulation, which started from standstill 
   and had 3-5 % more aerodynamic power below rated than FAST v8.16 of this 
   repository.
+- OutDataStepFASTTool.mat: the earlier FASTTool simulation with a stepped
+  wind (same step layout). Used for the original models of the paper
+  (WECS model version 'paper', getWecsModelVersion, runGeneratePicsPaper).

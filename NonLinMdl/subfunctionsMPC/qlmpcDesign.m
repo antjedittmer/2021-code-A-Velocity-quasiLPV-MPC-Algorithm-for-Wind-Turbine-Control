@@ -7,13 +7,18 @@ function P = qlmpcDesign(name)
 % MdlCtrl_qLPVMPCflap, test_*_qLPVMPCflap; 'flapIPC': MdlCtrl_qLPVMPCflap
 % with IPC, test_FAST_qLPVMPCflapIPC), qMPC, rMPC, pMPC, DTc, fNotchCtrl,
 % zetaNotchCtrl, smoothPitchCtrl, towerKFCtrl, kfSigmaVCtrl, kfSigmaACtrl,
-% ipcParCtrl ([gainSet, kScale, towerOn] of ipc_dlr; gainSet 0: no IPC).
+% ipcParCtrl ([gainSet, kScale, towerOn] of ipc_dlr; gainSet 0: no IPC),
+% kVeFiltCtrl (wind filter at the controller input, 0: off), paperMPCCtrl
+% (1: original qLPV-MPC formulation of the paper, HSqLd_WT_beta).
 %
 % Designs (results: experiments/EXPERIMENTS.md, FAST 18 m/s, 60-600 s,
 % rotor speed std / power std / tower fore-aft acc. std / pitch rate std;
 % PI: 0.286 rpm / 120 kW / 0.190 m/s^2 / 0.62 deg/s):
 % - 'beta': original design (paper/thesis), tracks Tg and beta; good on the
 %   Simulink plant models, fails on FAST in turbulent wind
+% - 'paper': 'beta' as in the paper (runGeneratePicsPaper): controller
+%   sample time DTc = DT = 0.008 s, no wind filter at the controller input,
+%   original formulation (Taylor discretization, scheduling)
 % - 'omega': tracks Tg and the rotor speed instead of the pitch
 %   (0.144 / 61 / 0.216 / 1.24)
 % - 'flap': omega design with the tower fore-aft and blade flap prediction
@@ -46,7 +51,8 @@ end
 % Defaults: no notch filter, step-wise pitch reference, DTc = 0.04 s
 P = struct('ctrlVariant', 'beta', 'qMPC', [], 'rMPC', [], 'pMPC', [], ...
     'DTc', 0.04, 'fNotchCtrl', 0, 'zetaNotchCtrl', 0.1, 'smoothPitchCtrl', 0, ...
-    'towerKFCtrl', 0, 'kfSigmaVCtrl', 0.5, 'kfSigmaACtrl', 0.05, 'ipcParCtrl', [0 1 0]);
+    'towerKFCtrl', 0, 'kfSigmaVCtrl', 0.5, 'kfSigmaACtrl', 0.05, 'ipcParCtrl', [0 1 0], ...
+    'kVeFiltCtrl', 0.75, 'paperMPCCtrl', 0);
 qFlap = [1 0 1e3 0 0 1e3 1e3 0 0 0 0 0 0 0 0 0];
 fNotch = [0.605 1.64]; % 3P at rated rotor speed, FAST drivetrain mode
 
@@ -55,6 +61,11 @@ switch name
         P.qMPC = [1 1e4 0 0 1e3 1e3 0 0 0 0 0];
         P.rMPC = [1 1e4];
         P.pMPC = 1e3;
+    case 'paper'
+        P = qlmpcDesign('beta');
+        P.DTc = 0.008;
+        P.kVeFiltCtrl = 0;
+        P.paperMPCCtrl = 1;
     case 'omega'
         P.qMPC = [1 0 1e3 0 1e3 1e3 0 0 0 0 0];
         P.rMPC = [1 1e6];
