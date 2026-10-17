@@ -88,6 +88,11 @@ smoothPitchCtrl = designMPC.smoothPitchCtrl;
 towerKFCtrl = designMPC.towerKFCtrl;
 kfSigmaVCtrl = designMPC.kfSigmaVCtrl;
 kfSigmaACtrl = designMPC.kfSigmaACtrl;
+% Only test_FAST_qLPVMPCflapIPC: individual pitch control (ipc_dlr) with the
+% parameters ipcParCtrl = [gainSet (0: off), gain scaling, tower term on/off]
+% and the blade pitch rate limit ipcMaxRateCtrl [deg/s]
+ipcParCtrl = designMPC.ipcParCtrl;
+ipcMaxRateCtrl = 13;
 fcTowerCtrl = 0.02;
 towerSignCtrl = 1; % sign of the measured tower acceleration in the controller
 % First-order low-pass filters of the measured speeds in the qLPV-MPC [Hz]

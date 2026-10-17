@@ -411,3 +411,42 @@ metrics. On FAST it is slightly worse than the leaky integration; the more
 it trusts the measured acceleration (larger sigmaV), the higher the tower
 acceleration. The tower state estimate is not what limits the tower
 damping on FAST.
+
+## Batch I: DLR individual pitch control on top of flapNotch (FAST)
+
+IPC = DLR IPC-Regler1 (Sandbox/.../MdLCtrl_IPC.slx, gains of
+initDLRparameter switchIPC 1 to 3, thesis section 4.2) reimplemented as
+`subfunctionsMPC/ipc_dlr.m` (Tustin at DT): 1P band-pass of the blade root
+out-of-plane moments, multiblade transformation, PI per tilt/yaw axis, back
+transformation with 25 deg azimuth offset, actuator filter
+100/(s^2+20s+100), optional collective tower term kp_Turm*LP(a_t), blade
+pitch rate limit 13 deg/s. Model `test_FAST_qLPVMPCflapIPC` (controller
+MdlCtrl_qLPVMPCflap, IPC between actuator and `Mdl_FAST_IPC`, which outputs
+RootMOoP1-3 and Azimuth and feeds the mean blade pitch back to the qLMPC).
+
+FAST 18 m/s, flapNotch, 150 s, evaluated 60-150 s; sign "+": blade pitch
+= collective - IPC (DLR model), "-": collective + IPC; scale: factor on KP
+and KI. Myb: blade root out-of-plane moment std (mean of the blades).
+
+| Gain set | Sign | Scale | Tower term | Mtilt mean/std (kNm) | Myb std (kNm) | Blade pitch rate std (deg/s) | IPC max (deg) | Tower FA std |
+|---|---|---|---|---|---|---|---|---|
+| off | | | | 1574 / 1134 | 1884 | 3.70 | 0 | 0.286 |
+| 2 | + | 1 | on | 2519 / 7032 | 7797 (unstable) | 11.9 | 59 | 0.717 |
+| 2 | - | 1 | on (flipped) | 167 / 1915 | 2218 | 6.42 | 6.7 | 0.400 |
+| 3 | + | 1 | on | 1714 / 1133 | 1950 | 3.69 | 0.31 | 0.288 |
+| 3 | - | 1 | on (flipped) | 1449 / 1137 | 1835 | 3.69 | 0.27 | 0.294 |
+| 1 | + | 1 | on | 1642 / 1142 | 1921 | 3.69 | 0.15 | 0.288 |
+| 1 | - | 1 | on (flipped) | 1511 / 1127 | 1851 | 3.70 | 0.14 | 0.284 |
+| 2 | - | 0.1 | on (flipped) | 868 / 1049 | 1607 | 3.88 | 1.6 | 0.330 |
+| 2 | - | 0.3 | on (flipped) | 447 / 1016 | 1504 | 4.12 | 2.7 | 0.334 |
+| 2 | - | 0.5 | on (flipped) | 298 / 1103 | 1564 | 4.41 | 3.5 | 0.357 |
+| 2 | - | 0.3 | on (DLR sign) | 447 / 1013 | 1467 | 4.02 | 2.7 | 0.295 |
+| 2 | - | 0.3 | off | 447 / 1012 | **1460** | 4.03 | 2.7 | **0.291** |
+
+With the FAST blade root moments and azimuth the IPC sign is opposite to the
+DLR model. The tuned gains do not carry over: set 2 (the aggressive one,
+probably the 13 deg/s tuning) is too strong, sets 1 and 3 hardly act.
+Gain set 2 scaled by 0.3 without the tower term (the qLMPC damps the tower)
+reduces the blade root moment std by 22 % (thesis, DLR model, 13 deg/s:
+23 %) at an unchanged tower acceleration and rotor speed: design
+`flapNotchIPC` (ipcParCtrl = [2 0.3 0]).

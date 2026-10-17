@@ -4,9 +4,10 @@ function P = qlmpcDesign(name)
 % to experiments/run_qlmpc_experiment as params.
 %
 % Fields: ctrlVariant ('beta': MdlCtrl_qLPVMPC, test_*_qLPVMPCbeta; 'flap':
-% MdlCtrl_qLPVMPCflap, test_*_qLPVMPCflap), qMPC, rMPC, pMPC, DTc,
-% fNotchCtrl, zetaNotchCtrl, smoothPitchCtrl, towerKFCtrl, kfSigmaVCtrl,
-% kfSigmaACtrl.
+% MdlCtrl_qLPVMPCflap, test_*_qLPVMPCflap; 'flapIPC': MdlCtrl_qLPVMPCflap
+% with IPC, test_FAST_qLPVMPCflapIPC), qMPC, rMPC, pMPC, DTc, fNotchCtrl,
+% zetaNotchCtrl, smoothPitchCtrl, towerKFCtrl, kfSigmaVCtrl, kfSigmaACtrl,
+% ipcParCtrl ([gainSet, kScale, towerOn] of ipc_dlr; gainSet 0: no IPC).
 %
 % Designs (results: experiments/EXPERIMENTS.md, FAST 18 m/s, 60-600 s,
 % rotor speed std / power std / tower fore-aft acc. std / pitch rate std;
@@ -29,6 +30,10 @@ function P = qlmpcDesign(name)
 %   weight 1e2 (0.185 / 78 / 0.219 / 1.67)
 % - 'flapNotchSmooth12KF', 'flapNotchSmooth12TowerKF': as above with the
 %   Kalman filter for the tower and blade flap states (flap_kalman)
+% - 'flapNotchIPC': flapNotch with the DLR individual pitch controller on top
+%   (ipc_dlr: gain set 2 of initDLRparameter scaled by 0.3, without the
+%   tower damping term; ctrlVariant 'flapIPC': test_FAST_qLPVMPCflapIPC,
+%   FAST only)
 %
 % qMPC: 'beta' model x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg,
 % dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)]; 'flap' model [Tg beta OmegaR v_t
@@ -41,7 +46,7 @@ end
 % Defaults: no notch filter, step-wise pitch reference, DTc = 0.04 s
 P = struct('ctrlVariant', 'beta', 'qMPC', [], 'rMPC', [], 'pMPC', [], ...
     'DTc', 0.04, 'fNotchCtrl', 0, 'zetaNotchCtrl', 0.1, 'smoothPitchCtrl', 0, ...
-    'towerKFCtrl', 0, 'kfSigmaVCtrl', 0.5, 'kfSigmaACtrl', 0.05);
+    'towerKFCtrl', 0, 'kfSigmaVCtrl', 0.5, 'kfSigmaACtrl', 0.05, 'ipcParCtrl', [0 1 0]);
 qFlap = [1 0 1e3 0 0 1e3 1e3 0 0 0 0 0 0 0 0 0];
 fNotch = [0.605 1.64]; % 3P at rated rotor speed, FAST drivetrain mode
 
@@ -65,6 +70,10 @@ switch name
         if contains(name, '12'), P.DTc = 0.12; end
         if contains(name, 'Tower'), P.qMPC(4) = 1e2; end % tower velocity v_t
         if endsWith(name, 'KF'), P.towerKFCtrl = 1; end
+    case 'flapNotchIPC'
+        P = qlmpcDesign('flapNotch');
+        P.ctrlVariant = 'flapIPC';
+        P.ipcParCtrl = [2 0.3 0];
     otherwise
         error('Unknown qLPV-MPC design %s.', name);
 end

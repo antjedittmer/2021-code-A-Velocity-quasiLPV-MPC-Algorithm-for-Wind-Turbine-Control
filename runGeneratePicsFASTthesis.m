@@ -17,8 +17,12 @@
 %
 % Metrics (evaluation window 60 to 600 s, limited by the data length): std
 % of the rotor speed, the power tracking error |P_g,ref - P_g|, the tower
-% fore-aft acceleration, the generator torque rate and the pitch rate; the
-% ratio sigma_PI/sigma_qLMPC is above 1 if the qLMPC design is better.
+% fore-aft acceleration, the generator torque rate, the (collective) pitch
+% rate and the blade 1 pitch rate; from the FAST output file the std of the
+% blade root out-of-plane moments (mean of the three blades), the blade root
+% DEL (Woehler exponent 10, maximum of the three blades) and the tower base
+% fore-aft DEL (TwrBsMyt, exponent 4), as in thesis section 4.2. The ratio
+% PI/qLMPC is above 1 if the qLMPC design is better.
 clc; clear; close all;
 
 Simulink.data.dictionary.closeAll('-discard');
@@ -31,7 +35,8 @@ initWorkspace;
 
 %% Settings
 loadData = 1; % load the stored simulation results if available
-maxRate = 13; % pitch rate limit (deg/s) for PI and qLMPC
+maxRate = 13; % pitch rate limit (deg/s) for PI, qLMPC and the IPC blade pitch
+ipcMaxRateCtrl = maxRate;
 
 % qLPV-MPC designs (qlmpcDesign.m, results in NonLinMdl/experiments/EXPERIMENTS.md)
 % - 'beta': original design (paper/thesis), tracks Tg and the pitch
@@ -39,7 +44,10 @@ maxRate = 13; % pitch rate limit (deg/s) for PI and qLMPC
 % - 'flapNotch': tower/blade flap model with notch filters, best speed and power
 % - 'flapNotchSmooth12': DTc = 0.12 s, smooth pitch reference, balanced
 % - 'flapNotchSmooth12Tower': as above with the tower velocity weight
-designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmooth12Tower'};
+% - 'flapNotchIPC': flapNotch with the DLR individual pitch controller
+%   (ipc_dlr, adapted to FAST: gain set 2 scaled by 0.3, no tower term)
+designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmooth12Tower', ...
+    'flapNotchIPC'};
 
 % Wind cases: name, FASTTool data (initial values, stop time), FAST input file
 windCases = {'NTW18', 'OutDataWind18NTW.mat', 'FAST_NTW18.fst', '18 m/s turbulent';
@@ -126,10 +134,13 @@ function R = getFASTRun(matFile, loadData, ctrlName, OutTable, fstFile, maxRate)
 % getFASTRun loads the stored closed-loop FAST run or runs the simulation.
 % R: struct with the fields OutTableRun (table at DT), GenPwrRef ([time,
 % value]), tictoc (qLMPC computation time per step), design (qlmpcDesign
-% struct, empty for the PI), status, msg, maxRate, wallTime_s
+% struct, empty for the PI), status, msg, maxRate, wallTime_s, FASTOut (table
+% of FAST output channels: blade root moments, blade 1 pitch, azimuth,
+% tower base moment)
 if loadData && isfile(matFile)
     tmp = load(matFile, 'R');
-    if ~isempty(tmp.R.OutTableRun) % runs without any data are repeated
+    % runs without any data or without the FAST output channels are repeated
+    if ~isempty(tmp.R.OutTableRun) && isfield(tmp.R, 'FASTOut') && ~isempty(tmp.R.FASTOut)
         R = tmp.R;
         fprintf('Loaded %s\n', matFile);
         return
@@ -160,7 +171,8 @@ assignin('base', 'OutList', cellstr(readlines(fullfile(fileparts(fstFile), 'OutL
 
 fprintf('Running %s with %s (%s) ...\n', simMdlname, ctrlName, fstFile);
 R = struct('ctrlName', ctrlName, 'design', design, 'status', "ok", 'msg', "", ...
-    'maxRate', maxRate, 'fstFile', fstFile, 'OutTableRun', table(), 'GenPwrRef', [], 'tictoc', []);
+    'maxRate', maxRate, 'fstFile', fstFile, 'OutTableRun', table(), 'GenPwrRef', [], 'tictoc', [], ...
+    'FASTOut', table());
 t0 = tic;
 try
     load_system(simMdlname);
@@ -189,12 +201,38 @@ catch ME
 end
 R.wallTime_s = toc(t0);
 close_system(simMdlname, 0);
+outFile = fullfile(fileparts(fstRun), 'FAST_exp_thesis.SFunc.out');
+if isfile(outFile)
+    R.FASTOut = readFASTOut(outFile, {'Time', 'RootMOoP1', 'RootMOoP2', 'RootMOoP3', ...
+        'BlPitch1', 'Azimuth', 'TwrBsMyt'});
+end
 delete(fullfile(fileparts(fstRun), 'FAST_exp_thesis.*'));
 if R.status ~= "ok"
     warning('%s: %s', ctrlName, R.msg);
 end
 save(matFile, 'R');
 fprintf('Saved %s (%.0f s)\n', matFile, R.wallTime_s);
+end
+
+function T = readFASTOut(outFile, channels)
+% readFASTOut reads the channels of a FAST text output file (tab delimited,
+% header with the channel names followed by a line with the units)
+lines = readlines(outFile);
+idxHead = find(startsWith(strtrim(lines), 'Time'), 1);
+names = strtrim(split(lines(idxHead), char(9)));
+dataLines = lines(idxHead + 2:end);
+dataLines = dataLines(contains(dataLines, char(9))); % without empty lines at the end
+data = str2double(split(strtrim(dataLines), char(9)));
+data = data(all(isfinite(data), 2), :);
+[~, idxCol] = ismember(channels, names);
+T = array2table(data(:, idxCol), 'VariableNames', channels);
+end
+
+function D = damageEquivalentLoad(x, t, m)
+% damageEquivalentLoad DEL of the signal x for the Woehler exponent m with
+% rainflow counting, equivalent number of cycles = duration in s (1 Hz)
+c = rainflow(x, t);
+D = (sum(c(:, 1).*c(:, 2).^m)/(t(end) - t(1)))^(1/m);
 end
 
 function [T, t] = runTable(R, DT)
@@ -212,7 +250,7 @@ function Tres = evaluateRuns(runs, ctrlNames, GenPwrRef, timeEval)
 DT = 0.008;
 nC = numel(runs);
 [RotSpdStd, RotSpdMax, PwrErrStd, TwrFAStd, GenTqRateStd, PitchRateStd, ...
-    tCpuMean, simulated] = deal(nan(nC, 1));
+    BlPitchRateStd, BlMOoPStd, BlDEL, TwrDEL, tCpuMean, simulated] = deal(nan(nC, 1));
 status = strings(nC, 1);
 for idxC = 1:nC
     [T, t] = runTable(runs{idxC}, DT);
@@ -230,13 +268,26 @@ for idxC = 1:nC
     if ~isempty(runs{idxC}.tictoc)
         tCpuMean(idxC) = mean(runs{idxC}.tictoc);
     end
+    % Blade and tower loads from the FAST output file
+    F = runs{idxC}.FASTOut;
+    if ~isempty(F)
+        idxF = F.Time >= timeEval(1) & F.Time <= timeEval(2);
+        tF = F.Time(idxF);
+        BlPitchRateStd(idxC) = std(diff(F.BlPitch1(idxF))./diff(tF));
+        Myb = [F.RootMOoP1(idxF), F.RootMOoP2(idxF), F.RootMOoP3(idxF)];
+        BlMOoPStd(idxC) = mean(std(Myb));
+        BlDEL(idxC) = max([damageEquivalentLoad(Myb(:, 1), tF, 10), ...
+            damageEquivalentLoad(Myb(:, 2), tF, 10), damageEquivalentLoad(Myb(:, 3), tF, 10)]);
+        TwrDEL(idxC) = damageEquivalentLoad(F.TwrBsMyt(idxF), tF, 4);
+    end
 end
 % Numerically constant signals (constant torque above rated) count as zero
 GenTqRateStd(GenTqRateStd < 1e-6) = 0;
 Tres = table(RotSpdStd, RotSpdMax, PwrErrStd, TwrFAStd, GenTqRateStd, PitchRateStd, ...
-    tCpuMean, simulated, status, 'RowNames', ctrlNames(:));
-% Std ratios PI/qLMPC (above 1: qLMPC better)
-metricNames = {'RotSpdStd', 'PwrErrStd', 'TwrFAStd', 'GenTqRateStd', 'PitchRateStd'};
+    BlPitchRateStd, BlMOoPStd, BlDEL, TwrDEL, tCpuMean, simulated, status, 'RowNames', ctrlNames(:));
+% Ratios PI/qLMPC (above 1: qLMPC better)
+metricNames = {'RotSpdStd', 'PwrErrStd', 'TwrFAStd', 'GenTqRateStd', 'PitchRateStd', ...
+    'BlPitchRateStd', 'BlMOoPStd', 'BlDEL', 'TwrDEL'};
 for k = 1:numel(metricNames)
     Tres.(['ratio_', metricNames{k}]) = Tres.(metricNames{k})(1)./Tres.(metricNames{k});
 end
@@ -254,6 +305,14 @@ for k = 1:height(Tres)
         Tres.PitchRateStd(k), Tres.ratio_RotSpdStd(k), Tres.ratio_PwrErrStd(k), Tres.ratio_TwrFAStd(k), ...
         Tres.ratio_PitchRateStd(k), Tres.status(k));
 end
+fprintf('\n%-24s %9s %9s %9s %9s | %-36s\n', 'Loads (FAST output)', 'BlPtchRt', 'BlMOoP', 'BlDEL', 'TwrDEL', ...
+    'ratio PI/qLMPC: blPtchRt MOoP blDEL twrDEL');
+fprintf('%-24s %9s %9s %9s %9s |\n', '', '(deg/s)', '(kNm)', '(kNm)', '(kNm)');
+for k = 1:height(Tres)
+    fprintf('%-24s %9.2f %9.0f %9.0f %9.0f | %5.2f %5.2f %5.2f %5.2f\n', Tres.Row{k}, ...
+        Tres.BlPitchRateStd(k), Tres.BlMOoPStd(k), Tres.BlDEL(k), Tres.TwrDEL(k), ...
+        Tres.ratio_BlPitchRateStd(k), Tres.ratio_BlMOoPStd(k), Tres.ratio_BlDEL(k), Tres.ratio_TwrDEL(k));
+end
 end
 
 function writeTable(Tres, figDir, windName, windLabel, maxRate)
@@ -264,39 +323,54 @@ fid = fopen(fullfile(figDir, ['resultsFASTthesis_', windName, '.tex']), 'w');
 fprintf(fid, '\\begin{table}[h]\n');
 fprintf(fid, '\\centering\n');
 fprintf(fid, ['\\caption[Controller comparison on FAST, %s.]{Controller comparison on FAST v8.16, %s, ', ...
-    'pitch rate limit %g\\,\\si{\\degree/s}. Standard deviations; in parentheses the ratio ', ...
-    '$\\sigma_\\text{PI}/\\sigma_\\text{qLMPC}$, values above 1 indicate improvement.}\n'], windLabel, windLabel, maxRate);
+    'pitch rate limit %g\\,\\si{\\degree/s}. Standard deviations (top) and blade pitch rate, ', ...
+    'blade root out-of-plane moment standard deviation and damage equivalent loads of the blade root ', ...
+    '(Woehler exponent 10, maximum of the blades) and tower base (exponent 4) (bottom); in parentheses ', ...
+    'the ratio PI/qLMPC, values above 1 indicate improvement.}\n'], windLabel, windLabel, maxRate);
 fprintf(fid, '\\label{tab:CtrlComparisonFAST%s}\n', windName);
-fprintf(fid, '\\begin{tabular}{lccccc}\n');
-fprintf(fid, '\\toprule\n');
-fprintf(fid, ['{Controller} & {$\\omega_r$ (rpm)} & {$|P_{g,\\text{ref}}-P_g|$ (kW)} & ', ...
-    '{Twr$_\\text{FA}$ (m/s$^2$)} & {$\\dot T_g$ (kNm/s)} & {$\\dot\\beta$ (\\si{\\degree/s})} \\\\\n']);
-fprintf(fid, '\\midrule\n');
-metricNames = {'RotSpdStd', 'PwrErrStd', 'TwrFAStd', 'GenTqRateStd', 'PitchRateStd'};
-fmt = {'%.3f', '%.1f', '%.3f', '%.2f', '%.2f'};
-for k = 1:height(Tres)
-    cells = cell(1, numel(metricNames));
-    for m = 1:numel(metricNames)
-        val = sprintf(fmt{m}, Tres.(metricNames{m})(k));
-        ratio = Tres.(['ratio_', metricNames{m}])(k);
-        if k > 1 && isfinite(ratio)
-            val = sprintf('%s (%.2f)', val, ratio);
+% Control performance (std) and loads (blade pitch rate std, blade root
+% out-of-plane moment std, DELs)
+headers = {['{Controller} & {$\\omega_r$ (rpm)} & {$|P_{g,\\text{ref}}-P_g|$ (kW)} & ', ...
+    '{Twr$_\\text{FA}$ (m/s$^2$)} & {$\\dot T_g$ (kNm/s)} & {$\\dot\\beta$ (\\si{\\degree/s})} \\\\\n'], ...
+    ['{Controller} & {$\\dot\\beta_1$ (\\si{\\degree/s})} & {$M_{yb}$ (kNm)} & ', ...
+    '{DEL$_b$ (kNm)} & {DEL$_t$ (kNm)} \\\\\n']};
+metricSets = {{'RotSpdStd', 'PwrErrStd', 'TwrFAStd', 'GenTqRateStd', 'PitchRateStd'}, ...
+    {'BlPitchRateStd', 'BlMOoPStd', 'BlDEL', 'TwrDEL'}};
+fmtSets = {{'%.3f', '%.1f', '%.3f', '%.2f', '%.2f'}, {'%.2f', '%.0f', '%.0f', '%.0f'}};
+for idxS = 1:2
+    metricNames = metricSets{idxS};
+    fprintf(fid, '\\begin{tabular}{l%s}\n', repmat('c', 1, numel(metricNames)));
+    fprintf(fid, '\\toprule\n');
+    fprintf(fid, headers{idxS});
+    fprintf(fid, '\\midrule\n');
+    for k = 1:height(Tres)
+        cells = cell(1, numel(metricNames));
+        for m = 1:numel(metricNames)
+            val = sprintf(fmtSets{idxS}{m}, Tres.(metricNames{m})(k));
+            ratio = Tres.(['ratio_', metricNames{m}])(k);
+            if k > 1 && isfinite(ratio)
+                val = sprintf('%s (%.2f)', val, ratio);
+            end
+            cells{m} = val;
         end
-        cells{m} = val;
+        fprintf(fid, '%s & %s \\\\\n', Tres.Row{k}, strjoin(cells, ' & '));
     end
-    fprintf(fid, '%s & %s \\\\\n', Tres.Row{k}, strjoin(cells, ' & '));
+    fprintf(fid, '\\bottomrule\n');
+    fprintf(fid, '\\end{tabular}\n');
+    if idxS == 1
+        fprintf(fid, '\n\\vspace{2mm}\n\n');
+    end
 end
-fprintf(fid, '\\bottomrule\n');
-fprintf(fid, '\\end{tabular}\n');
 fprintf(fid, '\\end{table}\n');
 fclose(fid);
 end
 
 function plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windLabel, fstFile, maxRate)
-% plotRuns plots wind, generator torque, pitch, tower fore-aft acceleration
-% and generator power of all runs in the evaluation window
+% plotRuns plots wind, generator torque, blade 1 pitch, tower fore-aft
+% acceleration, generator power and blade 1 root out-of-plane moment of all
+% runs in the evaluation window
 DT = 0.008;
-yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch (°)', 'TwrAcc_{FA} (m/s^2)', 'GenPwr (MW)'};
+yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch_1 (°)', 'TwrAcc_{FA} (m/s^2)', 'GenPwr (MW)', 'M_{yb,1} (MNm)'};
 [~, fstName] = fileparts(fstFile);
 figure(figNo); clf;
 set(gcf, 'Name', sprintf('PI vs. qLMPC designs (%s) | WECS: FAST v8.16 (%s.fst) | wind: %s | rate limit %g deg/s', ...
@@ -307,19 +381,28 @@ for k = 1:numel(yAxCell)
     ax(k) = nexttile; hold on; grid on;
     ylabel(yAxCell{k});
 end
-lineStyles = {'-', '-.', '--', ':', '-.', '--'};
+lineStyles = {'-', '-.', '--', ':'};
 for idxC = 1:numel(runs)
     [T, t] = runTable(runs{idxC}, DT);
     if isempty(T), continue, end
     idx = t >= timeEval(1) & t <= timeEval(2);
-    ls = lineStyles{min(idxC, numel(lineStyles))};
+    ls = lineStyles{mod(idxC - 1, numel(lineStyles)) + 1};
     if idxC == 1
         plot(ax(1), t(idx), T.Wind(idx), 'k');
     end
     plot(ax(2), t(idx), T.GenTq(idx)/1000, ls, 'DisplayName', ctrlNames{idxC});
-    plot(ax(3), t(idx), T.BlPitch1(idx), ls);
     plot(ax(4), t(idx), T.NcIMUTAxs(idx), ls);
     plot(ax(5), t(idx), T.GenPwr(idx)/1000, ls);
+    % Blade 1 pitch and root moment from the FAST output (individual pitch)
+    F = runs{idxC}.FASTOut;
+    if ~isempty(F)
+        idxF = F.Time >= timeEval(1) & F.Time <= timeEval(2);
+        plot(ax(3), F.Time(idxF), F.BlPitch1(idxF), ls);
+        plot(ax(6), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls);
+    else
+        plot(ax(3), t(idx), T.BlPitch1(idx), ls);
+        plot(ax(6), NaN, NaN, ls);
+    end
 end
 tRef = (timeEval(1):DT:timeEval(2))';
 tRef = tRef(tRef <= GenPwrRef(end, 1));
