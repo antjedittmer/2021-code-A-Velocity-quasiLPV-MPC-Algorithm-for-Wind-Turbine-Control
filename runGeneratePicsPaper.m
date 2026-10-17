@@ -14,11 +14,19 @@ initWorkspace;
 % factor and Cq correction, FASTTool step reference; results in
 % NonLinMdl/dataOut/paper) and the qLPV-MPC design 'paper' (qlmpcDesign:
 % DTc = DT, no wind filter at the controller input, original formulation).
+% The Cq scaling factors (updateDDMdl1) are set below.
 % initWorkspace sets the default version 'FAST' again.
 setModelVersionPaper('paper');
+
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots}
 filteredPlots = 1; % plots with filter for turbulent wind
+useFiltered = 1; % use Pi with filtered (more realistic) wind for qLMPC comparison
+
+% Load data if available from previous simulation.
+loadData = 1; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
+loadDataCtrlTest = loadData; % for runCompareCtrl (PI and qLMPC based on Mdl2)
+loadData1 = loadData; % for runCompareModels with qLMPC and PI at different rates
 
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
@@ -48,9 +56,6 @@ end
 % FAST simulation results obtained with FASTTool (Tu Delft) are provided as
 % mat-files in dataIn folder.
 
-%Load data if available from previous simulation.
-loadData = 1;
-updateDDMdl1(0.75); % data dictionaries of the paper models
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
 % k-omega-squared, Pitch controller: Gainscheduled Pi)
@@ -58,8 +63,11 @@ yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch (°)', 'RotSpd (rpm)',...
     'GenPwr (MW)','TwrAcc_{FA} (m/s^2)', 'TwrAcc_{SW} (m/s^2)'};
 
 figNo = 2; % 4 m/s -> 
+%updateDDMdl1(multRb,useTurn, x,scaleFactor)
+updateDDMdl1(0.75, [],[], 0.96);
 normStruct.Sweep = runCompareModels('Step',loadData,figNo,yAxCell,figDirStr,allPlots);
 figNo = figNo + 2;
+updateDDMdl1(0.75, [],[], 0.9475);
 normStruct.Sweep = runCompareModels('Sweep',loadData,figNo,yAxCell,figDirStr,allPlots);
 figNo = figNo + 1;
 normStruct.NTM18 = runCompareModels(18,loadData,figNo,yAxCell,figDirStr,allPlots);
@@ -123,12 +131,13 @@ end
 % The qLPV-MPC settings are set in initWorkspace (qMPC, rMPC, pMPC, DTc, ...).
 useFASTForComparison = 0; % compare with the PI on the same plant model
 useTitle = [0,1]; % for thesis
-loadDataCtrlTest = loadData; % this can be changed here
 ctrlCases = {'Sweep', 'SimulinkPaper'; 18, 'SimulinkPaper'};
+noFilterStepped = 1; % no filter needed here
+useFilteredCases = [noFilterStepped, useFiltered]; % PI run with the filtered wind (runCompareCtrl)
 for idxC = 1:size(ctrlCases, 1)
     figNo = figNo + 1;
     runCompareCtrl(ctrlCases{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
-        figDirStr, useTitle, ctrlCases{idxC,2});
+        figDirStr, useTitle, ctrlCases{idxC,2}, [], useFilteredCases(idxC));
 end
 
 runFASTComparison = 0; % 1: additional comparisons on the FAST-matched models and FAST
@@ -144,7 +153,6 @@ if runFASTComparison
 end
 
 %% For debugging
-
 % varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
 %     'NcIMUTAxs', 'NcIMUTAys'};
 % OutDataTable13 = array2table(OutDataTest,'VariableNames',varnames);
@@ -164,7 +172,6 @@ end
 % The loops below leave the pitch rate limits in DD_Mdl1.sldd and
 % DD_CtrlBaseline.sldd at the last value (13 deg/s).
 
-%-- define sldd to change
 %% Get Data Directory value of pitch actuator rate
 DDName = 'DD_Mdl1.sldd'; %'DD_MdlCtrl_qLPVMPC.sldd';
 loadData = loadDataCtrlTest;
@@ -177,6 +184,7 @@ try
 catch
     % Dictionary wasn't open, nothing to do
 end
+
 myDictionaryObj = Simulink.data.dictionary.open(DDName);
 dDataSectObj = getSection(myDictionaryObj,'Design Data');
 controlObj = getEntry(dDataSectObj,'controlValue'); % read by MdlCtrl_qLPVMPC as controlValue.Pitch.Maxrate
@@ -223,7 +231,7 @@ for idx = 1:length(maxRateVector)
     end
        
    [currentOutTableTestCell{idx}, tictoc_LPVMPCcell{idx},GenPwrRefCell{idx}] = ...
-        getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname);
+        getSimulationOutputTable(matFileOutTableTest1,loadData1,OutTable,simMdlname);
 end
 
 
@@ -237,7 +245,6 @@ controlValue = getValue(controlCtrlObj);
 currentOutTablePICell = cell(nRate,1); % cell with
 
 simMdlname = 'test_SimulinkMdl2_Baseline'; % Bianchi model (includes blade state), same plant as the qLMPC runs
-loadData1 = loadData;
 
 maxRateVector1 = 1:13;
 

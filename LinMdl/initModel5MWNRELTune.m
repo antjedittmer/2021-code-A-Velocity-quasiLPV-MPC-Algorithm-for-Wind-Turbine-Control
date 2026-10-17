@@ -1,4 +1,4 @@
-function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] = initModel5MWNRELTune(x,Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir, multRb)
+function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] = initModel5MWNRELTune(x,Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir, multRb, scaleFactor)
 % initModel5MWNREL initializes parameters of NREL 5 MW turbine.
 % Aerodynamic force and thrust LUT can be plotted.
 % All inputs are optional.

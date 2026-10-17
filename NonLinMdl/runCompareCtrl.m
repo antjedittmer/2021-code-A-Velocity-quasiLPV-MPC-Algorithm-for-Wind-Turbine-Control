@@ -1,4 +1,4 @@
-function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,plantMdl,ctrlOpts)
+function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,plantMdl,ctrlOpts,useFiltered)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
@@ -25,6 +25,9 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 %   pMPC (weights, replace the initWorkspace values during the run) and
 %   name (suffix of the result files and figures). Default: the
 %   initWorkspace weights, no suffix.
+% - useFiltered: only 'SimulinkPaper': 1 (Default) uses the PI run with the
+%   rotor-effective wind filter (OutTableTest2*_kVe0dot25_kVeTau0dot75.mat
+%   of runCompareModels) if available, as in the paper
 %
 % Evaluation window (figures, ratios, LaTeX table): 15 to 400 s for the
 % Simulink plant models, 60 to 600 s for FAST (limited by the data length).
@@ -62,6 +65,10 @@ end
 
 if nargin < 8 || isempty(ctrlOpts)
     ctrlOpts = struct;
+end
+
+if nargin < 9 || isempty(useFiltered)
+    useFiltered = 1;
 end
 
 %% Set path to directories
@@ -114,14 +121,6 @@ ctrlLabel = sprintf('qLMPC (tracking %s; q = [%s], r = [%s], p = %g*q)', ...
     strjoin(trackedNames(q_(1:3) > 0), ', '), num2str(q_), num2str(r_), p(1)/q_(1));
 
 % Switch between Sweep and NTW18
-% if strcmp(strWindType,'Sweep') == 1 % sweep 4-23m/s in 20s steps
-%     outDataSimulationMat = 'OutDataSweep.mat';
-%     strFig = '';
-% else % wind with average 18 m/s
-%     outDataSimulationMat = 'OutDataWind18NTW.mat';
-%     strFig = 'NTW18';
-% end
-
 if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataSweep.mat'; 
     strFig = '';
@@ -213,6 +212,12 @@ if useFASTForComparison % from FAST
 else % from Simulink
     loadBaseline = 1; %always load if available
     matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strPlant,strFig,'.mat']);
+    % As in the paper: PI run with the rotor-effective wind filter
+    % (runCompareModels, ..._kVe0dot25_kVeTau0dot75.mat) if available
+    matFileOutTableTest2Filt = strrep(matFileOutTableTest2,'.mat','_kVe0dot25_kVeTau0dot75.mat');
+    if strcmp(plantMdl, 'SimulinkPaper') && useFiltered == 1 && exist(matFileOutTableTest2Filt,"file") == 2
+        matFileOutTableTest2 = matFileOutTableTest2Filt;
+    end
     OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadBaseline,OutTable,simMdlname2,[],FAST_InputFileName);
 end
 

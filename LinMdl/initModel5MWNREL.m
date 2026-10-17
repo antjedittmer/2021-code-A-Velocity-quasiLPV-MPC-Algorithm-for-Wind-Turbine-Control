@@ -1,4 +1,4 @@
-function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] = initModel5MWNREL(plotOn, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir,titleOn,multRb,x)
+function [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] = initModel5MWNREL(plotOn, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir,titleOn,multRb,x, scaleFactor)
 %plotOnCpCt, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder,0.75,xWeights
 
 % initModel5MWNREL initializes parameters of NREL 5 MW turbine.
@@ -70,8 +70,18 @@ if nargin < 8  || isempty(multRb)
     multRb = 0.75;
 end
 
-if nargin < 9
+if nargin < 9 || isempty(x)
     x = [1,1,1];
+end
+
+% Factor of the maximum of the scaled Cq table: the FAST-matched models
+% (getWecsModelVersion 'FAST') were tuned with 0.96
+if nargin < 10 || isempty(scaleFactor)
+    if strcmp(getWecsModelVersion, 'paper')
+        scaleFactor = 0.9457;
+    else
+        scaleFactor = 0.96;
+    end
 end
 
 %% Define parameters
@@ -231,7 +241,7 @@ if scaleLoopUp == 1
     lookupTable = Cq;
     minValue = min(lookupTable(:));
     maxValue = max(lookupTable(:));
-    newMaxValue = maxValue* 0.96; % Reduce the highest point by 0.95%  * 0.9475
+    newMaxValue = maxValue* scaleFactor; % Reduce the highest point by 0.95%  * 0.9475
 
     % Cq: Apply linear scaling to adjust all values smoothly
     scaledTable = (lookupTable - minValue) / (maxValue - minValue); % Normalize to [0, 1]
