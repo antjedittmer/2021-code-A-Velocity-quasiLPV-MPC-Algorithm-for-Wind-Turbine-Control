@@ -1,19 +1,22 @@
 % script to update data dictionary
 % clear;
-function updateDDMdl1(multRb,useTurn, x)
+function updateDDMdl1(multRb,useTurn, x,scaleFactor)
 
 if ~nargin
     multRb = 0.75;
 end
 
-if  nargin < 2 
+if  nargin < 2 || isempty(useTurn)
     useTurn = 0;
 end
 
-if nargin <3
+if nargin <3  || isempty(x)
     x = [1,1];
 end
 
+if nargin < 4
+    scaleFactor = 0.9475;
+end
 
 % Update DD
 nameCell = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs';'Lin_points'};
@@ -62,7 +65,7 @@ figDir = ''; titleOn = 0;
 
 if useTurn == 0
     [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, beta,Cq,Ct,Q3] = ....
-        initModel5MWNREL(plotOn, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir,titleOn,multRb); %#ok<*ASGLU>
+        initModel5MWNREL(plotOn, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, figDir,titleOn,multRb,[1,1,1], scaleFactor); %#ok<*ASGLU>
 
 else
     [wecs, M, Ce, K, Q, L, rho, tau, kappa, lambda, pitch, Cq, Ct, Q3, Cp] = initModel5MWNRELTune(x);

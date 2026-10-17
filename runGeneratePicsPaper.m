@@ -14,7 +14,7 @@ filteredPlots = 1; % plots with filter for turbulent wind
 useFiltered = 1; % use Pi with filtered (more realistic) wind for qLMPC comparison
 
 % Load data if available from previous simulation.
-loadData = 0; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
+loadData = 1; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
 loadDataCtrlTest = loadData; % for runCompareCtrl (PI and qLMPC based on Mdl2)
 loadData1 = loadData; % for runCompareModels with qLMPC and PI at different rates
 
@@ -46,7 +46,9 @@ end
 % FAST simulation results obtained with FASTTool (Tu Delft) are provided as
 % mat-files in dataIn folder.
 
-updateDDMdl1(0.75);
+
+
+
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
 % k-omega-squared, Pitch controller: Gainscheduled Pi)
@@ -54,8 +56,11 @@ yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch (°)', 'RotSpd (rpm)',...
     'GenPwr (MW)','TwrAcc_{FA} (m/s^2)', 'TwrAcc_{SW} (m/s^2)'};
 
 figNo = 2; % 4 m/s -> 
+%updateDDMdl1(multRb,useTurn, x,scaleFactor)
+updateDDMdl1(0.75, [],[], 0.96);
 normStruct.Sweep = runCompareModels('Step',loadData,figNo,yAxCell,figDirStr,allPlots);
 figNo = figNo + 2;
+updateDDMdl1(0.75, [],[], 0.9475);
 normStruct.Sweep = runCompareModels('Sweep',loadData,figNo,yAxCell,figDirStr,allPlots);
 figNo = figNo + 1;
 normStruct.NTM18 = runCompareModels(18,loadData,figNo,yAxCell,figDirStr,allPlots);
