@@ -1,4 +1,4 @@
-function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,useFiltered)
+function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,plantMdl,ctrlOpts,useFiltered)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
@@ -10,6 +10,28 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 % - figNo1: Number of figure (Default: 1)
 % - useFASTForComparison: Uses FAST(1) or Simulink (0) PI data for comparison
 %   (Default: 0, PI on the same simplified Simulink model as the MPC)
+% - plantMdl: WECS model in the closed loop of both controllers: 'Simulink'
+%   (simplified model Mdl_BianchiOL, Default), 'SimFilt' (simplified model
+%   with the rotor-effective wind filter, Mdl_BianchiOL_WindFiltered, for
+%   turbulent wind) or 'FAST' (FAST v8.16 S-function, input
+%   files in FASTinputfiles; 'Sweep': FAST.fst, 18: FAST_NTW18.fst with a
+%   TurbSim wind field, so the FAST 18 m/s wind differs from the
+%   OutDataWind18NTW.mat wind, which is only used for initial values, the
+%   stop time and the power reference) or 'SimulinkPaper' (as in the paper:
+%   the test models as saved, i.e. the PI on Mdl_BianchiOL_WindFiltered
+%   with the wind filter settings of the base workspace and the qLPV-MPC
+%   on Mdl_BianchiOL)
+% - ctrlOpts: qLPV-MPC variant, struct with the optional fields qMPC, rMPC,
+%   pMPC (weights, replace the initWorkspace values during the run) and
+%   name (suffix of the result files and figures). Default: the
+%   initWorkspace weights, no suffix.
+% - useFiltered: only 'SimulinkPaper': 1 (Default) uses the PI run with the
+%   rotor-effective wind filter (OutTableTest2*_kVe0dot25_kVeTau0dot75.mat
+%   of runCompareModels) if available, as in the paper
+%
+% Evaluation window (figures, ratios, LaTeX table): stepped wind sweeps from
+% 15 s, all other wind cases (turbulent 18 m/s) from 60 s, to the end of the
+% wind data (sweep 400 s, turbulent 660 s); Simulink and FAST plant.
 
 %% Handle optional inputs
 % The default inputs are provided here.
@@ -38,7 +60,15 @@ if nargin < 6 || isempty(useTitle)
     useTitle = [0,1]; %[0,0];
 end
 
-if nargin < 7
+if nargin < 7 || isempty(plantMdl)
+    plantMdl = 'Simulink';
+end
+
+if nargin < 8 || isempty(ctrlOpts)
+    ctrlOpts = struct;
+end
+
+if nargin < 9 || isempty(useFiltered)
     useFiltered = 1;
 end
 
@@ -56,8 +86,9 @@ if ~isfolder(figDir)
     mkdir(figDir)
 end
 
-% Set path to data output directory
-dataDirOut = fullfile(workDir, 'dataOut');
+% Set path to data output directory (results of the paper models in dataOut/paper)
+[~, ~, dataOutSub] = getWecsModelVersion;
+dataDirOut = fullfile(workDir, 'dataOut', dataOutSub);
 if ~isfolder(dataDirOut)
     mkdir(dataDirOut)
 end
@@ -66,17 +97,36 @@ end
 varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
     'NcIMUTAxs', 'NcIMUTAys'};
 
-% Weight values (copied from MATLAB function)
-q_ = [1 10^4 0 10^3 10^3 0 0 0 0 0];
-r_ = [1 10^4];
-p = 10^3;
+% qLPV-MPC weights: the controller reads qMPC, rMPC and pMPC from the base
+% workspace; a variant in ctrlOpts replaces them during this run
+strCtrl = '';
+if isfield(ctrlOpts, 'name')
+    strCtrl = ['_', ctrlOpts.name];
+end
+weightNames = {'qMPC', 'rMPC', 'pMPC'};
+weightsOld = cell(size(weightNames));
+for idxW = 1:numel(weightNames)
+    weightsOld{idxW} = evalin('base', weightNames{idxW});
+    if isfield(ctrlOpts, weightNames{idxW})
+        assignin('base', weightNames{idxW}, ctrlOpts.(weightNames{idxW}));
+    end
+end
+cleanupWeights = onCleanup(@() cellfun(@(n, v) assignin('base', n, v), weightNames, weightsOld));
+q_ = evalin('base', 'qMPC');
+r_ = evalin('base', 'rMPC');
+p = evalin('base', 'pMPC')*q_;
+
+% Controller description for the figure names: tracked outputs with weight
+trackedNames = {'T_g', 'beta', 'omega_r'};
+ctrlLabel = sprintf('qLMPC (tracking %s; q = [%s], r = [%s], p = %g*q)', ...
+    strjoin(trackedNames(q_(1:3) > 0), ', '), num2str(q_), num2str(r_), p(1)/q_(1));
 
 % Switch between Sweep and NTW18
 if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataSweep.mat'; 
     strFig = '';
 elseif strcmp(strWindType,'Step') == 1 % sweep from 4 to 25 in steps
-    outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
+    [~, outDataSimulationMat] = getWecsModelVersion; % FAST step reference of the model version
     strFig = 'Step';
 elseif isa(strWindType,'double')  % wind with average 18 m/s
     outDataSimulationMat = sprintf('OutDataWind%02dNTW.mat',strWindType);
@@ -88,6 +138,70 @@ else
 end
 
 
+
+
+
+% Switch between the Simulink and the FAST WECS model
+switch plantMdl
+    case 'SimulinkPaper'
+        simMdlname2 = 'test_SimulinkMdl2_Baseline';
+        simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta';
+        FAST_InputFileName = '';
+        strPlant = '';
+        strFigPlant = 'Simulink';
+        % WECS models as saved in the test models (discard edits in memory)
+        wecsMdlCell = cell(1, 2);
+        mdlCellPaper = {simMdlname2, simMdlname};
+        for idxM = 1:2
+            if bdIsLoaded(mdlCellPaper{idxM}), close_system(mdlCellPaper{idxM}, 0); end
+            load_system(mdlCellPaper{idxM});
+            blk = find_system(mdlCellPaper{idxM}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+            wecsMdlCell{idxM} = strrep(get_param(blk{1}, 'ModelName'), '.slx', '');
+        end
+        wecsLabel = sprintf('Mdl2 (PI: %s, qLMPC: %s)', wecsMdlCell{:});
+    case {'Simulink', 'SimFilt'}
+        simMdlname2 = 'test_SimulinkMdl2_Baseline';
+        simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta';
+        FAST_InputFileName = '';
+        if strcmp(plantMdl, 'Simulink')
+            wecsMdl = 'Mdl_BianchiOL';
+            strPlant = '';
+            strFigPlant = 'Simulink';
+        else
+            % Rotor-effective wind in the plant aerodynamics, as in runCompareModels
+            wecsMdl = 'Mdl_BianchiOL_WindFiltered';
+            assignin('base', 'step_thresshold', 1);
+            assignin('base', 'kVeFilt', 0.25);
+            assignin('base', 'kVeFilt_tau', 0.75);
+            strPlant = 'SimFilt';
+            strFigPlant = 'SimulinkFiltered';
+        end
+        wecsLabel = ['Mdl2 (', wecsMdl, ')'];
+        % Same plant for both controllers (changed in memory only)
+        for mdlCell = {simMdlname2, simMdlname}
+            load_system(mdlCell{1});
+            blk = find_system(mdlCell{1}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+            set_param(blk{1}, 'ModelName', wecsMdl);
+        end
+        cleanupMdl = onCleanup(@() cellfun(@(m) close_system(m, 0), {simMdlname2, simMdlname}));
+    case 'FAST'
+        simMdlname2 = 'test_FAST_Baseline';
+        simMdlname = 'test_FAST_qLPVMPCbeta.slx';
+        if strcmp(strWindType,'Sweep') == 1
+            FAST_InputFileName = fullfile(workDir,'FASTinputfiles','FAST.fst');
+        elseif isequal(strWindType,18)
+            FAST_InputFileName = fullfile(workDir,'FASTinputfiles','FAST_NTW18.fst');
+        else
+            error('No FAST input files for wind type %s.', string(strWindType));
+        end
+        strPlant = 'FAST';
+        strFigPlant = 'FAST';
+        [~, fstName] = fileparts(FAST_InputFileName);
+        wecsLabel = ['FAST v8.16 (', fstName, '.fst)'];
+    otherwise
+        error('Unknown plant model %s (Simulink, SimulinkPaper, SimFilt or FAST).', plantMdl);
+end
+
 %% Load baseline and MPC data or run simulations
 
 %For FASTtool simulation data
@@ -98,13 +212,14 @@ if useFASTForComparison % from FAST
     OutTableTest2 = OutTable;
 else % from Simulink
     loadBaseline = 1; %always load if available
-    matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strFig,'.mat']);
+    matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strPlant,strFig,'.mat']);
+    % As in the paper: PI run with the rotor-effective wind filter
+    % (runCompareModels, ..._kVe0dot25_kVeTau0dot75.mat) if available
     matFileOutTableTest2Filt = strrep(matFileOutTableTest2,'.mat','_kVe0dot25_kVeTau0dot75.mat');
-    if useFiltered == 1 && exist(matFileOutTableTest2Filt,"file") == 2
+    if strcmp(plantMdl, 'SimulinkPaper') && useFiltered == 1 && exist(matFileOutTableTest2Filt,"file") == 2
         matFileOutTableTest2 = matFileOutTableTest2Filt;
     end
-    simMdlname2 = 'test_SimulinkMdl2_Baseline';
-    OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadBaseline,OutTable,simMdlname2);
+    OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadBaseline,OutTable,simMdlname2,[],FAST_InputFileName);
 end
 
 % Check that SI units are used (can be removed,
@@ -117,23 +232,31 @@ if mean(OutTableTest2.RotSpeed) >1
 end
 
 % Run or load qLPV controller
-simMdlname = 'test_SimulinkMdl2_qLPVMPCbeta.slx'; %
-matFileOutTableTest1 = fullfile(dataDirOut,['OutTableMPC',strFig,'.mat']);
-[OutTableMPC, tictoc_LPVMPC,GenPwrRef] = getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname,varnames);
+matFileOutTableTest1 = fullfile(dataDirOut,['OutTableMPC',strPlant,strFig,strCtrl,'.mat']);
+[OutTableMPC, tictoc_LPVMPC,GenPwrRef] = getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname,varnames,FAST_InputFileName);
 
 %% Prepare information for plots and plot data
 
 % Information for plot
-figStr = ['RefSimulinkClosedLoop',strFig,'_beta'];
+figStr = ['Ref',strFigPlant,'ClosedLoop',strFig,'_beta',strCtrl];
+% Figure name: controller and WECS model
+if ischar(strWindType), strWind = strWindType; else, strWind = sprintf('%g m/s turbulent', strWindType); end
+figLabel = sprintf('%s vs. PI | WECS: %s | wind: %s', ctrlLabel, wecsLabel, strWind);
 meanOpt = strrep(sprintf(' mean cputime MPC: %1.2e s',mean(tictoc_LPVMPC.Data)),'e-0','e-');
-timeForPlot = [15,400];
+% Evaluation window: stepped wind sweeps from 15 s (the start-up transient
+% has decayed within the first 20 s wind level), otherwise from 60 s
+if ischar(strWindType) && any(strcmp(strWindType, {'Sweep', 'Step'}))
+    timeForPlot = [15, OutTable.Time(end)];
+else
+    timeForPlot = [60, OutTable.Time(end)];
+end
 DT = 0.008;
 r = GenPwrRef;
 
 % Plot and compare closed-loop results
-plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType)
+plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel)
 
-function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType)
+function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel)
 %plotComparison plots the time series obtained with baseline and qLPVMPC
 
 %% Handle optional inputs
@@ -151,7 +274,13 @@ timeVecPlot = timeVec(idxPlot);
 OutTableTest2Plot = OutTableTest2(idxPlot,:);
 OutTableMPCPlot = OutTableMPC(idxPlot,:);
 
-PGRef = r.Data(idxPlot);
+rData = squeeze(r.Data);
+if numel(rData) == numel(timeVec)
+    PGRef = rData(idxPlot);
+else % reference logged at the controller sample time DTc
+    PGRef = interp1(r.Time, rData, timeVecPlot(:), 'previous', 'extrap');
+end
+PGRef = PGRef(:);
 
 %% Title strings
 % Display optimization weights and calculate decrease in tower movement and
@@ -291,7 +420,7 @@ if useTitle(2) == 0 % either plot the
 
     % Link axes and set poisition
     linkaxes(ax1,'x')
-    set(gcf,'Name', figStr)
+    set(gcf,'Name', figLabel, 'NumberTitle', 'off')
 
     posDefault = [520   378   560   420]; %get(gcf, 'position');
     set(gcf, 'position', [posDefault(1:3),posDefault(4)*1.1]);
@@ -413,7 +542,7 @@ text(ax_pwr, ...
 xlabel('Time (s)')
 linkaxes(axPlotAll,'x');
 
-set(gcf,'Name',['cmpCtrlTimeDomain_All_',figStr])
+set(gcf,'Name',figLabel,'NumberTitle','off')
 posDefault = get(0,'DefaultFigurePosition');
 set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*1.7]);
 

@@ -1,0 +1,8 @@
+T08_SimFilt_vt1e4	SimFilt	NTW18	struct('qMPC',[1 0 1e3 1e4  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)
+T01_vt0	FAST	NTW18	struct('qMPC',[1 0 1e3 0  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)
+T02_vt1e3	FAST	NTW18	struct('qMPC',[1 0 1e3 1e3  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)
+T03_vt1e4	FAST	NTW18	struct('qMPC',[1 0 1e3 1e4  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)
+T04_vt1e5	FAST	NTW18	struct('qMPC',[1 0 1e3 1e5  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)
+T05_vt1e6	FAST	NTW18	struct('qMPC',[1 0 1e3 1e6  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)
+T06_vt1e5_dvt1e3	FAST	NTW18	struct('qMPC',[1 0 1e3 1e5  0 1e3 1e3 0 0 0 1e3  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)
+T07_vt1e5_w3e3	FAST	NTW18	struct('qMPC',[1 0 3e3 1e5  0 1e3 1e3 0 0 0 0  0 0 0],'ctrlVariant','tower','rMPC',[1 1e6],'DTc',0.04,'pMPC',1)

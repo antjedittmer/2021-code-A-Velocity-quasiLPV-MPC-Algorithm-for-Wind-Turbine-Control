@@ -20,8 +20,21 @@ The mat files are:
    4 to 25 m/s.
 - OutDataSweep.mat: FASTTool simulation with wind sweep from 4 to 25 m/s, 
   step length 20 s
-- OutDataWind18NTW.mat: FASTTool simulation with normal turbulent wind with 
-   18 m/s mean   
-- OutDataStep.mat: FASTTool simulation with wind sweep from 4 to 25 m/s, 
-  step length 100 s. This is used to obtain references for rotot-speed and 
-  torque at these wind speeds.
+- OutDataWind18NTW.mat: FAST v8.16 simulation (S-function of this
+   repository, PI baseline test_FAST_Baseline) with normal turbulent wind,
+   18 m/s mean, IEC 61400-1 Ed3 class B, power law shear 0.2, 0 to 660 s
+   (TurbSim v3.2.1, FASTinputfiles/wind18_NTM_B.inp with the parameters of
+   wind.inp; FAST_NTM18B.fst; generated with NonLinMdl/generateOutDataWind18NTW.m).
+   Replaces the earlier FASTTool simulation of 600 s. Evaluation from 60 s.
+- OutDataStep.mat: FAST v8.16 simulation (S-function and FAST_Library of 
+  this repository, AeroDyn v15.03, PI baseline test_FAST_Baseline, same 
+  FAST input files as OutDataSweep.mat) with a uniform stepped wind from 3 
+  to 25 m/s, step length 100 s (steps at t = k*100 s, 4 m/s from 100 s), 
+  2300 s. This is used to obtain references for rotor speed, pitch and 
+  torque at these wind speeds (Lin_points, qLPVMPC_RefLUT, updateDDMdl1). 
+  Replaces the earlier FASTTool simulation, which started from standstill 
+  and had 3-5 % more aerodynamic power below rated than FAST v8.16 of this 
+  repository.
+- OutDataStepFASTTool.mat: the earlier FASTTool simulation with a stepped
+  wind (same step layout). Used for the original models of the paper
+  (WECS model version 'paper', getWecsModelVersion, runGeneratePicsPaper).

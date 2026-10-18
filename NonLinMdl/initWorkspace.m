@@ -50,8 +50,69 @@ DT = 0.008; % one sample time
 step_thresshold = 0; % per default filter wind
 kVeFilt = 0;
 kVeFilt_tau = 0.75;
+% Rotor-effective wind filter at the qLPV-MPC wind input: time constant
+% wecs.Rr*kVeFiltCtrl/V (0: filter off, the measured wind is passed through).
+% Same as the filter for the aerodynamic torque in Mdl_*_WindFiltered.
+% Set by the design below (default 0.75).
+% qLPV-MPC weights: stage cost x'Qx + u'Ru, terminal weight P = pMPC*Q
+% x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg, dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)],
+% u = [dTg_ref, dBeta_ref]; references [Tg_ss, beta_ss, OmegaR_ss](V_filt)
+% Stored designs (subfunctionsMPC/qlmpcDesign.m, results in
+% experiments/EXPERIMENTS.md): 'beta' (default, original paper/thesis
+% design), 'omega' (rotor speed tracking, candidate for FAST), 'flap',
+% 'flapNotch', 'flapNotchSmooth', 'flapSmooth12', 'flapNotchSmooth12'
+% (tower fore-aft and blade flap prediction model; need the controller
+% MdlCtrl_qLPVMPCflap, i.e. test_SimulinkMdl2_qLPVMPCflap or
+% test_FAST_qLPVMPCflap). ctrlVariant names the controller model variant.
+% 'paper': the qLPV-MPC of the paper (runGeneratePicsPaper).
+ctrlDesign = 'beta';
+designMPC = qlmpcDesign(ctrlDesign);
+kVeFiltCtrl = designMPC.kVeFiltCtrl;
+paperMPCCtrl = designMPC.paperMPCCtrl; % 1: original qLPV-MPC formulation of the paper
+ctrlVariant = designMPC.ctrlVariant;
+qMPC = designMPC.qMPC;
+rMPC = designMPC.rMPC;
+pMPC = designMPC.pMPC;
+% Sample time of the qLPV-MPC (multiple of DT); the prediction horizon is 40*DTc
+DTc = designMPC.DTc; % 0.04: horizon 1.6 s; DTc = DT (0.32 s horizon) is unstable on FAST
+% Only MdlCtrl_qLPVMPCflap: notch filters in the speed filters at the
+% frequencies fNotchCtrl [Hz] (0: off; e.g. [0.605 1.64] for 3P at rated
+% speed and the FAST drivetrain mode) with the pole damping zetaNotchCtrl,
+% and the pitch reference ramped at DT between the controller updates
+% (smoothPitchCtrl = 1) instead of step-wise (0)
+fNotchCtrl = designMPC.fNotchCtrl;
+zetaNotchCtrl = designMPC.zetaNotchCtrl;
+smoothPitchCtrl = designMPC.smoothPitchCtrl;
+% Only MdlCtrl_qLPVMPCflap: tower and blade flap states from a Kalman filter
+% (towerKFCtrl = 1, flap_kalman; process noise: hub/rotor-effective wind
+% difference kfSigmaVCtrl [m/s], measurement noise of the tower acceleration
+% kfSigmaACtrl [m/s^2]) instead of the leaky integration of the tower
+% acceleration (corner frequency fcTowerCtrl [Hz]) and flap_observer (0)
+towerKFCtrl = designMPC.towerKFCtrl;
+kfSigmaVCtrl = designMPC.kfSigmaVCtrl;
+kfSigmaACtrl = designMPC.kfSigmaACtrl;
+% Only test_FAST_qLPVMPCflapIPC: individual pitch control (ipc_dlr) with the
+% parameters ipcParCtrl = [gainSet (0: off), gain scaling, tower term on/off]
+% and the blade pitch rate limit ipcMaxRateCtrl [deg/s]
+ipcParCtrl = designMPC.ipcParCtrl;
+ipcMaxRateCtrl = 13;
+fcTowerCtrl = 0.02;
+towerSignCtrl = 1; % sign of the measured tower acceleration in the controller
+% First-order low-pass filters of the measured speeds in the qLPV-MPC [Hz]
+% (Inf: no filter): rotor speed for scheduling and the tracked rotor speed,
+% rotor and generator speed for the state increments
+fcOmegaCtrl = Inf;
+fcOmegaStatesCtrl = Inf;
 load(fullfile(dataInPath,'OutDataSweep.mat'),'OutTable');
 %load(fullfile(dataInPath,'OutDataWind18NTM.mat'),'OutTable');
+
+%% Version of the simplified WECS models (getWecsModelVersion)
+% 'FAST': matched to FAST v8.16 of this repository (effective wind factor,
+% Cq correction near rated, FAST v8.16 step reference); 'paper': original
+% models of the paper/thesis (runGeneratePicsPaper). The data dictionaries
+% are updated to the version (only changed values are written).
+wecsModelVersion = 'FAST';
+updateDDMdl1(0.75);
 
 %% Clean-up
 clear RESTORE*

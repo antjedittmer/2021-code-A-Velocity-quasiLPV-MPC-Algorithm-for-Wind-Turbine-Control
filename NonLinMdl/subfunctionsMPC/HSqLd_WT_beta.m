@@ -1,4 +1,4 @@
-function [L,S,H,g] = HSqLd_WT_beta(N,q,R_,p,xk,Xk,DT,ref,us,lambdaVec,pitchVec,cQ,rhoP,Udot,wecs)
+function [L,S,H,g] = HSqLd_WT_beta(N,q,R_,p,xk,Xk,DT,ref,us,lambdaVec,pitchVec,cQ,rhoP,Udot,wecs,paperMPC)
 % HSqLd calculate matrices L, S, H and g for Lemke's algorithm
 %
 % Inputs: * N: number of samples optimization (N = 40)
@@ -9,6 +9,9 @@ function [L,S,H,g] = HSqLd_WT_beta(N,q,R_,p,xk,Xk,DT,ref,us,lambdaVec,pitchVec,c
 %         * Ts: sample time
 %         * ref: Reference signal
 %         * us: steady state input
+%         * paperMPC (optional): 1: original formulation of the paper (rotor
+%           speed for scheduling from the measured speed and the predicted
+%           increments, no limits, Taylor discretization), 0: default
 %
 % Outputs: * L: stacked matrix L for state trajectory Xk = L x_k + S U_k
 %          * S: stacked matrix S for state trajectory
@@ -26,12 +29,23 @@ ni = 2; %;
 %disp(wecs.Rr)
 
 %p1 = NaN(length(Xk)/nx,1);
-p1 = [rhoP(1);cumsum(Xk(4:nx:end)) + rhoP(1)]; %repmat(rhoP(1), size(p1,1),1); % %rho1: omega_g: omega_r/Ng [rad/s] % p1 = [xk(1);Xk(1:nx:end)];
+if nargin < 16
+    paperMPC = 0;
+end
+
+p1 = [rhoP(1); Xk(3:nx:end)]; % predicted rotor speed (state 3) %[rhoP(1);cumsum(Xk(4:nx:end)) + rhoP(1)]; %repmat(rhoP(1), size(p1,1),1); % %rho1: omega_g: omega_r/Ng [rad/s] % p1 = [xk(1);Xk(1:nx:end)];
 p2 = [rhoP(2); Xk(2:nx:end)];%[rhoP(2);cumsum(Udot(2:ni:end)) + rhoP(2)]; %repmat(rhoP(2), size(p1,1),1); %[rhoP(2); cumsum(Udot(2:ni:end)) + rhoP(2)]; %rho2: beta [rad] + betaDot: % p2 = [xk(3);Xk(3:nx:end)]; %rho2: beta [rad]
 p3 = repmat(rhoP(3), size(p1,1),1); %V:  % p3 = [xk(4);Xk(4:nx:end)]; % V
+if paperMPC
+    p1 = [rhoP(1); cumsum(Xk(5:nx:end)) + rhoP(1)]; % measured speed + predicted increments dOmegaR
+else
+    % keep the predicted scheduling parameters within the range of the cQ table
+    p1 = min(max(p1, 0.3), 2);    % rotor speed [rad/s]
+    p2 = min(max(p2, 0), pi/2);   % pitch [rad]
+end
 
 %%%%%%%%% Build L, S matrices Xk = L*xk+S*Uk%%
-[Aj,Bj] = ABqLd_WT_beta(DT,[p1(1),p2(1),p3(1)],lambdaVec,pitchVec,cQ,wecs);
+[Aj,Bj] = ABqLd_WT_beta(DT,[p1(1),p2(1),p3(1)],lambdaVec,pitchVec,cQ,wecs,paperMPC);
 
 L = zeros(nx*N,nx);
 S = zeros(nx*N,ni*N);
@@ -39,7 +53,7 @@ L(1:nx,1:nx) = Aj;
 S(1:nx,1:ni) = Bj;
 
 for idx = 1:N-1
-    [Aj,Bj] = ABqLd_WT_beta(DT,[p1(idx+1),p2(idx+1),p3(idx+1)],lambdaVec,pitchVec,cQ,wecs);  
+    [Aj,Bj] = ABqLd_WT_beta(DT,[p1(idx+1),p2(idx+1),p3(idx+1)],lambdaVec,pitchVec,cQ,wecs,paperMPC);  
     L(idx*nx+1:(idx+1)*nx,1:nx) = Aj*L((idx-1)*nx+1:idx*nx,1:nx);
     S(idx*nx+1:(idx+1)*nx,1:(idx+1)*ni) = [Aj*S((idx-1)*nx+1:idx*nx,1:idx*ni),Bj];
 end

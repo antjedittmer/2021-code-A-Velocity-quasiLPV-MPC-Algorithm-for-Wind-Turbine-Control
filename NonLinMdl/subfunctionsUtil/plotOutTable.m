@@ -1,4 +1,6 @@
-function axPlotAll = plotOutTable(OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig)
+function axPlotAll = plotOutTable(OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig,timeEval)
+% timeEval (optional): time window [s] of the plots and the statistics
+% (Default: plots from 20 s, statistics from 15 s to the end)
 
 
 %% Set parameters and missing inputs
@@ -28,6 +30,10 @@ end
 if nargin<8 || isempty(strFig)
     strFig = 'testConstr';
 end
+
+if nargin<9 || isempty(timeEval)
+    timeEval = [];
+end
 % Assign data from FAST to variables
 
 %% Handle different variable names
@@ -52,7 +58,11 @@ titleStr = [testCaseStr,': ',testCaseCell{1},'{\color[rgb]{',num2str(cl(1,:)),'}
 
 % Create output plot time reference
 time = OutTable.Time(idxTime);
-idxTime = time > 20;
+if isempty(timeEval)
+    idxTime = time > 20;
+else
+    idxTime = time >= timeEval(1) & time <= timeEval(2);
+end
 time = time(idxTime);
 
 % Check if generator torque has meaningful variation
@@ -137,7 +147,11 @@ print(fullfile(figDir,['cmpTimeDomain_All',strFig]), '-depsc');
 %% Calculate variance and standard deviation for key signals
 % Use the same time index as in plotOutTable (time > 15s)
 time    = OutTable.Time;
-idxTime = time > 15;
+if isempty(timeEval)
+    idxTime = time > 15;
+else
+    idxTime = time >= timeEval(1) & time <= timeEval(2);
+end
 
 % ---- Extract signals (matching unit conversions used in plotOutTable) ----
 dt = mean(diff(OutTable.Time(idxTime)));   % [s]

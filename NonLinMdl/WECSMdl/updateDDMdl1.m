@@ -14,12 +14,19 @@ if nargin <3  || isempty(x)
     x = [1,1];
 end
 
-if nargin < 4
-    scaleFactor = 0.9475;
+% Cq scaling factor (initModel5MWNREL): 0.9475 for the paper models, 0.96 for
+% the FAST-matched models (getWecsModelVersion)
+if nargin < 4 || isempty(scaleFactor)
+    if strcmp(getWecsModelVersion, 'paper')
+        scaleFactor = 0.9475;
+    else
+        scaleFactor = 0.96;
+    end
 end
 
-% Update DD
-nameCell = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs';'Lin_points'};
+% Update DD (the model version, FAST or paper, is set by getWecsModelVersion)
+% qLPVMPC_RefLUT: reference table of the qLPV-MPC (DD_Mdl1), same as Lin_points
+nameCell = {'beta';'Ce';'Cq';'Ct';'K5'; 'lambda'; 'M';'Q'; 'rho';'wecs';'Lin_points';'qLPVMPC_RefLUT'};
 
 loadEqPoints = 0; % load equilibrium/reference points for wind speeds from file
 if  loadEqPoints == 1
@@ -27,7 +34,8 @@ if  loadEqPoints == 1
     Lin_points = Lin;
     nameCell{end+1} = 'Lin_points';
 else
-    load('OutDataStep.mat', 'OutTable');
+    [~, stepDataMat] = getWecsModelVersion;
+    load(stepDataMat, 'OutTable');
     idxT = OutTable.Time >= 100;
     OutTableT = OutTable(idxT,:);
 
@@ -58,6 +66,8 @@ else
 % Lin_points = Lin;
 
 end
+
+qLPVMPC_RefLUT = Lin_points;
 
 plotOn = 0;
 Rotor_Lamda = ''; Rotor_Pitch = ''; Rotor_cQ = ''; Rotor_cT = '';
@@ -93,6 +103,19 @@ for idxDD = 1: length(DDNameCell)
                 setValue(tempObj, newValue);
             end
         catch
+        end
+    end
+
+    % The bus object wecsBus (data type of the wecs parameter in the
+    % controller) must have the same fields in the same order as wecs
+    if exist(dDataSectObj, 'wecsBus')
+        busInfo = Simulink.Bus.createObject(wecs); % creates the bus object in the base workspace
+        newBus = evalin('base', busInfo.busName);
+        evalin('base', ['clear ', busInfo.busName]);
+        busObj = getEntry(dDataSectObj, 'wecsBus');
+        oldBus = getValue(busObj);
+        if ~isequal({oldBus.Elements.Name}, {newBus.Elements.Name})
+            setValue(busObj, newBus);
         end
     end
 

@@ -1,4 +1,4 @@
-function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder,useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,xWeights,allPlots)
+function [sysOut,gapCell,sysCmp] = compareLinearModels(speedVec,figFolder,useActuatorStates,figNoAdd,createBodePlots,plotVisible,noOut,xWeights,allPlots)
 % compareLinearModels compares two sets of linearized turbine models with
 % linearized FASTTool models at different wind speeds.
 % All inputs are optional.
@@ -29,6 +29,13 @@ function [sysOut,gapCell] = compareLinearModels(speedVec,figFolder,useActuatorSt
 %   inertia, and damping ratio of blade (Default: [1,1,1])
 % - allPlots: Generate all plots, including norm plots (Default: 0)
 % - plotOnCpCt: Plot the Cp and Ct
+%
+% Outputs:
+% - sysOut: Mdl2 with actuator states and outputs beta, Tg (last wind speed)
+% - gapCell: gap metrics (allPlots = 1)
+% - sysCmp: cell (index of the wind speed) with struct V, Mdl1, Mdl2, FAST:
+%   linear models with the inputs [Tg (kNm), beta (rad), V (m/s)] and the
+%   outputs [omega_r (rad/s), TwrAcc_fa (m/s^2), TwrAcc_sw (m/s^2)]
 
 % Bindu Sharan, Antje Dittmer, ICS TUHH
 % TU Delft model (ll. 175- 222): Atindriyo K. Pamososuryo and Jan-Willem
@@ -176,14 +183,20 @@ gapCell.gap5DoF = cell(noVelMdl,1);
 gapCell.nugap5DoF = cell(noVelMdl,1);
 gapCell.norm9DoF = cell(noVelMdl,1);
 gapCell.norm5DoF = cell(noVelMdl,1);
+sysCmp = cell(lenLinV,1);
 
 
 %% Loop over all air speeds in LinV
 for index =  speedVec
 
     %% Variables dependent on wind speed V
-    Vbar = Lin.V(index);
-    Lambda_bar = Lin.RSpeed(index)*wecs.Rr/Vbar; % (-)
+    Vbar = Lin.V(index); % hub height wind speed
+    % Rotor-effective wind speed for the aerodynamics (rotor tilt, precone,
+    % rotor averaging), as in the Simulink models: Ve = kWindEff*V
+    kWind = 1;
+    if isfield(wecs, 'kWindEff'), kWind = wecs.kWindEff; end
+    Vebar = kWind*Vbar;
+    Lambda_bar = Lin.RSpeed(index)*wecs.Rr/Vebar; % (-)
     omegabar = Lin.RSpeed(index); % 1/rad
     beta_bar = Lin.Pitch(index); % rad
 
@@ -196,24 +209,24 @@ for index =  speedVec
     dCtdbetab = interp2(lambda,pitch,Ctdbeta,Lambda_bar,beta_bar,'cubic');
 
     %% Tip speed ratio lambda = (Rr * omega)/Ve =  (Rr * omega)/(V - ydotfa)
-    dlambdadomega = wecs.Rr/Vbar;
-    dlambdadV = - omegabar*wecs.Rr/Vbar^2; %Vbar = Ve = V - ydot
+    dlambdadomega = wecs.Rr/Vebar;
+    dlambdadV = - omegabar*wecs.Rr/Vebar^2; % derivative w.r.t. Ve = kWind*V - ydot
     dlambdadydotfa =  - dlambdadV; %s/m   ydotfa m/s
     % dlambdaddelta =  - dlambdadV; %s/m   ydotfa m/s
 
     %% Ft = 0.5*rho*pi*Rr^2*Ct*v^2
     kCT = 0.5*rho*pi*wecs.Rr^2; % constant for CT: 0.5*rho*A
-    dFtdomega = kCT *dCtdlambdab*dlambdadomega*Vbar^2;
-    dFtdV = kCT * Vbar * (dCtdlambdab*dlambdadV*Vbar + 2*Ctb); % dVe/dV = 1;
-    dFtdydotfa = kCT * Vbar *(dCtdlambdab*dlambdadydotfa*Vbar - 2*Ctb); % dVe/dydot = -1;
-    dFtdbeta = kCT*dCtdbetab*Vbar^2;
+    dFtdomega = kCT *dCtdlambdab*dlambdadomega*Vebar^2;
+    dFtdV = kWind * kCT * Vebar * (dCtdlambdab*dlambdadV*Vebar + 2*Ctb); % dVe/dV = kWind;
+    dFtdydotfa = kCT * Vebar *(dCtdlambdab*dlambdadydotfa*Vebar - 2*Ctb); % dVe/dydot = -1;
+    dFtdbeta = kCT*dCtdbetab*Vebar^2;
 
     %% Tr = 0.5*rho*pi*Rr^3*Cq*v^2
     kCQ = kCT*wecs.Rr;
-    dTrdomega = kCQ *dCqdlambdab*dlambdadomega*Vbar^2;
-    dTrdV = kCQ *Vbar *(dCqdlambdab*dlambdadV*Vbar + 2*Cqb);
-    dTrdydotfa = kCQ * Vbar*(dCqdlambdab*dlambdadydotfa*Vbar - 2*Cqb);
-    dTrdbeta = kCQ *dCqdbetab*Vbar^2;
+    dTrdomega = kCQ *dCqdlambdab*dlambdadomega*Vebar^2;
+    dTrdV = kWind * kCQ *Vebar *(dCqdlambdab*dlambdadV*Vebar + 2*Cqb); % dVe/dV = kWind
+    dTrdydotfa = kCQ * Vebar*(dCqdlambdab*dlambdadydotfa*Vebar - 2*Cqb);
+    dTrdbeta = kCQ *dCqdbetab*Vebar^2;
 
     %% Linear Model Mdl1: System, input matrices and state space model
     % States omega ydotfa xdotsw xfa xss
@@ -344,7 +357,12 @@ for index =  speedVec
     sysOut.Inputname = sysInputname;
 
     sysCell{index} = sysOut;
-    Torque_g_bar = 0.5*rho*pi*wecs.Rr^3*Cqb*Vbar^2/wecs.Ng; % Nm, Tr = 0.5*rho*pi*Rr^3*Cq*V^2 (as kCQ)
+    % Linear models for further comparisons (third output): Mdl1, Mdl2 and FAST
+    modelFAST = diag(multFASTOutput)*sysmCell{1}{index}(idxFASTOutput,idxFASTInput)*diag(multFASTInput);
+    modelFAST.OutputName = sysOutputname;
+    modelFAST.InputName = sysInputname;
+    sysCmp{index} = struct('V', Vbar, 'Mdl1', sys5DoF, 'Mdl2', sysLagrange, 'FAST', modelFAST);
+    Torque_g_bar = 0.5*rho*pi*wecs.Rr^3*Cqb*Vebar^2/wecs.Ng; % Nm, Tr = 0.5*rho*pi*Rr^3*Cq*V^2 (as kCQ)
     u_bar_cell{index} = [Torque_g_bar, beta_bar,Vbar]'; % beta_bar is already in rad
     x_bar_cell{index}  = - sysLagrange.A\sysLagrange.B *u_bar_cell{index}; % X(s) = (sI - A)1 *B *U(s) (xdot = 0 = Ax +Bu)
     y_bar_cell{index}  = sysLagrange.C * x_bar_cell{index} + sysLagrange.D * u_bar_cell{index};

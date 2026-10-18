@@ -1,4 +1,4 @@
-function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs)
+function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs,paperMPC)
 % ABqLd calculates system (A) and input (B) matrix for quasiLPV
 % representation from ABgL and augments the states with integrating
 % disturbances.
@@ -8,8 +8,8 @@ function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs)
 %
 % Outputs: * A: Augmented system matrix A(rho) at current rho
 %          * B: Augmented Input matrix B(rho) at current rho
-%          State order: [Tg, beta, dThetaS, dOmegaR, dOmegaG, dTg, dBeta, dV,
-%          dTg_ref(k-1), dBeta_ref(k-1)]
+%          State order: [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg,
+%          dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)]
 
 % Pablo S.G. Cisneros, Herbert Werner, ICS TUHH
 % modified for WECS simulation: Antje Dittmer
@@ -17,19 +17,28 @@ function [Av,Bv] = ABqLd_WT_beta(DT,rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs)
 % Calculate system and input matrices at current wind speed
 [Arho,Brho] = ABqL_WT_beta(rhoP,Rotor_Lambda,Rotor_Pitch,Rotor_cQ,wecs);
 
-%% Calculate discrete forms of A,B
-A2 = Arho*Arho;
-A3 = Arho*A2;
-Apre = (1.0/24.0)*DT^4*A3+(1.0/6.0)*DT^3*A2+0.5*DT^2*Arho+DT*eye(size(Arho));
-
-%% Finish calculation of A,B
-Ak = Apre*Arho + eye(size(Arho));
-Bk = Apre*Brho;
+%% Calculate discrete forms of A,B (zero-order hold, exact)
+% The 4th order Taylor series of the paper (paperMPC = 1) diverges for DT
+% larger than the fast actuator time constants (kappa_g = 0.01 s, tau_g =
+% 0.05 s), e.g. for a controller sample time DTc = 0.04 s.
+if nargin > 6 && paperMPC
+    A2 = Arho*Arho;
+    A3 = Arho*A2;
+    Apre = (1.0/24.0)*DT^4*A3+(1.0/6.0)*DT^3*A2+0.5*DT^2*Arho+DT*eye(size(Arho));
+    Ak = Apre*Arho + eye(size(Arho));
+    Bk = Apre*Brho;
+else
+    nxc = size(Arho,1);
+    nuc = size(Brho,2);
+    Md = expm([Arho, Brho; zeros(nuc, nxc + nuc)]*DT);
+    Ak = Md(1:nxc, 1:nxc);
+    Bk = Md(1:nxc, nxc+1:end);
+end
 
 %% Calculate new matrices augmented system
-ny = 2; %
+ny = 3; % outputs y = [Tg, beta, OmegaR]: the absolute rotor speed is tracked
 nx = size(Arho,1);
-nyvec = nx-1:nx; % 
+nyvec = [nx-1, nx, 2]; % Tg, beta, OmegaR in x = [ThetaS, OmegaR, OmegaG, Tg, beta]
 nd = 1;% B: columns disturbance input
 nuvec = 2:3; % B: columns control input
 Cdiag = eye(ny); %diag([97,1]); %eye(ny); %diag([97,1]);
@@ -37,7 +46,7 @@ Cdiag = eye(ny); %diag([97,1]); %eye(ny); %diag([97,1]);
 
 nu = length(nuvec);
 
-A = [eye(2) Cdiag * Ak(nyvec,:);
+A = [eye(ny) Cdiag * Ak(nyvec,:);
     zeros(size(Ak,1),ny), Ak];
 B = [Cdiag * Bk(nyvec,nuvec); Bk(:,nuvec)];
 Bv1 = [Cdiag * Bk(nyvec,nd); Bk(:,nd)];

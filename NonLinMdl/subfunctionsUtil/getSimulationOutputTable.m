@@ -1,4 +1,4 @@
-function [currentOutTableTest, tictoc_LPVMPC,GenPwrRef] = getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname1,varnames)
+function [currentOutTableTest, tictoc_LPVMPC,GenPwrRef] = getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname1,varnames,FAST_InputFileName)
 % OutTableTest1 retrieves simulation data, either from previous runs or by
 % running the simulation. All inputs but varnames are required.
 %
@@ -8,6 +8,8 @@ function [currentOutTableTest, tictoc_LPVMPC,GenPwrRef] = getSimulationOutputTab
 % - OutTable: FAST simulation table
 % - simMdlname1: Simulink mdl name
 % - varnames (optional): variables names of simulation output
+% - FAST_InputFileName (optional): FAST input file (*.fst) if the model
+%   uses the FAST WECS model (Mdl_FAST)
 %
 % Outputs
 % - currentOutTableTest: Simulation results as a table
@@ -20,6 +22,10 @@ if nargin < 5 || isempty(varnames)
     'NcIMUTAxs', 'NcIMUTAys'}; %%'Tower FA acc', 'Tower SS acc'};
 end
 
+if nargin < 6
+    FAST_InputFileName = '';
+end
+
 % Get the name of the table
 [~, strTable] = fileparts(matFileOutTableTest1);
 
@@ -28,7 +34,14 @@ tictoc_LPVMPC = [];
 GenPwrRef = [];
 if exist(matFileOutTableTest1,'file') == 2 && loadData
     tmp = load(matFileOutTableTest1);
-    currentOutTableTest = tmp.(strTable);
+    if isfield(tmp, strTable)
+        currentOutTableTest = tmp.(strTable);
+    else
+        % renamed or copied file: use the table stored under another name
+        tmpNames = fieldnames(tmp);
+        idxTab = find(cellfun(@(n) istable(tmp.(n)), tmpNames), 1);
+        currentOutTableTest = tmp.(tmpNames{idxTab});
+    end
     if isfield(tmp,'tictoc_LPVMPC')
         tictoc_LPVMPC = tmp.tictoc_LPVMPC;
         GenPwrRef = tmp.GenPwrRef;
@@ -37,6 +50,14 @@ else
     WS = 'base';
     % assignin(WS,'DT',DT)
     assignin(WS,'OutTable',OutTable)
+    if ~isempty(FAST_InputFileName)
+        % FAST S-function parameters and output channel names used by
+        % Mdl_FAST. FAST v8.16 creates OutList only during initialization,
+        % after the model is compiled, so it is read from OutList_FAST.txt.
+        assignin(WS,'FAST_InputFileName',FAST_InputFileName)
+        assignin(WS,'TMax',OutTable.Time(end))
+        assignin(WS,'OutList',cellstr(readlines(fullfile(fileparts(FAST_InputFileName),'OutList_FAST.txt'),'EmptyLineRule','skip')))
+    end
     open_system(simMdlname1);
     out1 = sim(simMdlname1,'SrcWorkspace',WS);
     varnames = varnames(1: size(out1.OutDataTest,2));

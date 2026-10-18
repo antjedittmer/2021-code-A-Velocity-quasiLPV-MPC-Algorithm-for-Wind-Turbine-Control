@@ -1,0 +1,4 @@
+S05_seedA_p10	FAST	NTW18	struct('pMPC',10)
+S06_seedB_p10	FAST	NTW18b	struct('pMPC',10)
+S07_seedA_w2e3	FAST	NTW18	struct('qMPC',[1 0 2e3 0 1e3 1e3 0 0 0 0 0])
+S08_seedB_w2e3	FAST	NTW18b	struct('qMPC',[1 0 2e3 0 1e3 1e3 0 0 0 0 0])

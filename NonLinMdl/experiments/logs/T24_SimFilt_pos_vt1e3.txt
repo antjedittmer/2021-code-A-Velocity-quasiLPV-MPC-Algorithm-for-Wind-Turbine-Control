@@ -1,0 +1,73 @@
+
+Simulink Agentic Toolkit - Installation Check
+===============================================
+
+Prerequisites
+  ✓ MATLAB 9.14.0.2891782 (R2023a) Update 8
+  ✓ Simulink installed and licensed
+
+MATLAB Environment
+  ✓ All 9 tool entry points on path
+  ✓ Package resolution correct (+sage, +mbd inside SATK)
+
+MCP Server
+  ✓ matlab-mcp-server.exe found: C:\Users\jdi\.matlab\agentic-toolkits\bin\matlab-mcp-server.exe
+
+MCP Connectivity
+  ✓ shareMATLABSession available (MATLAB-side MCP components installed)
+  ✓ MATLAB connector running (port 31519)
+
+===============================================
+Result: PASS
+
+[Warning: The autosave file for model 'test_SimulinkMdl2_qLPVMPCtower' could not be created.] 
+[> In run_qlmpc_experiment (line 117)] 
+[Warning: Error writing file
+"D:\Development\matlab\antje\2021-code-A-Velocity-quasiLPV-MPC-Algorithm-for-Wind-Turbine-Control\NonLinMdl\test_SimulinkMdl2_qLPVMPCtower.slx.autosave": Failed to close the
+package: "Improper link (17)".] 
+[> In run_qlmpc_experiment (line 117)] 
+                 name: 'T24_SimFilt_pos_vt1e3'
+                plant: 'SimFilt'
+                 wind: 'NTW18'
+               status: "ok"
+                  msg: ""
+          ctrlVariant: 'tower'
+           wallTime_s: 57.3366
+          simulated_s: 600.0080
+        RotSpeed_mean: 11.9659
+         RotSpeed_std: 0.4822
+         RotSpeed_max: 13.3744
+          GenPwr_mean: 4.9945e+03
+           GenPwr_std: 201.5375
+            TwrFA_std: 0.1508
+        PitchRate_std: 0.7467
+    PitchRate_meanAbs: 0.5787
+        GenTqRate_std: 9.4345e-08
+                n_err: 0
+          tictoc_mean: 0.0022
+
+
+ans = 
+
+  struct with fields:
+
+                 name: 'T24_SimFilt_pos_vt1e3'
+                plant: 'SimFilt'
+                 wind: 'NTW18'
+               status: "ok"
+                  msg: ""
+          ctrlVariant: 'tower'
+           wallTime_s: 57.3366
+          simulated_s: 600.0080
+        RotSpeed_mean: 11.9659
+         RotSpeed_std: 0.4822
+         RotSpeed_max: 13.3744
+          GenPwr_mean: 4.9945e+03
+           GenPwr_std: 201.5375
+            TwrFA_std: 0.1508
+        PitchRate_std: 0.7467
+    PitchRate_meanAbs: 0.5787
+        GenTqRate_std: 9.4345e-08
+                n_err: 0
+          tictoc_mean: 0.0022
+

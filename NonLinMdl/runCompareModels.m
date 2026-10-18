@@ -61,8 +61,9 @@ if ~isfolder(figDir)
     mkdir(figDir)
 end
 
-% Set path to data output directory
-dataDirOut = fullfile(workDir, 'dataOut');
+% Set path to data output directory (results of the paper models in dataOut/paper)
+[~, ~, dataOutSub] = getWecsModelVersion;
+dataDirOut = fullfile(workDir, 'dataOut', dataOutSub);
 if ~isfolder(dataDirOut)
     mkdir(dataDirOut)
 end
@@ -82,7 +83,7 @@ if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     testCaseStr = 'Wind Sweep';
     step_thresshold = 0;
 elseif strcmp(strWindType,'Step') == 1 % sweep from 4 to 25 in steps
-    outDataSimulationMat = 'OutDataStep.mat'; % 'OutDataSweep.mat'; %
+    [~, outDataSimulationMat] = getWecsModelVersion; % FAST step reference of the model version
     strFig = 'Step';
     testCaseStr = 'Wind Step';
     step_thresshold = 0;
@@ -146,7 +147,15 @@ OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadData,OutTable,
 % Create output plot time reference
 idxTime = 1: min([length(idxTime), height(OutTableTest1),height(OutTableTest2)]);
 time = OutTable.Time(idxTime);
-idxTime = time > 60;
+% Evaluation (plots, norms): stepped wind sweeps (Sweep, Step) from 15 s,
+% the start-up transient has decayed within the first 20 s wind level;
+% all other wind cases from 60 s
+if ischar(strWindType) && any(strcmp(strWindType, {'Sweep', 'Step'}))
+    tEvalStart = 15;
+else
+    tEvalStart = 60;
+end
+idxTime = time > tEvalStart;
 time = time(idxTime);
 
 % Change line width

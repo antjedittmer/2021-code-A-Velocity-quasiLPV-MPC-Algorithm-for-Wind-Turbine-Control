@@ -1,0 +1,21 @@
+start E52_b0_w1e3_rb3e7
+start E53_b0_w1e3_rb1e8
+start E54_b0_w3e2_rb1e7
+start E55_b0_w3e2_rb1e7_dw0
+start E56_b0_w3e3_rb1e8
+done E52_b0_w1e3_rb3e7 (5.8 min, result)
+done E53_b0_w1e3_rb1e8 (5.8 min, result)
+done E54_b0_w3e2_rb1e7 (5.8 min, result)
+done E55_b0_w3e2_rb1e7_dw0 (5.8 min, result)
+done E56_b0_w3e3_rb1e8 (5.8 min, result)
+start E57_b1e2_w1e3_rb1e7
+start E58_b0_w1e3_rb1e7_dw0
+start E59_b0_w1e3_rb1e7_f025
+start E60_b0_w1e3_rb1e7_Sweep
+start E61_b0_w1e3_rb1e7_SimFilt
+done E61_b0_w1e3_rb1e7_SimFilt (1.2 min, result)
+done E60_b0_w1e3_rb1e7_Sweep (5.3 min, result)
+done E57_b1e2_w1e3_rb1e7 (5.5 min, result)
+done E58_b0_w1e3_rb1e7_dw0 (5.5 min, result)
+done E59_b0_w1e3_rb1e7_f025 (5.5 min, result)
+queue finished

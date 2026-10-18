@@ -113,6 +113,22 @@ wecs.Bs = 6215000;  %Nm/rad/sec %Damping of the transmission
 wecs.Rr = 63; % m length rotor radius
 wecs.rb = wecs.Rr*multRb; %*0.75; % m aerodynamic center on blade radius
 wecs.etag = 0.944; %Drivetrain.Generator.Efficiency: 0.944;
+% Effective wind factor: the aerodynamics of the simplified models use the
+% rotor-effective wind Ve = kWindEff*V (hub height wind V). It accounts for
+% rotor tilt (5 deg) and precone (2.5 deg), cos(5)*cos(2.5) = 0.995, and the
+% remaining difference to FAST (rotor averaging, blade flexibility); 0.985
+% matches the FAST steady states and step responses of the wind sweep.
+% kWindEffFilt: factor in the rotor-effective wind filter (Lib_WindFilter).
+% The original paper/thesis models (getWecsModelVersion 'paper') have no
+% effective wind factor and cos(5 deg) in the wind filter.
+isPaperMdl = strcmp(getWecsModelVersion, 'paper');
+if isPaperMdl
+    wecs.kWindEff = 1;
+    wecs.kWindEffFilt = cos(5/180*pi);
+else
+    wecs.kWindEff = 0.985;
+    wecs.kWindEffFilt = wecs.kWindEff;
+end
 
 %% Lagrange's Model matrices
 % Force input w = [Ft_fa,Ft_sw,Tr,Tg]; Ft_fa = Ft
@@ -198,5 +214,17 @@ if scaleLoopUp == 1
     Cq = Cq1;
 
 end
+
+% Local Cq correction near rated, just above fine pitch (lambda about 6.65,
+% beta about 1 deg): +5 %. After the 11 to 12 m/s step the FAST rotor
+% accelerates more, so the pitch passes the 1 deg threshold of the PI torque
+% switch at once; without the correction the models stay just below it for
+% about 5 s with torque above rated. Zero at fine pitch (0.11 deg), so the
+% steady states below rated are unchanged. Not in the paper models.
+kCqRated = 0.05*~isPaperMdl;
+[betaGrid, lambdaGrid] = ndgrid(betaDeg(:), lambda(:));
+CqBump = exp(-0.5*((lambdaGrid - 6.65)/0.3).^2) .* exp(-0.5*((betaGrid - 1)/0.5).^2) ...
+    .* min(max((betaGrid - 0.11)/0.4, 0), 1);
+Cq = Cq .* (1 + kCqRated*CqBump);
 
 

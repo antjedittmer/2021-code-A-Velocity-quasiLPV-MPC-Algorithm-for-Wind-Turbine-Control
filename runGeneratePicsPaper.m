@@ -8,6 +8,16 @@ addpath(genpath('NonLinMdl'));
 addpath(genpath('LinMdl'));
 
 initWorkspace;
+
+% Original models and qLPV-MPC of the paper (same results as the code of the
+% paper): WECS model version 'paper' (getWecsModelVersion: no effective wind
+% factor and Cq correction, FASTTool step reference; results in
+% NonLinMdl/dataOut/paper) and the qLPV-MPC design 'paper' (qlmpcDesign:
+% DTc = DT, no wind filter at the controller input, original formulation).
+% The Cq scaling factors (updateDDMdl1) are set below.
+% initWorkspace sets the default version 'FAST' again.
+setModelVersionPaper('paper');
+
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots}
 filteredPlots = 1; % plots with filter for turbulent wind
@@ -45,9 +55,6 @@ end
 % Simulink models are compared with FAST (NREL) references.
 % FAST simulation results obtained with FASTTool (Tu Delft) are provided as
 % mat-files in dataIn folder.
-
-
-
 
 
 % Run Simulink models in closed loop w baseline controller( Torque controller
@@ -110,15 +117,40 @@ end
 % figNo = figNo + 1;
 % plotNormTimePlots(normStruct,figNo,figDirStr);
 
-% Run models in closed loop with qLPV MPC
-useFASTForComparison = 0; % compare with PI on the same simplified Simulink model (Mdl_BianchiOL)
+%% Comparison qLPV MPC vs. PI in closed loop
+% As in the paper ('SimulinkPaper'): test models as saved, PI on
+% Mdl_BianchiOL_WindFiltered, qLPV-MPC on Mdl_BianchiOL.
+% Additional comparisons (runFASTComparison = 1) with the FAST-matched models
+% (version 'FAST') and the qLPV-MPC design 'beta' of initWorkspace; both
+% controllers run on the same plant model:
+% - 'Simulink': simplified model Mdl_BianchiOL (uniform wind sweep)
+% - 'SimFilt':  simplified model with rotor-effective wind filter
+%               (Mdl_BianchiOL_WindFiltered) for the turbulent wind
+% - 'FAST':     FAST v8.16 (NonLinMdl/FASTinputfiles; the 18 m/s case uses
+%               the TurbSim file wind18_TurbKlasseA.bts)
+% The qLPV-MPC settings are set in initWorkspace (qMPC, rMPC, pMPC, DTc, ...).
+useFASTForComparison = 0; % compare with the PI on the same plant model
 useTitle = [0,1]; % for thesis
-
-figNo = figNo + 1;
+ctrlCases = {'Sweep', 'SimulinkPaper'; 18, 'SimulinkPaper'};
 noFilterStepped = 1; % no filter needed here
-runCompareCtrl('Sweep',loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle,noFilterStepped);
-figNo = figNo + 1;
-runCompareCtrl(18,loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle,useFiltered);
+useFilteredCases = [noFilterStepped, useFiltered]; % PI run with the filtered wind (runCompareCtrl)
+for idxC = 1:size(ctrlCases, 1)
+    figNo = figNo + 1;
+    runCompareCtrl(ctrlCases{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
+        figDirStr, useTitle, ctrlCases{idxC,2}, [], useFilteredCases(idxC));
+end
+
+runFASTComparison = 0; % 1: additional comparisons on the FAST-matched models and FAST
+if runFASTComparison
+    setModelVersionPaper('FAST');
+    ctrlCasesFAST = {'Sweep', 'Simulink'; 18, 'SimFilt'; 'Sweep', 'FAST'; 18, 'FAST'};
+    for idxC = 1:size(ctrlCasesFAST, 1)
+        figNo = figNo + 1;
+        runCompareCtrl(ctrlCasesFAST{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
+            figDirStr, useTitle, ctrlCasesFAST{idxC,2});
+    end
+    setModelVersionPaper('paper');
+end
 
 %% For debugging
 % varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
@@ -132,6 +164,13 @@ runCompareCtrl(18,loadDataCtrlTest,figNo,useFASTForComparison,figDirStr,useTitle
 % OutDataTable04= array2table(OutDataTest,'VariableNames',varnames);
 % OutDataTable08= array2table(OutDataTest,'VariableNames',varnames);
 
+
+%% Run baseline PI algorithm with different rate limits
+% Note: with loadData = 1 the qLPV-MPC results for the different rate
+% limits (dataOut/OutTableTest_rate*_MPC.mat) are loaded if available; set
+% loadData = 0 to recompute them with the current controller settings.
+% The loops below leave the pitch rate limits in DD_Mdl1.sldd and
+% DD_CtrlBaseline.sldd at the last value (13 deg/s).
 
 %% Get Data Directory value of pitch actuator rate
 DDName = 'DD_Mdl1.sldd'; %'DD_MdlCtrl_qLPVMPC.sldd';
@@ -155,7 +194,8 @@ controlValue = getValue(controlObj);
 maxRateVector = [1,3,4,5,8,13];
 outDataSimulationMat = 'OutDataWind18NTW.mat';
 %dataDirOut = fullfile(fileparts(mfilename('fullpath')),'dataOut');
-dataDirOut = fullfile(fileparts(mfilename('fullpath')),'NonLinMdl','dataOut'); % same folder as the other simulation results
+[~, ~, dataOutSub] = getWecsModelVersion;
+dataDirOut = fullfile(fileparts(mfilename('fullpath')),'NonLinMdl','dataOut',dataOutSub); % same folder as the other simulation results
 
 if strcmp(outDataSimulationMat, 'OutDataWind18NTW.mat')
     load(fullfile('dataIn',outDataSimulationMat),'OutTable');
@@ -243,12 +283,13 @@ tableForPlotMPC{1}.Time = OutTable.Time(1:heightT); % Time assigned to this tabl
 tableForPlotMPC{2} = currentOutTableTestCell{idx8};
 tableForPlotMPC{3} = currentOutTableTestCell{end};
 
-% input plotOutTable:OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig)
+% input plotOutTable:OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig,timeEval)
+timeEvalRate = [60, OutTable.Time(end)]; % evaluation window of the 18 m/s wind (60 to 660 s)
 figDir = 'figDir';
 testCaseStrMPC =  'qLMPC Rate Constraints (°/s)';
 testCaseCell = {'standard (8)  ','high (13) ', 'low (4) '};
 axPlotAllMPC = plotOutTable(tableForPlotMPC{1},tableForPlotMPC{2},tableForPlotMPC{3},...
-   testCaseStrMPC,testCaseCell,[],figDir);
+   testCaseStrMPC,testCaseCell,[],figDir,[],timeEvalRate);
 
 DDNameCtrl = 'DD_CtrlBaseline.sldd';
 myDictionaryCtrlObj = Simulink.data.dictionary.open(DDNameCtrl);
@@ -266,7 +307,7 @@ testCaseStr =  'PI Rate Constraints (°/s)';
 figNo2 = 200;
 strFig = 'testConstrPI';
 axPlotAll = plotOutTable(OutTable4,currentOutTablePICell{maxRateVector1 == 8},currentOutTablePICell{end},...
-   testCaseStr,testCaseCell,figNo2,figDir,strFig);
+   testCaseStr,testCaseCell,figNo2,figDir,strFig,timeEvalRate);
 
 % Set the axis for all axes
 % xPlotAllMPC = axPlotAllMPC(isgraphics(axPlotAll, 'axes'));
@@ -297,3 +338,22 @@ strFig = 'PINewLim';
 print(figNo2, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
 print(figNo2, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
 
+function setModelVersionPaper(modelVersion)
+% setModelVersionPaper sets the WECS model version ('paper' or 'FAST',
+% getWecsModelVersion) with the corresponding qLPV-MPC design ('paper' or
+% 'beta', qlmpcDesign) in the base workspace and updates the data dictionaries
+assignin('base', 'wecsModelVersion', modelVersion);
+if strcmp(modelVersion, 'paper')
+    ctrlDesign = 'paper';
+else
+    ctrlDesign = 'beta';
+end
+designMPC = qlmpcDesign(ctrlDesign);
+fn = fieldnames(designMPC);
+for idxF = 1:numel(fn)
+    assignin('base', fn{idxF}, designMPC.(fn{idxF}));
+end
+assignin('base', 'ctrlDesign', ctrlDesign);
+assignin('base', 'designMPC', designMPC);
+updateDDMdl1(0.75);
+end
