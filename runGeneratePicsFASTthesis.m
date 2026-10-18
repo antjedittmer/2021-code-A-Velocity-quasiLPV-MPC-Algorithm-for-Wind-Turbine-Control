@@ -12,9 +12,6 @@
 %
 % Outputs:
 % - time series figures (PI and qLMPC designs) per wind case in figDirFASTthesis
-% - diagnostic plot of the rotor speed per wind case (PI vs. the original
-%   beta design and vs. the other designs, zoom on the maximum rotor speed of
-%   beta): figDirFASTthesis/rotSpdDiagFASTthesis_<wind>.png/.eps
 % - comparison table per wind case: console, figDirFASTthesis/
 %   resultsFASTthesis_<wind>.csv and .tex, NonLinMdl/dataOut/FASTthesis/
 %   resultsFASTthesis.mat (variable resultsFAST)
@@ -121,10 +118,6 @@ for idxW = 1:size(windCases, 1)
 
     % Time series
     plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windCases{idxW, 4}, fstFile, maxRate);
-    figNo = figNo + 1;
-
-    % Diagnostic plot: rotor speed of the PI and the qLMPC designs
-    plotRotSpeedDiagnostic(runs, ctrlNames, timeEval, figNo, figDir, windName, windCases{idxW, 4}, maxRate);
     figNo = figNo + 1;
 end
 save(fullfile(dataDirOut, 'resultsFASTthesis.mat'), 'resultsFAST', 'designNames', 'windCases', 'maxRate', 'timeEvalCase');
@@ -381,11 +374,13 @@ fclose(fid);
 end
 
 function plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windLabel, fstFile, maxRate)
-% plotRuns plots wind, generator torque, blade 1 pitch, tower fore-aft
-% acceleration, generator power and blade 1 root out-of-plane moment of all
-% runs in the evaluation window
+% plotRuns plots wind, generator torque, blade 1 pitch, rotor speed, tower
+% fore-aft acceleration, generator power and blade 1 root out-of-plane moment
+% of all runs in the evaluation window. Torque axis: minimum - 10 % to
+% maximum + 10 % (above rated the torque is nearly constant).
 DT = 0.008;
-yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch_1 (°)', 'TwrAcc_{FA} (m/s^2)', 'GenPwr (MW)', 'M_{yb,1} (MNm)'};
+yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch_1 (°)', 'RotSpd (rpm)', 'TwrAcc_{FA} (m/s^2)', 'GenPwr (MW)', 'M_{yb,1} (MNm)'};
+rpmRated = 12.1; % rated rotor speed of the NREL 5 MW turbine
 [~, fstName] = fileparts(fstFile);
 figure(figNo); clf;
 set(gcf, 'Name', sprintf('PI vs. qLMPC designs (%s) | WECS: FAST v8.16 (%s.fst) | wind: %s | rate limit %g deg/s', ...
@@ -397,6 +392,7 @@ for k = 1:numel(yAxCell)
     ylabel(yAxCell{k});
 end
 lineStyles = {'-', '-.', '--', ':'};
+tqRange = [Inf, -Inf]; % torque range of all runs (kNm)
 for idxC = 1:numel(runs)
     [T, t] = runTable(runs{idxC}, DT);
     if isempty(T), continue, end
@@ -406,106 +402,37 @@ for idxC = 1:numel(runs)
         plot(ax(1), t(idx), T.Wind(idx), 'k');
     end
     plot(ax(2), t(idx), T.GenTq(idx)/1000, ls, 'DisplayName', ctrlNames{idxC});
-    plot(ax(4), t(idx), T.NcIMUTAxs(idx), ls);
-    plot(ax(5), t(idx), T.GenPwr(idx)/1000, ls);
+    tqRange = [min(tqRange(1), min(T.GenTq(idx))/1000), max(tqRange(2), max(T.GenTq(idx))/1000)];
+    plot(ax(4), t(idx), T.RotSpeed(idx), ls);
+    plot(ax(5), t(idx), T.NcIMUTAxs(idx), ls);
+    plot(ax(6), t(idx), T.GenPwr(idx)/1000, ls);
     % Blade 1 pitch and root moment from the FAST output (individual pitch)
     F = runs{idxC}.FASTOut;
     if ~isempty(F)
         idxF = F.Time >= timeEval(1) & F.Time <= timeEval(2);
         plot(ax(3), F.Time(idxF), F.BlPitch1(idxF), ls);
-        plot(ax(6), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls);
+        plot(ax(7), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls);
     else
         plot(ax(3), t(idx), T.BlPitch1(idx), ls);
-        plot(ax(6), NaN, NaN, ls);
+        plot(ax(7), NaN, NaN, ls);
     end
 end
 tRef = (timeEval(1):DT:timeEval(2))';
 tRef = tRef(tRef <= GenPwrRef(end, 1));
-plot(ax(5), tRef, interp1(GenPwrRef(:, 1), GenPwrRef(:, 2), tRef, 'previous', 'extrap')/1000, 'k--');
+plot(ax(6), tRef, interp1(GenPwrRef(:, 1), GenPwrRef(:, 2), tRef, 'previous', 'extrap')/1000, 'k--');
+yline(ax(4), rpmRated, 'k:', 'HandleVisibility', 'off');
 title(ax(1), sprintf('FAST v8.16, %s, pitch rate limit %g°/s', windLabel, maxRate));
 lgd = legend(ax(2));
 lgd.Layout.Tile = 'east'; % outside the tiles, all axes keep the same width
 xlabel(ax(end), 'Time (s)');
 linkaxes(ax, 'x'); axis(ax, 'tight');
+if all(isfinite(tqRange))
+    ylim(ax(2), [0.9*tqRange(1), 1.1*tqRange(2)]);
+end
 posDefault = get(0, 'DefaultFigurePosition');
-set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*0.7, posDefault(3)*1.4, posDefault(4)*1.7]);
+set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*1.2, posDefault(3)*1.4, posDefault(4)*2.3]);
 set(findall(gcf, '-property', 'FontSize'), 'FontSize', 11);
 print(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), '-dpng');
 print(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), '-depsc');
 end
 
-function plotRotSpeedDiagnostic(runs, ctrlNames, timeEval, figNo, figDir, windName, windLabel, maxRate)
-% plotRotSpeedDiagnostic plots the rotor speed in the evaluation window:
-% wind, PI vs. the original design beta, PI vs. the other qLMPC designs and
-% a zoom of +/-20 s around the maximum rotor speed of beta. The legends
-% give the std and the maximum of the rotor speed.
-DT = 0.008;
-rpmRated = 12.1; % rated rotor speed of the NREL 5 MW turbine
-figure(figNo); clf;
-set(gcf, 'Name', sprintf('Rotor speed diagnostic | WECS: FAST v8.16 | wind: %s | rate limit %g deg/s', ...
-    windLabel, maxRate), 'NumberTitle', 'off');
-tiledlayout(4, 1, 'TileSpacing', 'Compact');
-ax = gobjects(4, 1);
-for k = 1:4
-    ax(k) = nexttile; hold on; grid on;
-end
-ylabel(ax(1), 'Wind (m/s)');
-ylabel(ax(2:4), 'RotSpd (rpm)');
-idxBeta = find(strcmp(ctrlNames, 'beta'), 1);
-tZoom = [];
-if ~isempty(idxBeta)
-    [T, t] = runTable(runs{idxBeta}, DT);
-    idx = find(t >= timeEval(1) & t <= timeEval(2));
-    if ~isempty(idx)
-        [~, iMax] = max(T.RotSpeed(idx));
-        tMax = t(idx(iMax));
-        tZoom = [max(timeEval(1), tMax - 20), min(timeEval(2), tMax + 20)];
-    end
-end
-cl = lines(numel(runs));
-for idxC = 1:numel(runs)
-    [T, t] = runTable(runs{idxC}, DT);
-    if isempty(T), continue, end
-    idx = t >= timeEval(1) & t <= timeEval(2);
-    lbl = sprintf('%s (std %.3f, max %.2f rpm)', ctrlNames{idxC}, std(T.RotSpeed(idx)), max(T.RotSpeed(idx)));
-    if idxC == 1
-        plot(ax(1), t(idx), T.Wind(idx), 'k');
-        lw = 1.5; col = [0 0 0];
-    else
-        lw = 0.8; col = cl(idxC, :);
-    end
-    isPI = idxC == 1;
-    isBeta = ~isempty(idxBeta) && idxC == idxBeta;
-    if isPI || isBeta
-        plot(ax(2), t(idx), T.RotSpeed(idx), 'Color', col, 'LineWidth', lw, 'DisplayName', lbl);
-    end
-    if ~isBeta
-        plot(ax(3), t(idx), T.RotSpeed(idx), 'Color', col, 'LineWidth', lw, 'DisplayName', lbl);
-    end
-    if ~isempty(tZoom)
-        iz = t >= tZoom(1) & t <= tZoom(2);
-        plot(ax(4), t(iz), T.RotSpeed(iz), 'Color', col, 'LineWidth', lw, 'DisplayName', ctrlNames{idxC});
-    end
-end
-for k = 2:4
-    yline(ax(k), rpmRated, 'k:', 'rated', 'HandleVisibility', 'off');
-end
-title(ax(1), sprintf('Rotor speed, FAST v8.16, %s, pitch rate limit %g°/s', windLabel, maxRate));
-title(ax(2), 'PI vs. original qLMPC design beta');
-title(ax(3), 'PI vs. the other qLMPC designs');
-if ~isempty(tZoom)
-    title(ax(4), sprintf('Zoom around the maximum rotor speed of beta (%.0f to %.0f s)', tZoom));
-    xlim(ax(4), tZoom);
-end
-legend(ax(2), 'Location', 'eastoutside');
-legend(ax(3), 'Location', 'eastoutside');
-legend(ax(4), 'Location', 'eastoutside');
-linkaxes(ax(1:3), 'x');
-xlim(ax(1), timeEval);
-xlabel(ax(end), 'Time (s)');
-posDefault = get(0, 'DefaultFigurePosition');
-set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*0.7, posDefault(3)*1.9, posDefault(4)*1.9]);
-set(findall(gcf, '-property', 'FontSize'), 'FontSize', 10);
-print(gcf, fullfile(figDir, ['rotSpdDiagFASTthesis_', windName]), '-dpng', '-r150');
-print(gcf, fullfile(figDir, ['rotSpdDiagFASTthesis_', windName]), '-depsc');
-end
