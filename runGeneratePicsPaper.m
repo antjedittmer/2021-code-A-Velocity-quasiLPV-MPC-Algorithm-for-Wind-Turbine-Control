@@ -24,7 +24,7 @@ filteredPlots = 1; % plots with filter for turbulent wind
 useFiltered = 1; % use Pi with filtered (more realistic) wind for qLMPC comparison
 
 % Load data if available from previous simulation.
-loadData = 0; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
+loadData = 1; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
 loadDataCtrlTest = loadData; % for runCompareCtrl (PI and qLMPC based on Mdl2)
 loadData1 = loadData; % for runCompareModels with qLMPC and PI at different rates
 
