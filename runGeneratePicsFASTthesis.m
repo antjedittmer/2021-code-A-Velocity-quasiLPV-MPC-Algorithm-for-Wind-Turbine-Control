@@ -12,6 +12,9 @@
 %
 % Outputs:
 % - time series figures (PI and qLMPC designs) per wind case in figDirFASTthesis
+% - diagnostic plot of the rotor speed per wind case (PI vs. the original
+%   beta design and vs. the other designs, zoom on the maximum rotor speed of
+%   beta): figDirFASTthesis/rotSpdDiagFASTthesis_<wind>.png/.eps
 % - comparison table per wind case: console, figDirFASTthesis/
 %   resultsFASTthesis_<wind>.csv and .tex, NonLinMdl/dataOut/FASTthesis/
 %   resultsFASTthesis.mat (variable resultsFAST)
@@ -118,6 +121,10 @@ for idxW = 1:size(windCases, 1)
 
     % Time series
     plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windCases{idxW, 4}, fstFile, maxRate);
+    figNo = figNo + 1;
+
+    % Diagnostic plot: rotor speed of the PI and the qLMPC designs
+    plotRotSpeedDiagnostic(runs, ctrlNames, timeEval, figNo, figDir, windName, windCases{idxW, 4}, maxRate);
     figNo = figNo + 1;
 end
 save(fullfile(dataDirOut, 'resultsFASTthesis.mat'), 'resultsFAST', 'designNames', 'windCases', 'maxRate', 'timeEvalCase');
@@ -425,4 +432,80 @@ set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*0.7, posDefau
 set(findall(gcf, '-property', 'FontSize'), 'FontSize', 11);
 print(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), '-dpng');
 print(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), '-depsc');
+end
+
+function plotRotSpeedDiagnostic(runs, ctrlNames, timeEval, figNo, figDir, windName, windLabel, maxRate)
+% plotRotSpeedDiagnostic plots the rotor speed in the evaluation window:
+% wind, PI vs. the original design beta, PI vs. the other qLMPC designs and
+% a zoom of +/-20 s around the maximum rotor speed of beta. The legends
+% give the std and the maximum of the rotor speed.
+DT = 0.008;
+rpmRated = 12.1; % rated rotor speed of the NREL 5 MW turbine
+figure(figNo); clf;
+set(gcf, 'Name', sprintf('Rotor speed diagnostic | WECS: FAST v8.16 | wind: %s | rate limit %g deg/s', ...
+    windLabel, maxRate), 'NumberTitle', 'off');
+tiledlayout(4, 1, 'TileSpacing', 'Compact');
+ax = gobjects(4, 1);
+for k = 1:4
+    ax(k) = nexttile; hold on; grid on;
+end
+ylabel(ax(1), 'Wind (m/s)');
+ylabel(ax(2:4), 'RotSpd (rpm)');
+idxBeta = find(strcmp(ctrlNames, 'beta'), 1);
+tZoom = [];
+if ~isempty(idxBeta)
+    [T, t] = runTable(runs{idxBeta}, DT);
+    idx = find(t >= timeEval(1) & t <= timeEval(2));
+    if ~isempty(idx)
+        [~, iMax] = max(T.RotSpeed(idx));
+        tMax = t(idx(iMax));
+        tZoom = [max(timeEval(1), tMax - 20), min(timeEval(2), tMax + 20)];
+    end
+end
+cl = lines(numel(runs));
+for idxC = 1:numel(runs)
+    [T, t] = runTable(runs{idxC}, DT);
+    if isempty(T), continue, end
+    idx = t >= timeEval(1) & t <= timeEval(2);
+    lbl = sprintf('%s (std %.3f, max %.2f rpm)', ctrlNames{idxC}, std(T.RotSpeed(idx)), max(T.RotSpeed(idx)));
+    if idxC == 1
+        plot(ax(1), t(idx), T.Wind(idx), 'k');
+        lw = 1.5; col = [0 0 0];
+    else
+        lw = 0.8; col = cl(idxC, :);
+    end
+    isPI = idxC == 1;
+    isBeta = ~isempty(idxBeta) && idxC == idxBeta;
+    if isPI || isBeta
+        plot(ax(2), t(idx), T.RotSpeed(idx), 'Color', col, 'LineWidth', lw, 'DisplayName', lbl);
+    end
+    if ~isBeta
+        plot(ax(3), t(idx), T.RotSpeed(idx), 'Color', col, 'LineWidth', lw, 'DisplayName', lbl);
+    end
+    if ~isempty(tZoom)
+        iz = t >= tZoom(1) & t <= tZoom(2);
+        plot(ax(4), t(iz), T.RotSpeed(iz), 'Color', col, 'LineWidth', lw, 'DisplayName', ctrlNames{idxC});
+    end
+end
+for k = 2:4
+    yline(ax(k), rpmRated, 'k:', 'rated', 'HandleVisibility', 'off');
+end
+title(ax(1), sprintf('Rotor speed, FAST v8.16, %s, pitch rate limit %g°/s', windLabel, maxRate));
+title(ax(2), 'PI vs. original qLMPC design beta');
+title(ax(3), 'PI vs. the other qLMPC designs');
+if ~isempty(tZoom)
+    title(ax(4), sprintf('Zoom around the maximum rotor speed of beta (%.0f to %.0f s)', tZoom));
+    xlim(ax(4), tZoom);
+end
+legend(ax(2), 'Location', 'eastoutside');
+legend(ax(3), 'Location', 'eastoutside');
+legend(ax(4), 'Location', 'eastoutside');
+linkaxes(ax(1:3), 'x');
+xlim(ax(1), timeEval);
+xlabel(ax(end), 'Time (s)');
+posDefault = get(0, 'DefaultFigurePosition');
+set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*0.7, posDefault(3)*1.9, posDefault(4)*1.9]);
+set(findall(gcf, '-property', 'FontSize'), 'FontSize', 10);
+print(gcf, fullfile(figDir, ['rotSpdDiagFASTthesis_', windName]), '-dpng', '-r150');
+print(gcf, fullfile(figDir, ['rotSpdDiagFASTthesis_', windName]), '-depsc');
 end
