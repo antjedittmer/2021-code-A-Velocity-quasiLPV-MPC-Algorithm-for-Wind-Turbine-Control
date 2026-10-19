@@ -21,7 +21,18 @@ setModelVersionPaper('paper');
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots}
 filteredPlots = 1; % plots with filter for turbulent wind
-useFiltered = 1; % use Pi with filtered (more realistic) wind for qLMPC comparison
+% Rotor-effective wind filter for the turbulent wind (runCompareCtrl and the
+% pitch rate runs below; the stepped wind sweep is never filtered):
+% 2: PI and qLMPC on the filtered plant Mdl_BianchiOL_WindFiltered, the
+%    qLMPC scheduled with the filtered wind (setFilteredWindQLMPC)
+% 1: as in the paper, only the PI on the filtered plant
+% 0: no filter
+useFiltered = 1;
+% Additional case (fourth case) with useFiltered = 2 for the turbulent wind:
+% third column of the merged table (results_tableNTW18_windFilt.tex) and
+% fourth line/column 'filt. (13)' of the qLMPC pitch rate figure
+% and table (13 deg/s). See NonLinMdl/PlantControllerSetup.txt.
+addFilteredCase = 1;
 
 % Load data if available from previous simulation.
 loadData = 1; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
@@ -132,13 +143,25 @@ end
 useFASTForComparison = 0; % compare with the PI on the same plant model
 useTitle = [0,1]; % for thesis
 ctrlCases = {'Sweep', 'SimulinkPaper'; 18, 'SimulinkPaper'};
-noFilterStepped = 1; % no filter needed here
-useFilteredCases = [noFilterStepped, useFiltered]; % PI run with the filtered wind (runCompareCtrl)
+% Stepped wind sweep without filter: a wind step acts equally on the whole
+% rotor disk (there is no filtered PI run of the sweep, so this is the same
+% as before)
+noFilterStepped = 0;
+useFilteredCases = [noFilterStepped, useFiltered]; % wind filter (runCompareCtrl)
 for idxC = 1:size(ctrlCases, 1)
     figNo = figNo + 1;
     runCompareCtrl(ctrlCases{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
         figDirStr, useTitle, ctrlCases{idxC,2}, [], useFilteredCases(idxC));
 end
+fileTableFilt = '';
+if addFilteredCase % turbulent wind, qLMPC also with the filtered wind
+    figNo = figNo + 1;
+    runCompareCtrl(18, loadDataCtrlTest, figNo, useFASTForComparison, ...
+        figDirStr, useTitle, 'SimulinkPaper', [], 2);
+    fileTableFilt = 'results_tableNTW18_windFilt.tex';
+end
+merge_controller_tables('results_tableSweep.tex', 'results_tableNTW18.tex', ...
+    'results_tableMerged.tex', fileTableFilt);
 
 runFASTComparison = 0; % 1: additional comparisons on the FAST-matched models and FAST
 if runFASTComparison
@@ -221,17 +244,43 @@ for idx = 1:length(maxRateVector)
         close_system(simMdlname, 0);  % close without saving
     end
     load_system(simMdlname);
-    
+
+    % useFiltered = 2: qLPV-MPC on the filtered plant, scheduled with the
+    % filtered wind (as runCompareCtrl; WECS model changed in memory only)
+    strFilt = '';
+    if useFiltered == 2
+        oldValues = setFilteredWindQLMPC(simMdlname);
+        if idx == 1, oldBaseVars = oldValues; end
+        strFilt = '_windFilt';
+    end
+
     if strcmp(outDataSimulationMat,'OutDataWind18NTW.mat')
         matFileOutTableTest1 = fullfile(dataDirOut,...
-            sprintf('OutTableTest_rate%02d_MPC.mat',maxRate));
+            sprintf('OutTableTest_rate%02d_MPC%s.mat',maxRate,strFilt));
     else
         matFileOutTableTest1 = fullfile(dataDirOut,...
-            sprintf('OutTableTest_rate%02d_MPC_NTW16.mat',maxRate));
+            sprintf('OutTableTest_rate%02d_MPC_NTW16%s.mat',maxRate,strFilt));
     end
-       
+
    [currentOutTableTestCell{idx}, tictoc_LPVMPCcell{idx},GenPwrRefCell{idx}] = ...
         getSimulationOutputTable(matFileOutTableTest1,loadData1,OutTable,simMdlname);
+end
+close_system(simMdlname, 0); % discard the WECS model change
+if useFiltered == 2
+    restoreBaseVars(oldBaseVars);
+end
+
+% Fourth case: 13 deg/s (last rate of the loop, still set in DD_Mdl1),
+% qLPV-MPC on the filtered plant and scheduled with the filtered wind
+OutTableMPCFilt13 = [];
+if addFilteredCase && useFiltered ~= 2
+    assert(maxRateVector(end) == 13, 'The fourth case needs 13 deg/s as the last rate.');
+    load_system(simMdlname);
+    oldBaseVars = setFilteredWindQLMPC(simMdlname);
+    OutTableMPCFilt13 = getSimulationOutputTable(fullfile(dataDirOut, ...
+        'OutTableTest_rate13_MPC_windFilt.mat'), loadData1, OutTable, simMdlname);
+    close_system(simMdlname, 0);
+    restoreBaseVars(oldBaseVars);
 end
 
 
@@ -247,6 +296,18 @@ currentOutTablePICell = cell(nRate,1); % cell with
 simMdlname = 'test_SimulinkMdl2_Baseline'; % Bianchi model (includes blade state), same plant as the qLMPC runs
 
 maxRateVector1 = 1:13;
+
+% The PI test model uses the filtered plant Mdl_BianchiOL_WindFiltered; set
+% the filter settings explicitly (as runCompareModels) instead of using the
+% values left in the base workspace
+if useFiltered >= 1
+    filtValues = struct('step_thresshold', 1, 'kVeFilt', 0.25, 'kVeFilt_tau', 0.75);
+    oldBaseVarsPI = struct;
+    for fn = fieldnames(filtValues)'
+        oldBaseVarsPI.(fn{1}) = evalin('base', fn{1});
+    end
+    restoreBaseVars(filtValues);
+end
 
 for idx = maxRateVector1
     maxRate = maxRateVector1(idx);
@@ -269,6 +330,9 @@ for idx = maxRateVector1
         getSimulationOutputTable(matFileOutTableTest1,loadData1,OutTable,simMdlname,...
         {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', 'NcIMUTAxs', 'NcIMUTAys','zetadotdot'}); % names are truncated to the number of logged signals
 end
+if useFiltered >= 1
+    restoreBaseVars(oldBaseVarsPI);
+end
 
 % Plot qLmpc result for different maximu rates
 selR = [3,4,8,13]; %[1,4,8,13]; % 
@@ -287,9 +351,10 @@ tableForPlotMPC{3} = currentOutTableTestCell{end};
 timeEvalRate = [60, OutTable.Time(end)]; % evaluation window of the 18 m/s wind (60 to 660 s)
 figDir = 'figDir';
 testCaseStrMPC =  'qLMPC Rate Constraints (°/s)';
-testCaseCell = {'standard (8)  ','high (13) ', 'low (4) '};
+testCaseCell = {'standard (8)  ','high (13) ', 'low (4) ', 'filt. (13)'};
 axPlotAllMPC = plotOutTable(tableForPlotMPC{1},tableForPlotMPC{2},tableForPlotMPC{3},...
-   testCaseStrMPC,testCaseCell,[],figDir,[],timeEvalRate);
+   testCaseStrMPC,testCaseCell,[],figDir,[],timeEvalRate,OutTableMPCFilt13);
+testCaseCell = testCaseCell(1:3); % PI: three cases
 
 DDNameCtrl = 'DD_CtrlBaseline.sldd';
 myDictionaryCtrlObj = Simulink.data.dictionary.open(DDNameCtrl);

@@ -1,0 +1,77 @@
+Plant and controller setup of the qLMPC / PI comparison on Mdl2
+(runGeneratePicsPaper, runCompareCtrl with plant 'SimulinkPaper')
+=====================================================================
+
+Plant models (WECS model of the test models)
+--------------------------------------------
+- Mdl_BianchiOL: Mdl2 (rotor, drivetrain, tower, blade flap, actuators).
+  The aerodynamics use the hub-height (freestream) wind V directly.
+- Mdl_BianchiOL_WindFiltered: the same model, but the wind passes through
+  the rotor-effective wind filter (Lib_WindFilter, end of chapter 3 of the
+  thesis) before the aerodynamic lookup tables:
+  * projection onto the rotor axis: V_in = cos(5 deg) * V
+    (wecs.kWindEffFilt in the paper version)
+  * first-order low-pass filters with the wind-dependent time constant
+    T = k*R/V_in: torque channel k_tau = 0.75 (kVeFilt_tau),
+    thrust channel k_T = 0.25 (kVeFilt)
+  * the filter is bypassed for jumps larger than step_thresshold between two
+    samples (wind steps of the sweep); step_thresshold = 0 bypasses it
+    completely (the cos(5 deg) projection remains)
+
+Controllers
+-----------
+- PI baseline: does not use the wind. Its test model
+  test_SimulinkMdl2_Baseline uses Mdl_BianchiOL_WindFiltered.
+- qLMPC (design 'paper'): scheduled with the wind at its input. The
+  scheduling wind sets the steady-state references Tg_ss, beta_ss and
+  omega_ss and the wind increment dV of the prediction model. A wind filter
+  at the controller input (time constant R*kVeFiltCtrl/V, never bypassed)
+  and a factor kWindEffCtrl before it are available; in the paper design
+  kVeFiltCtrl = 0 (no filter) and kWindEffCtrl = 1. Its test model
+  test_SimulinkMdl2_qLPVMPCbeta uses Mdl_BianchiOL.
+
+Cases (switch useFiltered in runGeneratePicsPaper / runCompareCtrl)
+-------------------------------------------------------------------
+1. Stepped wind sweep (always without filter; a wind step acts equally on
+   the whole rotor disk):
+   - PI: Mdl_BianchiOL_WindFiltered, filter bypassed (only cos(5 deg))
+   - qLMPC: Mdl_BianchiOL, scheduled with the freestream wind
+2. Turbulent wind, useFiltered = 1 (as in the paper, used for the existing
+   figures and tables):
+   - PI: Mdl_BianchiOL_WindFiltered with the filter
+     (OutTableTest2NTW18_kVe0dot25_kVeTau0dot75.mat, PI rate runs
+     OutTableTest_rate*_PI_1.mat)
+   - qLMPC: Mdl_BianchiOL without filter, scheduled with the unfiltered wind
+     (OutTableMPCNTW18.mat, OutTableTest_rate*_MPC.mat)
+   The two controllers therefore run on different plants; the qLMPC sees
+   exactly the (unfiltered) wind that drives its plant.
+3. Turbulent wind, useFiltered = 2 (fourth case, addFilteredCase = 1):
+   - PI: as in case 2
+   - qLMPC: Mdl_BianchiOL_WindFiltered with the same filter as the PI, and
+     scheduled with the filtered wind of the torque channel
+     (kWindEffCtrl = cos(5 deg), kVeFiltCtrl = 0.75; setFilteredWindQLMPC)
+     (OutTableMPCNTW18_windFilt.mat, OutTableTest_rate*_MPC_windFilt.mat)
+   Both controllers run on the same plant, and the qLMPC knows the
+   rotor-effective wind of the plant exactly (best case; in practice it
+   would have to be estimated).
+
+Results, turbulent wind 18 m/s (60-660 s), std PI / std qLMPC, 13 deg/s
+-----------------------------------------------------------------------
+                                case 2 (qLMPC unfiltered)  case 3 (filtered)
+  Tower fore-aft acc. (m/s^2)   0.1300 / 0.0751 = 1.73     0.1300 / 0.0723 = 1.80
+  Power tracking error (kW)     159.33 / 17.72  = 8.99     159.33 / 27.40  = 5.82
+  Blade pitch rate (deg/s)      0.71 / 4.44     = 0.16     0.71 / 0.54     = 1.32
+  Rotor speed std (rpm)         PI 0.381, qLMPC 0.042      PI 0.381, qLMPC 0.066
+
+In case 3 the largest qLMPC pitch rate is 2.6 deg/s, so the pitch rate
+limits of 3 to 13 deg/s give identical results (only 1 deg/s differs). The
+benefit of high pitch rates in case 2 comes from the qLMPC reacting to the
+unfiltered wind.
+
+Output
+------
+- results_tableNTW18.tex: case 2, results_tableNTW18_windFilt.tex: case 3,
+  results_tableMerged.tex: sweep, case 2 and case 3 (third column)
+- figDir/statsTabletestConstr.tex and cmpTimeDomain_AlltestConstr: qLMPC at
+  4, 8 and 13 deg/s (case 2) and the fourth case 'filt. (13)'
+  (case 3)

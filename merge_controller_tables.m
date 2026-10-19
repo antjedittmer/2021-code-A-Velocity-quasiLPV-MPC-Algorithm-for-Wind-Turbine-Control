@@ -1,10 +1,15 @@
-function merge_controller_tables(file_sweep, file_ntw, file_out)
+function merge_controller_tables(file_sweep, file_ntw, file_out, file_ntw_filt)
 % merge_controller_tables merges the table rows written by runCompareCtrl
 % for the stepped wind sweep and the turbulent wind into one LaTeX table.
 %
 % merge_controller_tables('results_tableSweep.tex', ...
 %                         'results_tableNTW18.tex', ...
-%                         'results_tableMerged.tex')
+%                         'results_tableMerged.tex', ...
+%                         'results_tableNTW18_windFilt.tex')
+%
+% file_ntw_filt (optional): rows of the turbulent wind with the qLMPC also
+% on the filtered plant and scheduled with the filtered wind (runCompareCtrl
+% with useFiltered = 2), added as a third column.
 %
 % Expected row format of the input files (written by runCompareCtrl):
 %   Tower fore-aft acc. (m/s$^2$) & $0.0514 / 0.0319 = 1.61$ \\
@@ -15,9 +20,14 @@ function merge_controller_tables(file_sweep, file_ntw, file_out)
 if nargin < 1 || isempty(file_sweep), file_sweep = 'results_tableSweep.tex';  end
 if nargin < 2 || isempty(file_ntw),   file_ntw   = 'results_tableNTW18.tex';  end
 if nargin < 3 || isempty(file_out),   file_out   = 'results_tableMerged.tex'; end
+if nargin < 4, file_ntw_filt = ''; end
+hasFilt = ~isempty(file_ntw_filt);
 
 [labels_sw,  cells_sw]  = parseRows(file_sweep);
 [labels_ntw, cells_ntw] = parseRows(file_ntw);
+if hasFilt
+    [labels_filt, cells_filt] = parseRows(file_ntw_filt);
+end
 
 fid = fopen(file_out, 'w');
 if fid < 0
@@ -31,12 +41,24 @@ fprintf(fid, '\\caption[Standard deviation comparison: Baseline PI vs.\\ qLMPC f
 fprintf(fid, '{Standard deviation comparison: Baseline PI vs.\\ qLMPC for stepped wind sweep and\n');
 fprintf(fid, 'turbulent wind (18\\,m/s mean, IEC class B).\n');
 fprintf(fid, 'The standard deviations obtained with the PI controller are divided by those obtained with the qLMPC;\n');
-fprintf(fid, 'quotients above~1 indicate improvement. Ratios are computed from unrounded values.}\n');
-fprintf(fid, '\\label{tab:ControllerComparisonMerged}\n');
-fprintf(fid, '\\begin{tabular}{l rr}\n');
-fprintf(fid, '\\toprule\n');
-fprintf(fid, '{Standard Deviation of} & {Stepped wind sweep} & {Turbulent wind} \\\\\n');
-fprintf(fid, '{Signal (unit)} & \\multicolumn{2}{c}{std PI / std qLMPC = ratio} \\\\\n');
+if hasFilt
+    fprintf(fid, 'quotients above~1 indicate improvement. Ratios are computed from unrounded values.\n');
+    fprintf(fid, 'Turbulent wind: PI on the plant with the rotor-effective wind filter, qLMPC on the plant\n');
+    fprintf(fid, 'without filter and scheduled with the unfiltered wind; filtered: qLMPC also on the plant\n');
+    fprintf(fid, 'with the filter and scheduled with the filtered wind.}\n');
+    fprintf(fid, '\\label{tab:ControllerComparisonMerged}\n');
+    fprintf(fid, '\\begin{tabular}{l rrr}\n');
+    fprintf(fid, '\\toprule\n');
+    fprintf(fid, '{Standard Deviation of} & {Stepped wind sweep} & {Turbulent wind} & {Turbulent wind, filtered} \\\\\n');
+    fprintf(fid, '{Signal (unit)} & \\multicolumn{3}{c}{std PI / std qLMPC = ratio} \\\\\n');
+else
+    fprintf(fid, 'quotients above~1 indicate improvement. Ratios are computed from unrounded values.}\n');
+    fprintf(fid, '\\label{tab:ControllerComparisonMerged}\n');
+    fprintf(fid, '\\begin{tabular}{l rr}\n');
+    fprintf(fid, '\\toprule\n');
+    fprintf(fid, '{Standard Deviation of} & {Stepped wind sweep} & {Turbulent wind} \\\\\n');
+    fprintf(fid, '{Signal (unit)} & \\multicolumn{2}{c}{std PI / std qLMPC = ratio} \\\\\n');
+end
 fprintf(fid, '\\midrule\n');
 
 for i = 1:numel(labels_sw)
@@ -44,7 +66,15 @@ for i = 1:numel(labels_sw)
     if isempty(idx)
         error('Row "%s" not found in %s.', labels_sw{i}, file_ntw);
     end
-    fprintf(fid, '%s & %s & %s \\\\\n', labels_sw{i}, cells_sw{i}, cells_ntw{idx});
+    if hasFilt
+        idxF = find(strcmp(labels_filt, labels_sw{i}), 1);
+        if isempty(idxF)
+            error('Row "%s" not found in %s.', labels_sw{i}, file_ntw_filt);
+        end
+        fprintf(fid, '%s & %s & %s & %s \\\\\n', labels_sw{i}, cells_sw{i}, cells_ntw{idx}, cells_filt{idxF});
+    else
+        fprintf(fid, '%s & %s & %s \\\\\n', labels_sw{i}, cells_sw{i}, cells_ntw{idx});
+    end
 end
 
 fprintf(fid, '\\bottomrule\n');

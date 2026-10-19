@@ -37,7 +37,7 @@ function [cols, data] = parseStdTable(filename)
         % Parse data rows
         elseif contains(line, '&') && contains(line, '\\') && ~contains(line, 'tabular')
             parts = strsplit(line, '&');
-            if numel(parts) == 4
+            if numel(parts) >= 4 % three rate limits, optionally the fourth case
                 vals = cellfun(@(s) str2double(strtrim(strrep(s,'\\',''))), parts(2:end));
                 data{end+1} = vals; %#ok<AGROW>
             end
@@ -65,6 +65,14 @@ end
 idx_mpc = colOrder(cols_mpc, desired);
 idx_pi  = colOrder(cols_pi,  desired);
 
+% Optional fourth case of the qLMPC (runGeneratePicsPaper, addFilteredCase):
+% 13 deg/s, qLMPC on the filtered plant and scheduled with the filtered wind
+nameFilt = 'filt. (13)';
+hasFilt = any(strcmpi(strtrim(cols_mpc), nameFilt));
+if hasFilt
+    idx_mpc = [idx_mpc, colOrder(cols_mpc, {nameFilt})];
+end
+
 % Reorder each row
 for i = 1:numel(data_mpc)
     data_mpc{i} = data_mpc{i}(idx_mpc);
@@ -76,7 +84,7 @@ end
 % --- Row display names (in desired output order) ---
 rowNames = {
     'Tower fore-aft acc.\ (m/s$^2$)', ...
-    'Generated power (kW)', ...
+    'Power tracking error (kW)', ...
     'Rotor speed (rpm)', ...
     'Blade pitch rate (\textdegree/s)'
 };
@@ -94,18 +102,28 @@ fprintf(fid, '    {Standard deviation comparison: Baseline PI vs.\\ qLMPC\n');
 fprintf(fid, '        for turbulent wind with pitch rate limits. The PI controller is largely insensitive to the rate limit\n');
 fprintf(fid, '        whereas the qLMPC uses higher rates for less rotor speed, tower movement and\n');
 fprintf(fid, '        power variation. Values in brackets show the ratio to the standard\n');
-fprintf(fid, '        (8\\textdegree/s) baseline PI value.}\n');
+if hasFilt
+    fprintf(fid, '        (8\\textdegree/s) baseline PI value. Last column: qLMPC at 13\\textdegree/s on the plant with the\n');
+    fprintf(fid, '        rotor-effective wind filter and scheduled with the filtered wind.}\n');
+else
+    fprintf(fid, '        (8\\textdegree/s) baseline PI value.}\n');
+end
 fprintf(fid, '    \\label{tab:stddev_unified}\n');
-fprintf(fid, '    \\begin{tabular}{ll rrr}\n');
+nCol = 3 + hasFilt;
+fprintf(fid, '    \\begin{tabular}{ll %s}\n', repmat('r', 1, nCol));
 fprintf(fid, '        \\toprule\n');
-fprintf(fid, '        & & \\multicolumn{3}{c}{Rate limit (\\textdegree/s) (ratio to PI at 8\\textdegree/s)} \\\\\n');
-fprintf(fid, '        \\cmidrule(lr){3-5}\n');
-fprintf(fid, '        Controller & Signal & low: 4\\textdegree/s & standard: 8\\textdegree/s & high: 13\\textdegree/s \\\\\n');
+fprintf(fid, '        & & \\multicolumn{%d}{c}{Rate limit (\\textdegree/s) (ratio to PI at 8\\textdegree/s)} \\\\\n', nCol);
+fprintf(fid, '        \\cmidrule(lr){3-%d}\n', 2 + nCol);
+if hasFilt
+    fprintf(fid, '        Controller & Signal & low: 4\\textdegree/s & standard: 8\\textdegree/s & high: 13\\textdegree/s & filtered: 13\\textdegree/s \\\\\n');
+else
+    fprintf(fid, '        Controller & Signal & low: 4\\textdegree/s & standard: 8\\textdegree/s & high: 13\\textdegree/s \\\\\n');
+end
 fprintf(fid, '        \\midrule\n');
 
-writeBlock(fid, 'PI',    rowNames, data_pi,  baseline);
+writeBlock(fid, 'PI',    rowNames, data_pi,  baseline, nCol);
 fprintf(fid, '        \\midrule\n');
-writeBlock(fid, 'qLMPC', rowNames, data_mpc, baseline);
+writeBlock(fid, 'qLMPC', rowNames, data_mpc, baseline, nCol);
 
 fprintf(fid, '        \\bottomrule\n');
 fprintf(fid, '    \\end{tabular}\n');
@@ -114,13 +132,25 @@ fclose(fid);
 fprintf('Merged table written to %s\n', file_out);
 
 % --- Write one controller block: value (baseline/value) ---
-function writeBlock(fid, name, rowNames, data, baseline)
+% (nCol columns; a block with fewer values, e.g. the PI without the fourth
+% case, gets '--' in the remaining columns)
+function writeBlock(fid, name, rowNames, data, baseline, nCol)
+    % Number formats of the rows: tower acceleration and rotor speed with
+    % four digits, power and pitch rate with two (as plotOutTable)
+    rowFormats = {'%.4f', '%.2f', '%.4f', '%.2f'};
     fprintf(fid, '        \\multirow{%d}{*}{%s}\n', numel(rowNames), name);
     for r = 1:numel(rowNames)
         v = data{r};
         q = baseline(r) ./ v;
-        fprintf(fid, '        & %s & %.2f (%.2f) & %.2f (%.2f) & %.2f (%.2f) \\\\\n', ...
-            rowNames{r}, v(1), q(1), v(2), q(2), v(3), q(3));
+        fprintf(fid, '        & %s', rowNames{r});
+        for c = 1:nCol
+            if c <= numel(v)
+                fprintf(fid, [' & ', rowFormats{r}, ' (%.2f)'], v(c), q(c));
+            else
+                fprintf(fid, ' & --');
+            end
+        end
+        fprintf(fid, ' \\\\\n');
     end
 end
 end
