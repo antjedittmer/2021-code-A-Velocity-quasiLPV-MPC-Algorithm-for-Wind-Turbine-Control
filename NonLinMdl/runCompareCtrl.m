@@ -27,7 +27,10 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 %   initWorkspace weights, no suffix.
 % - useFiltered: only 'SimulinkPaper': 1 (Default) uses the PI run with the
 %   rotor-effective wind filter (OutTableTest2*_kVe0dot25_kVeTau0dot75.mat
-%   of runCompareModels) if available, as in the paper
+%   of runCompareModels) if available, as in the paper; 2 (turbulent wind
+%   only) additionally runs the qLPV-MPC on the same filtered plant
+%   Mdl_BianchiOL_WindFiltered and schedules it with the filtered wind
+%   (setFilteredWindQLMPC, result files *_windFilt); 0: no filter
 %
 % Evaluation window (figures, ratios, LaTeX table): stepped wind sweeps from
 % 15 s, all other wind cases (turbulent 18 m/s) from 60 s, to the end of the
@@ -100,6 +103,7 @@ varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
 % qLPV-MPC weights: the controller reads qMPC, rMPC and pMPC from the base
 % workspace; a variant in ctrlOpts replaces them during this run
 strCtrl = '';
+strTableFilt = ''; % suffix of the LaTeX table rows (filtered wind for the qLPV-MPC)
 if isfield(ctrlOpts, 'name')
     strCtrl = ['_', ctrlOpts.name];
 end
@@ -157,6 +161,16 @@ switch plantMdl
             load_system(mdlCellPaper{idxM});
             blk = find_system(mdlCellPaper{idxM}, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
             wecsMdlCell{idxM} = strrep(get_param(blk{1}, 'ModelName'), '.slx', '');
+        end
+        if useFiltered == 2 && isa(strWindType, 'double')
+            % Turbulent wind: qLPV-MPC on the filtered plant of the PI,
+            % scheduled with the filtered wind (model changed in memory only)
+            oldBaseVars = setFilteredWindQLMPC(simMdlname);
+            cleanupFilt = onCleanup(@() restoreBaseVars(oldBaseVars));
+            cleanupMdlFilt = onCleanup(@() close_system(simMdlname, 0));
+            wecsMdlCell{2} = 'Mdl_BianchiOL_WindFiltered, filtered wind';
+            strCtrl = [strCtrl, '_windFilt'];
+            strTableFilt = '_windFilt';
         end
         wecsLabel = sprintf('Mdl2 (PI: %s, qLMPC: %s)', wecsMdlCell{:});
     case {'Simulink', 'SimFilt'}
@@ -216,7 +230,10 @@ else % from Simulink
     % As in the paper: PI run with the rotor-effective wind filter
     % (runCompareModels, ..._kVe0dot25_kVeTau0dot75.mat) if available
     matFileOutTableTest2Filt = strrep(matFileOutTableTest2,'.mat','_kVe0dot25_kVeTau0dot75.mat');
-    if strcmp(plantMdl, 'SimulinkPaper') && useFiltered == 1 && exist(matFileOutTableTest2Filt,"file") == 2
+    % (useFiltered = 2: the filter settings are set by setFilteredWindQLMPC,
+    % so a missing file is simulated with the filter)
+    if strcmp(plantMdl, 'SimulinkPaper') && ((useFiltered == 1 && exist(matFileOutTableTest2Filt,"file") == 2) || ...
+            (useFiltered == 2 && isa(strWindType, 'double')))
         matFileOutTableTest2 = matFileOutTableTest2Filt;
     end
     OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadBaseline,OutTable,simMdlname2,[],FAST_InputFileName);
@@ -254,9 +271,9 @@ DT = 0.008;
 r = GenPwrRef;
 
 % Plot and compare closed-loop results
-plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel)
+plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt)
 
-function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel)
+function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt)
 %plotComparison plots the time series obtained with baseline and qLPVMPC
 
 %% Handle optional inputs
@@ -346,7 +363,7 @@ if isa(strWindType,'double')  % wind with average 18 m/s
     strWindType = sprintf('NTW%02d',strWindType); %'NTW18';
 end
 
-fileTable = ['results_table',strWindType,'.tex'];
+fileTable = ['results_table',strWindType,strTableFilt,'.tex']; % _windFilt: useFiltered = 2
 fid = fopen(fileTable, 'w');
 fprintf(fid, '%% Rows for table tab:ControllerComparisonMerged, wind case %s\n', strWindType);
 fprintf(fid, '%% Standard deviations PI / qLMPC = ratio; ratios computed from unrounded values\n');

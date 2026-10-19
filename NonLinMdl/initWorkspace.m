@@ -54,6 +54,10 @@ kVeFilt_tau = 0.75;
 % wecs.Rr*kVeFiltCtrl/V (0: filter off, the measured wind is passed through).
 % Same as the filter for the aerodynamic torque in Mdl_*_WindFiltered.
 % Set by the design below (default 0.75).
+% kWindEffCtrl: factor on the measured wind before the qLPV-MPC wind filter
+% (1: none). setFilteredWindQLMPC sets it to wecs.kWindEffFilt, the
+% projection onto the rotor axis in the plant wind filter (Lib_WindFilter).
+kWindEffCtrl = 1;
 % qLPV-MPC weights: stage cost x'Qx + u'Ru, terminal weight P = pMPC*Q
 % x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg, dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)],
 % u = [dTg_ref, dBeta_ref]; references [Tg_ss, beta_ss, OmegaR_ss](V_filt)

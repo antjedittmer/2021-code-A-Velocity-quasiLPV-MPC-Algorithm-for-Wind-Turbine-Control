@@ -1,6 +1,8 @@
-function axPlotAll = plotOutTable(OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig,timeEval)
+function axPlotAll = plotOutTable(OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig,timeEval,OutTableTest3)
 % timeEval (optional): time window [s] of the plots and the statistics
 % (Default: plots from 20 s, statistics from 15 s to the end)
+% OutTableTest3 (optional): fourth case, label testCaseCell{4}; additional
+% line (color 4 of the color map) and last column of the statistics tables
 
 
 %% Set parameters and missing inputs
@@ -34,10 +36,18 @@ end
 if nargin<9 || isempty(timeEval)
     timeEval = [];
 end
+
+if nargin<10
+    OutTableTest3 = [];
+end
+hasTest3 = ~isempty(OutTableTest3);
 % Assign data from FAST to variables
 
 %% Handle different variable names
 idxTime =1: min([height(OutTable), height(OutTableTest1),height(OutTableTest2)]);
+if hasTest3
+    idxTime = 1:min(numel(idxTime), height(OutTableTest3));
+end
 OutTable = OutTable(idxTime,:);
 OutTable.BldPitch1 = OutTable.BlPitch1;
 OutTable.Torque = OutTable.GenTq;
@@ -55,6 +65,9 @@ cl = colormap('lines');
 %     '\color[rgb]{',num2str(cl(2,:)),'}FAST} '];
 titleStr = [testCaseStr,': ',testCaseCell{1},'{\color[rgb]{',num2str(cl(1,:)),'}',testCaseCell{2},...
     '\color[rgb]{',num2str(cl(2,:)),'}',testCaseCell{3},'}'];
+if hasTest3
+    titleStr = [titleStr(1:end-1), ' \color[rgb]{',num2str(cl(4,:)),'}',testCaseCell{4},'}'];
+end
 
 % Create output plot time reference
 time = OutTable.Time(idxTime);
@@ -89,6 +102,7 @@ if plotGenTq
     plot(time, OutTableTest2.GenTq(idxTime)/10^3, ...
          time, OutTable.GenTq(idxTime), ...
          time, OutTableTest1.GenTq(idxTime)/10^3, 'k--');
+    plotTest3(hasTest3, time, OutTableTest3, 'GenTq', idxTime, 1/10^3, cl(4,:));
     axis tight;
     posAxis = axis;
     axis([posAxis(1:2), min(43, posAxis(3)), 44]);
@@ -101,6 +115,7 @@ axPlotAll(3) = nexttile;
 plot(time, OutTableTest2.BlPitch1(idxTime), ...
      time, OutTable.BlPitch1(idxTime), ...
      time, OutTableTest1.BlPitch1(idxTime), 'k--');
+plotTest3(hasTest3, time, OutTableTest3, 'BlPitch1', idxTime, 1, cl(4,:));
 axis tight; grid on;
 ylabel(yAxCell{3});
 
@@ -109,6 +124,7 @@ axPlotAll(4) = nexttile;
 plot(time, OutTableTest2.RotSpeed(idxTime), ...
      time, OutTable.RotSpeed(idxTime), ...
      time, OutTableTest1.RotSpeed(idxTime), 'k--');
+plotTest3(hasTest3, time, OutTableTest3, 'RotSpeed', idxTime, 1, cl(4,:));
 axis tight; grid on;
 ylabel(yAxCell{4});
 
@@ -117,6 +133,7 @@ axPlotAll(5) = nexttile;
 plot(time, OutTableTest2.NcIMUTAxs(idxTime), ...
      time, OutTable.NcIMUTAxs(idxTime), ...
      time, OutTableTest1.NcIMUTAxs(idxTime), 'k--');
+plotTest3(hasTest3, time, OutTableTest3, 'NcIMUTAxs', idxTime, 1, cl(4,:));
 axis tight; grid on;
 ylabel(yAxCell{6});
 
@@ -125,6 +142,7 @@ axPlotAll(6) = nexttile;
 plot(time, OutTableTest2.GenPwr(idxTime)/1000, ...
      time, OutTable.GenPwr(idxTime)/1000, ...
      time, OutTableTest1.GenPwr(idxTime)/1000, 'k--');
+plotTest3(hasTest3, time, OutTableTest3, 'GenPwr', idxTime, 1/1000, cl(4,:));
 axis tight; grid on;
 ylabel(yAxCell{5});
 xlabel('Time (s)');
@@ -161,9 +179,10 @@ dPitch_1   = diff(OutTable.BlPitch1(idxTime))     / dt;
 dPitch_2   = diff(OutTableTest2.BlPitch1(idxTime)) / dt;
 dPitch_Ref = diff(OutTableTest1.BlPitch1(idxTime)) / dt;
 
-rotSpd_1   = OutTable.RotSpeed(idxTime)     * 60/(2*pi);
-rotSpd_2   = OutTableTest2.RotSpeed(idxTime)* 60/(2*pi);
-rotSpd_Ref = OutTableTest1.RotSpeed(idxTime)* 60/(2*pi);
+% Rotor speed in rpm (the Simulink test models log rpm already)
+rotSpd_1   = toRpm(OutTable.RotSpeed(idxTime));
+rotSpd_2   = toRpm(OutTableTest2.RotSpeed(idxTime));
+rotSpd_Ref = toRpm(OutTableTest1.RotSpeed(idxTime));
 
 twrFA_1    = OutTable.NcIMUTAxs(idxTime);
 twrFA_2    = OutTableTest2.NcIMUTAxs(idxTime);
@@ -183,10 +202,15 @@ data = {
     rotSpd_1,   rotSpd_2,   rotSpd_Ref;
     dPitch_1,   dPitch_2,   dPitch_Ref;
 };
+if hasTest3 % fourth case as last column
+    data(:,4) = {OutTableTest3.NcIMUTAxs(idxTime); OutTableTest3.GenPwr(idxTime); ...
+        toRpm(OutTableTest3.RotSpeed(idxTime)); diff(OutTableTest3.BlPitch1(idxTime)) / dt};
+end
+nModels = size(data, 2);
+modelNames = modelNames(1:nModels);
 
 % ---- Compute variance and std dev matrices ----
 nCriteria = numel(criteriaNames);
-nModels   = numel(modelNames);
 
 varMat = zeros(nCriteria, nModels);
 stdMat = zeros(nCriteria, nModels);
@@ -199,19 +223,11 @@ for c = 1:nCriteria
 end
 
 % ---- Build tables ----
-col1 = modelNames{1};
-col2 = modelNames{2};
-col3 = modelNames{3};
+varianceTable = [table(criteriaNames(:), 'VariableNames', {'Criterion'}), ...
+    array2table(varMat, 'VariableNames', modelNames)];
 
-varianceTable = table( ...
-    criteriaNames(:), ...
-    varMat(:,1), varMat(:,2), varMat(:,3), ...
-    'VariableNames', {'Criterion', col1, col2, col3});
-
-stdDevTable = table( ...
-    criteriaNames(:), ...
-    stdMat(:,1), stdMat(:,2), stdMat(:,3), ...
-    'VariableNames', {'Criterion', col1, col2, col3});
+stdDevTable = [table(criteriaNames(:), 'VariableNames', {'Criterion'}), ...
+    array2table(stdMat, 'VariableNames', modelNames)];
 
 % ---- Swap columns (Ref=Test1 is col3, swap to col1 position) ----
 tmpNames = varianceTable.Properties.VariableNames;
@@ -234,7 +250,7 @@ writeLatexTable(fid, stdDevTable, ...
     'Standard deviation of key signals for different pitch rate constraints', ...
     'tab:stddev');
 fclose(fid);
-fprintf('LaTeX tables written to %s\n', fullfile(figDir, 'statsTable.tex'));
+fprintf('LaTeX tables written to %s\n', fullfile(figDir, ['statsTable',strFig,'.tex']));
 end
 
 % Helper to write one table
@@ -244,23 +260,47 @@ function writeLatexTable(fid, tbl, caption, label)
     fprintf(fid, '\\centering\n');
     fprintf(fid, '\\caption{%s}\n', caption);
     fprintf(fid, '\\label{%s}\n', label);
-    fprintf(fid, '\\begin{tabular}{lrrr}\n');
+    nCol = numel(colNames) - 1;
+    fprintf(fid, '\\begin{tabular}{l%s}\n', repmat('r', 1, nCol));
     fprintf(fid, '\\toprule\n');
-    fprintf(fid, '%s & %s & %s & %s \\\\\n', ...
-        colNames{1}, colNames{2}, colNames{3}, colNames{4});
+    fprintf(fid, '%s \\\\\n', strjoin(colNames, ' & '));
     fprintf(fid, '\\midrule\n');
-    % Row labels matching new order: TwrFA, GenPwr, RotSpeed, Pitch rate
+    % Row labels matching new order: TwrFA, GenPwr, RotSpeed, Pitch rate.
+    % Above rated the power reference is constant, so the std of the
+    % generator power equals the std of the power tracking error (runCompareCtrl).
+    % Number formats as in runCompareCtrl: tower acceleration and rotor
+    % speed with four digits, the other signals with two digits
     criteria = {
-        'Tower fore-aft acc.\ (m/s$^2$)', ...
-        'Generated power (kW)', ...
-        'Rotor speed (rpm)', ...
-        'Blade pitch rate (\textdegree/s)'
+        'Tower fore-aft acc.\ (m/s$^2$)',   '%.4f';
+        'Power tracking error (kW)',        '%.2f';
+        'Rotor speed (rpm)',                '%.4f';
+        'Blade pitch rate (\textdegree/s)', '%.2f'
     };
     for r = 1:height(tbl)
-        fprintf(fid, '%s & %.2f & %.2f & %.2f \\\\\n', ...
-            criteria{r}, tbl{r,2}, tbl{r,3}, tbl{r,4});
+        fmt = criteria{r,2};
+        fprintf(fid, ['%s', repmat([' & ', fmt], 1, nCol), ' \\\\\n'], ...
+            criteria{r,1}, tbl{r,2:end});
     end
     fprintf(fid, '\\bottomrule\n');
     fprintf(fid, '\\end{tabular}\n');
     fprintf(fid, '\\end{table}\n\n');
+end
+
+% Helper: rotor speed in rpm (signals in rad/s are converted)
+function rpm = toRpm(rotSpd)
+    if mean(rotSpd) < 3 % rad/s (rated 1.27 rad/s = 12.1 rpm)
+        rpm = rotSpd * 60/(2*pi);
+    else
+        rpm = rotSpd;
+    end
+end
+
+% Helper: line of the fourth case (if available) in the current axes
+function plotTest3(hasTest3, time, OutTableTest3, sigName, idxTime, scale, color)
+    if ~hasTest3
+        return
+    end
+    hold on;
+    plot(time, OutTableTest3.(sigName)(idxTime)*scale, 'Color', color);
+    hold off;
 end

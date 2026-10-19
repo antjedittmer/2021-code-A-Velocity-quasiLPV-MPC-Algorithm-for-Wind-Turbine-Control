@@ -35,9 +35,11 @@ for i = 1:numel(tableLines)
             if numel(parts) < 3
                 error('Row "%s" has fewer than two data columns.', rowDefs{r,2});
             end
-            % Last two columns: stepped sweep and turbulent wind
-            stepped   = parseCell(stepped,   rowDefs{r,1}, parts{end-1});
-            turbulent = parseCell(turbulent, rowDefs{r,1}, parts{end});
+            % Columns 2 and 3: stepped sweep and turbulent wind (an optional
+            % fourth column, turbulent wind with filtered wind for the
+            % qLMPC, is not used here)
+            stepped   = parseCell(stepped,   rowDefs{r,1}, parts{2});
+            turbulent = parseCell(turbulent, rowDefs{r,1}, parts{3});
         end
     end
 end
