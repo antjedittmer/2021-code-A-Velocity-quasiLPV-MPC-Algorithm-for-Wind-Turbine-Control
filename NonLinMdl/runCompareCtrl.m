@@ -298,8 +298,8 @@ titleStdPI = sprintf('%2.2e',varPI);
 titleStdqLPV = sprintf('%2.2e',varqLPV);
 ratioStd = sprintf('%2.1f ', varPI/varqLPV);
 
-varPI_Pwr = var(abs(PGRef - OutTableTest2Plot.GenPwr));
-varqLPV_Pwr = var(abs(PGRef - OutTableMPCPlot.GenPwr));
+varPI_Pwr = var(PGRef - OutTableTest2Plot.GenPwr);
+varqLPV_Pwr = var(PGRef - OutTableMPCPlot.GenPwr);
 
 
 titleStdPI_Pwr = sprintf('%2.2e',varPI_Pwr);
@@ -316,68 +316,53 @@ dPitch_PI   = diff(OutTableTest2Plot.BlPitch1)   / dt;  % deg/s
 dPitch_qLPV = diff(OutTableMPCPlot.BlPitch1)     / dt;
 
 % --- Define metrics ---
+% Column 5: number format of the standard deviations in the LaTeX table
+% (tower acceleration with four digits, all other signals with two digits)
 metrics = {
-    %  Label                      std_PI                                            std_qLPV                                          unit
-    'Tower fore-aft acc.',        std(OutTableTest2Plot.NcIMUTAxs),                 std(OutTableMPCPlot.NcIMUTAxs),                  'm/s^2';
-    'Power tracking error',       std(abs(PGRef - OutTableTest2Plot.GenPwr)),       std(abs(PGRef - OutTableMPCPlot.GenPwr)),         'kW';
-    'Generator torque rate',      std(dGenTq_PI),                                   std(dGenTq_qLPV),                                'kNm/s';
-    'Blade pitch rate',           std(dPitch_PI),                                   std(dPitch_qLPV),                                'deg/s';
+    %  Label                      std_PI                                  std_qLPV                                unit             format
+    'Tower fore-aft acc.',        std(OutTableTest2Plot.NcIMUTAxs),       std(OutTableMPCPlot.NcIMUTAxs),        'm/s$^2$',       '%.4f';
+    'Power tracking error',       std(PGRef - OutTableTest2Plot.GenPwr),  std(PGRef - OutTableMPCPlot.GenPwr),   'kW',            '%.2f';
+    'Generator torque rate',      std(dGenTq_PI),                         std(dGenTq_qLPV),                      'kNm/s',         '%.2f';
+    'Blade pitch rate',           std(dPitch_PI),                         std(dPitch_qLPV),                      '\textdegree/s', '%.2f';
     };
 
 % Treat numerically constant signals (e.g. constant torque above rated) as
 % zero, so ratios become Inf/NaN instead of huge round-off values
 metrics(:,2:3) = cellfun(@(x) x * (x > 1e-6), metrics(:,2:3), 'UniformOutput', false);
 
-% --- Print variance ratios to console (for use in text) ---
-fprintf('\n--- Variance ratios (PI/qLMPC, for text) ---\n');
+% --- Print std and variance ratios to console (for use in text) ---
+fprintf('\n--- Std and variance ratios (PI/qLMPC, for text) ---\n');
 for i = 1:size(metrics, 1)
-    var_PI   = metrics{i,2}^2;
-    var_qLPV = metrics{i,3}^2;
-    fprintf('%s: var_PI = %.3f, var_qLPV = %.3f, ratio = %.2f\n', ...
-        metrics{i,1}, var_PI, var_qLPV, var_PI/var_qLPV);
+    s_PI  = metrics{i,2};
+    s_MPC = metrics{i,3};
+    fmt   = metrics{i,5};
+    fprintf(['%s: std_PI = ', fmt, ', std_qLMPC = ', fmt, ...
+        ', std ratio = %.2f, var ratio = %.2f\n'], ...
+        metrics{i,1}, s_PI, s_MPC, s_PI/s_MPC, (s_PI/s_MPC)^2);
 end
 
-% --- Print variance ratios to console (for use in text) ---
-fprintf('\n--- Std ratios (PI/qLMPC, for text) ---\n');
-for i = 1:size(metrics, 1)
-    var_PI   = metrics{i,2};
-    var_qLPV = metrics{i,3};
-    fprintf('%s: var_PI = %.2f, var_qLPV = %.2f, ratio = %.2f\n', ...
-        metrics{i,1}, var_PI, var_qLPV, var_PI/var_qLPV);
-end
-
-
-% --- Write LaTeX table (std ratio only) ---
-
-if isa(strWindType,'double')  % wind with average 18 m/s  
+% --- Write LaTeX table rows in thesis format: $std_PI / std_qLMPC = ratio$ ---
+if isa(strWindType,'double')  % wind with average 18 m/s
     strWindType = sprintf('NTW%02d',strWindType); %'NTW18';
 end
 
-
-fid = fopen(['results_table',strWindType,'.tex'], 'w');
-fprintf(fid, '\\begin{table}[h]\n');
-fprintf(fid, '\\centering\n');
-fprintf(fid, '\\caption[Controller comparison: PI baseline vs.\\ qLMPC.]{Controller comparison: PI baseline vs.\\ qLMPC. The standard deviation ratio $\\sigma_\\text{PI}/\\sigma_\\text{qLMPC}$ is shown; values above 1 indicate improvement.}\n');
-fprintf(fid, '\\label{tab:ControllerComparison}\n');
-fprintf(fid, '\\begin{tabular}{lSSSS}\n');
-fprintf(fid, '\\toprule\n');
-fprintf(fid, '{Metric} & {Unit} & {$\\sigma$ PI} & {$\\sigma$ qLMPC} & {$\\sigma$ ratio} \\\\\n');
-fprintf(fid, '\\midrule\n');
+fileTable = ['results_table',strWindType,'.tex'];
+fid = fopen(fileTable, 'w');
+fprintf(fid, '%% Rows for table tab:ControllerComparisonMerged, wind case %s\n', strWindType);
+fprintf(fid, '%% Standard deviations PI / qLMPC = ratio; ratios computed from unrounded values\n');
 for i = 1:size(metrics, 1)
-    std_PI   = metrics{i,2};
-    std_qLPV = metrics{i,3};
-    ratioStr = sprintf('%.2f', std_PI/std_qLPV);
-    if ~isfinite(std_PI/std_qLPV)
-        ratioStr = '{n/a}';
+    s_PI  = metrics{i,2};
+    s_MPC = metrics{i,3};
+    fmt   = metrics{i,5};
+    if isfinite(s_PI/s_MPC)
+        cellStr = sprintf(['$', fmt, ' / ', fmt, ' = %.2f$'], s_PI, s_MPC, s_PI/s_MPC);
+    else
+        cellStr = sprintf(['$', fmt, ' / ', fmt, ' = {-}$'], s_PI, s_MPC);
     end
-    fprintf(fid, '%s & %s & %.4f & %.4f & %s \\\\\n', ...
-        metrics{i,1}, metrics{i,4}, std_PI, std_qLPV, ratioStr);
+    fprintf(fid, '%s (%s) & %s \\\\\n', metrics{i,1}, metrics{i,4}, cellStr);
 end
-fprintf(fid, '\\bottomrule\n');
-fprintf(fid, '\\end{tabular}\n');
-fprintf(fid, '\\end{table}\n');
 fclose(fid);
-fprintf('Table written to results_table.tex\n');
+fprintf('Table rows written to %s\n', fileTable);
 % axis for plot
 yAxCell = {'Wind V (m/s)', 'Twr_{FA} (m/s^2)','GenPwr P_g (kW)'};
 
@@ -410,7 +395,7 @@ if useTitle(2) == 0 % either plot the
     ax1(3) = subplot(3,1,3);
     plot(timeVecPlot, OutTableTest2Plot.GenPwr/1000, timeVecPlot,OutTableMPCPlot.GenPwr/1000,'-.',timeVecPlot,PGRef/1000,'k--');
     if useTitle(1)
-        title(['|P_{g,ref}-P_g| [kW]: var_{PI}: ',titleStdPI_Pwr, ', var_{qLMPC}: ' ,...
+        title(['P_{g,ref}-P_g [kW]: var_{PI}: ',titleStdPI_Pwr, ', var_{qLMPC}: ' ,...
             titleStdqLPV_Pwr,', ratio: ' ,ratioStd_Pwr])
     end
     ylabel(strrep(yAxCell{3}, 'kW','MW'))

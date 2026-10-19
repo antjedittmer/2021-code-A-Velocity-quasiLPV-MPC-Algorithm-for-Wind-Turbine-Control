@@ -50,9 +50,9 @@ ipcMaxRateCtrl = maxRate;
 %   (ipc_dlr, adapted to FAST: gain set 2 scaled by 0.3, no tower term)
 designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmooth12Tower', ...
     'flapNotchIPC'};
-%designNames = designNames([1,2,3]);
+designNames = designNames([1,2,3]);
 %designNames = designNames([1,3]);
-designNames = designNames([5,6]);
+% designNames = designNames([5,6]);
 
 
 % Wind cases: name, reference data (initial values, stop time), FAST input file,
