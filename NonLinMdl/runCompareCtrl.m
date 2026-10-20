@@ -1,4 +1,4 @@
-function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,plantMdl,ctrlOpts,useFiltered)
+function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,plantMdl,ctrlOpts,useFiltered,strOut)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
@@ -30,7 +30,12 @@ function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTFor
 %   of runCompareModels) if available, as in the paper; 2 (turbulent wind
 %   only) additionally runs the qLPV-MPC on the same filtered plant
 %   Mdl_BianchiOL_WindFiltered and schedules it with the filtered wind
-%   (setFilteredWindQLMPC, result files *_windFilt); 0: no filter
+%   (setFilteredWindQLMPC, result files *_windFilt); 0: no filter, both
+%   controllers on the same plant Mdl_BianchiOL (the PI test model gets the
+%   plant of the qLPV-MPC in memory, i.e. no filter and no projection factor
+%   kWindEffFilt; PI result files *_noFilt)
+% - strOut: suffix of the figure and LaTeX table files (e.g. '_old').
+%   Default: no suffix.
 %
 % Evaluation window (figures, ratios, LaTeX table): stepped wind sweeps from
 % 15 s, all other wind cases (turbulent 18 m/s) from 60 s, to the end of the
@@ -75,6 +80,10 @@ if nargin < 9 || isempty(useFiltered)
     useFiltered = 1;
 end
 
+if nargin < 10 || isempty(strOut)
+    strOut = '';
+end
+
 %% Set path to directories
 
 % Set path to inputdata directory
@@ -104,6 +113,7 @@ varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', ...
 % workspace; a variant in ctrlOpts replaces them during this run
 strCtrl = '';
 strTableFilt = ''; % suffix of the LaTeX table rows (filtered wind for the qLPV-MPC)
+strPI = ''; % suffix of the PI result file (_noFilt: PI on Mdl_BianchiOL)
 if isfield(ctrlOpts, 'name')
     strCtrl = ['_', ctrlOpts.name];
 end
@@ -172,6 +182,16 @@ switch plantMdl
             strCtrl = [strCtrl, '_windFilt'];
             strTableFilt = '_windFilt';
         end
+        if useFiltered == 0
+            % Both controllers on the same plant: the PI test model gets the
+            % plant of the qLPV-MPC, Mdl_BianchiOL (no filter, no projection
+            % factor kWindEffFilt; changed in memory only)
+            blk = find_system(simMdlname2, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+            set_param(blk{1}, 'ModelName', 'Mdl_BianchiOL');
+            cleanupMdlPI = onCleanup(@() close_system(simMdlname2, 0));
+            wecsMdlCell{1} = 'Mdl_BianchiOL';
+            strPI = '_noFilt';
+        end
         wecsLabel = sprintf('Mdl2 (PI: %s, qLMPC: %s)', wecsMdlCell{:});
     case {'Simulink', 'SimFilt'}
         simMdlname2 = 'test_SimulinkMdl2_Baseline';
@@ -226,7 +246,7 @@ if useFASTForComparison % from FAST
     OutTableTest2 = OutTable;
 else % from Simulink
     loadBaseline = 1; %always load if available
-    matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strPlant,strFig,'.mat']);
+    matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strPlant,strFig,strPI,'.mat']);
     % As in the paper: PI run with the rotor-effective wind filter
     % (runCompareModels, ..._kVe0dot25_kVeTau0dot75.mat) if available
     matFileOutTableTest2Filt = strrep(matFileOutTableTest2,'.mat','_kVe0dot25_kVeTau0dot75.mat');
@@ -255,7 +275,8 @@ matFileOutTableTest1 = fullfile(dataDirOut,['OutTableMPC',strPlant,strFig,strCtr
 %% Prepare information for plots and plot data
 
 % Information for plot
-figStr = ['Ref',strFigPlant,'ClosedLoop',strFig,'_beta',strCtrl];
+figStr = ['Ref',strFigPlant,'ClosedLoop',strFig,'_beta',strCtrl,strOut];
+strTableFilt = [strTableFilt, strOut]; % suffix of the LaTeX table file
 % Figure name: controller and WECS model
 if ischar(strWindType), strWind = strWindType; else, strWind = sprintf('%g m/s turbulent', strWindType); end
 figLabel = sprintf('%s vs. PI | WECS: %s | wind: %s', ctrlLabel, wecsLabel, strWind);

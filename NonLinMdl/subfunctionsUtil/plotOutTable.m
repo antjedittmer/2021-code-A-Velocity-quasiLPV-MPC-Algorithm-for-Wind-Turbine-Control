@@ -1,8 +1,10 @@
-function axPlotAll = plotOutTable(OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig,timeEval,OutTableTest3)
+function axPlotAll = plotOutTable(OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig,timeEval,OutTableTest3,plotTest3Lines)
 % timeEval (optional): time window [s] of the plots and the statistics
 % (Default: plots from 20 s, statistics from 15 s to the end)
 % OutTableTest3 (optional): fourth case, label testCaseCell{4}; additional
 % line (color 4 of the color map) and last column of the statistics tables
+% plotTest3Lines (optional, default true): false writes the fourth case only
+% to the statistics tables, not to the plot
 
 
 %% Set parameters and missing inputs
@@ -41,6 +43,10 @@ if nargin<10
     OutTableTest3 = [];
 end
 hasTest3 = ~isempty(OutTableTest3);
+if nargin < 11 || isempty(plotTest3Lines)
+    plotTest3Lines = true;
+end
+showTest3 = hasTest3 && plotTest3Lines; % fourth case in the plot
 % Assign data from FAST to variables
 
 %% Handle different variable names
@@ -65,7 +71,7 @@ cl = colormap('lines');
 %     '\color[rgb]{',num2str(cl(2,:)),'}FAST} '];
 titleStr = [testCaseStr,': ',testCaseCell{1},'{\color[rgb]{',num2str(cl(1,:)),'}',testCaseCell{2},...
     '\color[rgb]{',num2str(cl(2,:)),'}',testCaseCell{3},'}'];
-if hasTest3
+if showTest3
     titleStr = [titleStr(1:end-1), ' \color[rgb]{',num2str(cl(4,:)),'}',testCaseCell{4},'}'];
 end
 
@@ -102,7 +108,7 @@ if plotGenTq
     plot(time, OutTableTest2.GenTq(idxTime)/10^3, ...
          time, OutTable.GenTq(idxTime), ...
          time, OutTableTest1.GenTq(idxTime)/10^3, 'k--');
-    plotTest3(hasTest3, time, OutTableTest3, 'GenTq', idxTime, 1/10^3, cl(4,:));
+    plotTest3(showTest3, time, OutTableTest3, 'GenTq', idxTime, 1/10^3, cl(4,:));
     axis tight;
     posAxis = axis;
     axis([posAxis(1:2), min(43, posAxis(3)), 44]);
@@ -115,7 +121,7 @@ axPlotAll(3) = nexttile;
 plot(time, OutTableTest2.BlPitch1(idxTime), ...
      time, OutTable.BlPitch1(idxTime), ...
      time, OutTableTest1.BlPitch1(idxTime), 'k--');
-plotTest3(hasTest3, time, OutTableTest3, 'BlPitch1', idxTime, 1, cl(4,:));
+plotTest3(showTest3, time, OutTableTest3, 'BlPitch1', idxTime, 1, cl(4,:));
 axis tight; grid on;
 ylabel(yAxCell{3});
 
@@ -124,7 +130,7 @@ axPlotAll(4) = nexttile;
 plot(time, OutTableTest2.RotSpeed(idxTime), ...
      time, OutTable.RotSpeed(idxTime), ...
      time, OutTableTest1.RotSpeed(idxTime), 'k--');
-plotTest3(hasTest3, time, OutTableTest3, 'RotSpeed', idxTime, 1, cl(4,:));
+plotTest3(showTest3, time, OutTableTest3, 'RotSpeed', idxTime, 1, cl(4,:));
 axis tight; grid on;
 ylabel(yAxCell{4});
 
@@ -133,7 +139,7 @@ axPlotAll(5) = nexttile;
 plot(time, OutTableTest2.NcIMUTAxs(idxTime), ...
      time, OutTable.NcIMUTAxs(idxTime), ...
      time, OutTableTest1.NcIMUTAxs(idxTime), 'k--');
-plotTest3(hasTest3, time, OutTableTest3, 'NcIMUTAxs', idxTime, 1, cl(4,:));
+plotTest3(showTest3, time, OutTableTest3, 'NcIMUTAxs', idxTime, 1, cl(4,:));
 axis tight; grid on;
 ylabel(yAxCell{6});
 
@@ -142,7 +148,7 @@ axPlotAll(6) = nexttile;
 plot(time, OutTableTest2.GenPwr(idxTime)/1000, ...
      time, OutTable.GenPwr(idxTime)/1000, ...
      time, OutTableTest1.GenPwr(idxTime)/1000, 'k--');
-plotTest3(hasTest3, time, OutTableTest3, 'GenPwr', idxTime, 1/1000, cl(4,:));
+plotTest3(showTest3, time, OutTableTest3, 'GenPwr', idxTime, 1/1000, cl(4,:));
 axis tight; grid on;
 ylabel(yAxCell{5});
 xlabel('Time (s)');
