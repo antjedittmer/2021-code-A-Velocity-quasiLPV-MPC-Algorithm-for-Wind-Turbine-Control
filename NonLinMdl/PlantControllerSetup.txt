@@ -21,7 +21,9 @@ Plant models (WECS model of the test models)
 Controllers
 -----------
 - PI baseline: does not use the wind. Its test model
-  test_SimulinkMdl2_Baseline uses Mdl_BianchiOL_WindFiltered.
+  test_SimulinkMdl2_Baseline is saved with Mdl_BianchiOL_WindFiltered; for
+  the cases without filter (useFiltered = 0) runCompareCtrl and
+  runGeneratePicsPaper set its WECS model to Mdl_BianchiOL in memory.
 - qLMPC (design 'paper'): scheduled with the wind at its input. The
   scheduling wind sets the steady-state references Tg_ss, beta_ss and
   omega_ss and the wind increment dV of the prediction model. A wind filter
@@ -32,46 +34,70 @@ Controllers
 
 Cases (switch useFiltered in runGeneratePicsPaper / runCompareCtrl)
 -------------------------------------------------------------------
-1. Stepped wind sweep (always without filter; a wind step acts equally on
-   the whole rotor disk):
-   - PI: Mdl_BianchiOL_WindFiltered, filter bypassed (only cos(5 deg))
-   - qLMPC: Mdl_BianchiOL, scheduled with the freestream wind
-2. Turbulent wind, useFiltered = 1 (as in the paper, used for the existing
-   figures and tables):
-   - PI: Mdl_BianchiOL_WindFiltered with the filter
+0. No filter, useFiltered = 0 (controller comparison, useFilteredCtrl = 0,
+   stepped wind sweep and turbulent wind; pitch rate runs 4/8/13 deg/s):
+   - PI and qLMPC on the same plant Mdl_BianchiOL (no filter, no cos(5 deg)
+     projection), qLMPC scheduled with the same freestream wind
+     (PI: OutTableTest2_noFilt.mat, OutTableTest2NTW18_noFilt.mat,
+     OutTableTest_rate*_PI_noFilt.mat; qLMPC: OutTableMPC.mat,
+     OutTableMPCNTW18.mat, OutTableTest_rate*_MPC.mat)
+1. As in the paper, useFiltered = 1 (files with the suffix _old,
+   addOldCtrl = 1):
+   - PI: Mdl_BianchiOL_WindFiltered; turbulent wind with the filter
      (OutTableTest2NTW18_kVe0dot25_kVeTau0dot75.mat, PI rate runs
-     OutTableTest_rate*_PI_1.mat)
+     OutTableTest_rate*_PI_1.mat), stepped wind sweep with the filter
+     bypassed, i.e. only cos(5 deg) (OutTableTest2.mat)
    - qLMPC: Mdl_BianchiOL without filter, scheduled with the unfiltered wind
-     (OutTableMPCNTW18.mat, OutTableTest_rate*_MPC.mat)
-   The two controllers therefore run on different plants; the qLMPC sees
-   exactly the (unfiltered) wind that drives its plant.
-3. Turbulent wind, useFiltered = 2 (fourth case, addFilteredCase = 1):
-   - PI: as in case 2
-   - qLMPC: Mdl_BianchiOL_WindFiltered with the same filter as the PI, and
-     scheduled with the filtered wind of the torque channel
-     (kWindEffCtrl = cos(5 deg), kVeFiltCtrl = 0.75; setFilteredWindQLMPC)
+   The two controllers therefore run on different plants.
+2. Filtered, useFiltered = 2 (turbulent wind, addFilteredCase = 1):
+   - PI: Mdl_BianchiOL_WindFiltered with the filter, as in case 1
+   - qLMPC: Mdl_BianchiOL_WindFiltered with the same filter, scheduled with
+     the filtered wind of the torque channel (kWindEffCtrl = cos(5 deg),
+     kVeFiltCtrl = 0.75; setFilteredWindQLMPC)
      (OutTableMPCNTW18_windFilt.mat, OutTableTest_rate*_MPC_windFilt.mat)
    Both controllers run on the same plant, and the qLMPC knows the
-   rotor-effective wind of the plant exactly (best case; in practice it
-   would have to be estimated).
+   rotor-effective wind of the torque channel exactly (best case; in
+   practice it would have to be estimated). The thrust channel uses the
+   faster filter (kVeFilt), which the qLMPC does not get.
 
-Results, turbulent wind 18 m/s (60-660 s), std PI / std qLMPC, 13 deg/s
------------------------------------------------------------------------
-                                case 2 (qLMPC unfiltered)  case 3 (filtered)
-  Tower fore-aft acc. (m/s^2)   0.1300 / 0.0751 = 1.73     0.1300 / 0.0723 = 1.80
-  Power tracking error (kW)     159.33 / 17.72  = 8.99     159.33 / 27.40  = 5.82
-  Blade pitch rate (deg/s)      0.71 / 4.44     = 0.16     0.71 / 0.54     = 1.32
-  Rotor speed std (rpm)         PI 0.381, qLMPC 0.042      PI 0.381, qLMPC 0.066
+The pitch rate limit of the controller comparison is set to 13 deg/s in
+both data dictionaries (setPitchRateLimitDD).
 
-In case 3 the largest qLMPC pitch rate is 2.6 deg/s, so the pitch rate
-limits of 3 to 13 deg/s give identical results (only 1 deg/s differs). The
-benefit of high pitch rates in case 2 comes from the qLMPC reacting to the
-unfiltered wind.
+Results, std PI / std qLMPC, 13 deg/s (sweep 15-400 s, turbulent 60-660 s)
+-------------------------------------------------------------------------
+                                sweep, case 0   turbulent, case 0   turbulent, case 2
+  Tower fore-aft acc. (m/s^2)   0.0597/0.0342   0.3110/0.0751       0.1300/0.0723
+                                = 1.74          = 4.14              = 1.80
+  Power tracking error (kW)     176.01/154.95   201.12/17.72        159.33/27.40
+                                = 1.14          = 11.35             = 5.82
+  Blade pitch rate (deg/s)      0.21/0.76       1.21/4.44           0.71/0.54
+                                = 0.28          = 0.27              = 1.32
+
+Pitch rate limits, turbulent wind, case 0: the PI hardly reacts to the rate
+limit (4/8/13 deg/s within about 1 %, above 4 deg/s during less than 1 % of
+the time); the qLMPC is above 4 deg/s during more than a third of the time
+and its tower ratio to the PI at 8 deg/s is 2.58 / 3.82 / 4.14. In case 2
+the largest pitch rate is 2.5 deg/s (PI) and 2.6 deg/s (qLMPC), so the
+rate limits from 3 deg/s upwards give identical results.
 
 Output
 ------
-- results_tableNTW18.tex: case 2, results_tableNTW18_windFilt.tex: case 3,
-  results_tableMerged.tex: sweep, case 2 and case 3 (third column)
-- figDir/statsTabletestConstr.tex and cmpTimeDomain_AlltestConstr: qLMPC at
-  4, 8 and 13 deg/s (case 2) and the fourth case 'filt. (13)'
-  (case 3)
+- results_tableSweep.tex, results_tableNTW18.tex: case 0,
+  results_tableNTW18_windFilt.tex: case 2, results_tableMerged.tex: sweep,
+  turbulent wind (case 0) and turbulent wind, filtered (case 2);
+  results_table*_old.tex and cmpCtrlTimeDomain_All_*_old: case 1
+- figDirConstr1 (identical y axes):
+  * cmpTimeDomain_All5PINewLim_NoFilt: PI at 4, 8 and 13 deg/s, case 0
+  * cmpTimeDomain_All5MPCNewLim: qLMPC at 4, 8 and 13 deg/s, case 0
+  * cmpTimeDomain_All5PIvsMPC_Filt: PI and qLMPC at 13 deg/s, case 2
+  * cmpTimeDomain_All5PINewLim: PI at 4, 8 and 13 deg/s on the filtered
+    plant (case 1)
+  The purple line of the filtered case in the rate figures is drawn only
+  with showFilteredLines = 1.
+- figDir/statsTabletestConstr.tex (qLMPC) and
+  statsTabletestConstrPI_NoFilt.tex (PI): 4, 8, 13 deg/s (case 0) and the
+  last column 'filt. (13)' (case 2); statsTableMerged_NoFilt.tex: both
+  merged, the filtered qLMPC column normalized with the filtered PI, the
+  filtered PI column with the PI at 8 deg/s without filter (the only ratio
+  of two different plants); statsTabletestConstrPI.tex: PI on the filtered
+  plant (case 1)

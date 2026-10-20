@@ -39,10 +39,13 @@ addOldCtrl = 1;
 % 4/8/13 deg/s without filter); additionally the PI without filter on
 % Mdl_BianchiOL (cmpTimeDomain_All5PINewLim_NoFilt, statsTableMerged_NoFilt)
 useFiltered = 1;
-% Additional case (fourth case) with useFiltered = 2 for the turbulent wind:
-% third column of the merged table (results_tableNTW18_windFilt.tex) and
-% fourth line/column 'filt. (13)' of the qLMPC pitch rate figure
-% and table (13 deg/s). See NonLinMdl/PlantControllerSetup.txt.
+% Additional case with useFiltered = 2 for the turbulent wind (both
+% controllers on the filtered plant, 13 deg/s): figure
+% cmpCtrlTimeDomain_All_RefSimulinkClosedLoopNTW18_beta_windFilt, third
+% column of the merged table (results_tableNTW18_windFilt.tex) and last
+% column 'filt. (13)' of statsTableMerged_NoFilt (pitch rate table; in the
+% pitch rate figures only with showFilteredLines = 1 below).
+% See NonLinMdl/PlantControllerSetup.txt.
 addFilteredCase = 1;
 
 % Load data if available from previous simulation.
@@ -381,12 +384,6 @@ for idx = 1:numel(maxRateVectorNoFilt)
 end
 close_system(simMdlname, 0); % discard the WECS model change
 
-% qLPV-MPC on the filtered plant at 8 deg/s (result of the rate loop with
-% useFiltered = 2), filtered case of statsTableMerged_NoFilt
-fileMPCFilt8 = fullfile(dataDirOut, 'OutTableTest_rate08_MPC_windFilt.mat');
-assert(isfile(fileMPCFilt8), 'Missing %s: run the qLPV-MPC rate loop once with useFiltered = 2.', fileMPCFilt8);
-OutTableMPCFilt8 = getSimulationOutputTable(fileMPCFilt8, 1, OutTable, 'test_SimulinkMdl2_qLPVMPCbeta');
-
 % Plot qLmpc result for different maximu rates
 selR = [3,4,8,13]; %[1,4,8,13]; % 
 idx3 = maxRateVector == selR(1);
@@ -403,11 +400,18 @@ tableForPlotMPC{3} = currentOutTableTestCell{end};
 % input plotOutTable:OutTable,OutTableTest1,OutTableTest2,testCaseStr, testCaseCell, figNo2,figDir,strFig,timeEval)
 timeEvalRate = [60, OutTable.Time(end)]; % evaluation window of the 18 m/s wind (60 to 660 s)
 figDir = 'figDir';
-testCaseStrMPC =  'qLMPC Rate Constraints (°/s)';
-testCaseCell = {'standard (8)  ','high (13) ', 'low (4) ', 'filt. (13)'};
+testCaseStrMPC =  'qLMPC Rate Limits (°/s)';
+% showFilteredLines: fourth case (purple line: controller on the filtered
+% plant at 13 deg/s) in the pitch rate figures. 0: the figures show only
+% 4/8/13 deg/s on the plant without filter; the filtered case is shown in
+% the controller comparison (..._windFilt). The statistics tables
+% (statsTabletestConstr.tex, statsTabletestConstrPI_NoFilt.tex) always
+% contain the fourth case as last column 'filt. (13)'
+showFilteredLines = 0;
+testCaseCellFilt13 = {'standard (8)  ','high (13) ', 'low (4) ', 'filt. (13)'};
 axPlotAllMPC = plotOutTable(tableForPlotMPC{1},tableForPlotMPC{2},tableForPlotMPC{3},...
-   testCaseStrMPC,testCaseCell,[],figDir,[],timeEvalRate,OutTableMPCFilt13);
-testCaseCell = testCaseCell(1:3); % PI: three cases
+   testCaseStrMPC,testCaseCellFilt13,[],figDir,[],timeEvalRate,OutTableMPCFilt13,showFilteredLines);
+testCaseCell = testCaseCellFilt13(1:3); % PI: three cases
 
 DDNameCtrl = 'DD_CtrlBaseline.sldd';
 myDictionaryCtrlObj = Simulink.data.dictionary.open(DDNameCtrl);
@@ -420,29 +424,35 @@ controlValue = getValue(controlCtrlObj);
 % Plot qLmpc result
 OutTable4 = currentOutTablePICell{maxRateVector1 == 4}; % PI results are indexed by maxRateVector1
 OutTable4.Time = OutTable.Time(1:height(OutTable4));
-testCaseStr =  'PI Rate Constraints (°/s)';
+testCaseStr =  'PI Rate Limits (°/s)';
 
 figNo2 = 200;
 strFig = 'testConstrPI';
 axPlotAll = plotOutTable(OutTable4,currentOutTablePICell{maxRateVector1 == 8},currentOutTablePICell{end},...
    testCaseStr,testCaseCell,figNo2,figDir,strFig,timeEvalRate);
 
-% PI without filter (Mdl_BianchiOL) at 4, 8 and 13 deg/s; fourth case
-% (purple): PI on the filtered plant at 8 deg/s. Statistics table
-% figDir/statsTabletestConstrPI_NoFilt.tex
-testCaseCellFilt8 = {'standard (8)  ','high (13) ', 'low (4) ', 'filt. (8)'};
+% PI without filter (Mdl_BianchiOL) at 4, 8 and 13 deg/s; fourth case: PI
+% on the filtered plant at 13 deg/s (last column of
+% figDir/statsTabletestConstrPI_NoFilt.tex; purple line only with
+% showFilteredLines = 1)
 OutTable4NoFilt = currentOutTablePINoFiltCell{maxRateVectorNoFilt == 4};
 OutTable4NoFilt.Time = OutTable.Time(1:height(OutTable4NoFilt));
 figNo3 = 201;
 axPlotAllNoFilt = plotOutTable(OutTable4NoFilt, ...
     currentOutTablePINoFiltCell{maxRateVectorNoFilt == 8}, ...
     currentOutTablePINoFiltCell{maxRateVectorNoFilt == 13}, ...
-    testCaseStr, testCaseCellFilt8, figNo3, figDir, 'testConstrPI_NoFilt', timeEvalRate, ...
-    currentOutTablePICell{maxRateVector1 == 8});
+    testCaseStr, testCaseCellFilt13, figNo3, figDir, 'testConstrPI_NoFilt', timeEvalRate, ...
+    currentOutTablePICell{maxRateVector1 == 13}, showFilteredLines);
+
+% PI and qLPV-MPC on the filtered plant at 13 deg/s, the qLPV-MPC scheduled
+% with the filtered wind (two lines; cmpTimeDomain_All5PIvsMPC_Filt)
+figNo6 = 204;
+axPlotAllFilt = plotFilteredComparison(currentOutTablePICell{maxRateVector1 == 13}, ...
+    OutTableMPCFilt13, OutTable.Time, timeEvalRate, figNo6);
 
 % Set the axis for all axes: identical y limits in the qLMPC figure, the PI
-% figure and the PI figure without filter
-axCell = {axPlotAllMPC, axPlotAll, axPlotAllNoFilt};
+% figure, the PI figure without filter and the figure with the filtered wind
+axCell = {axPlotAllMPC, axPlotAll, axPlotAllNoFilt, axPlotAllFilt};
 for idx = 1:length(axPlotAllMPC)
     if all(cellfun(@(a) idx <= length(a) && isgraphics(a(idx)), axCell))
         lims = cell2mat(cellfun(@(a) get(a(idx),'YLim'), axCell, 'UniformOutput', false)');
@@ -471,15 +481,57 @@ strFig = 'PINewLim_NoFilt';
 print(figNo3, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
 print(figNo3, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
 
-% qLPV-MPC statistics with the filtered case at 8 deg/s
-% (figDir/statsTabletestConstr_Filt8.tex; the figure is not used) and the
-% merged table qLMPC and PI without filter: figDir/statsTableMerged_NoFilt.tex
-figNo4 = 202;
-plotOutTable(tableForPlotMPC{1},tableForPlotMPC{2},tableForPlotMPC{3},...
-    testCaseStrMPC,testCaseCellFilt8,figNo4,'figDir','testConstr_Filt8',timeEvalRate,OutTableMPCFilt8);
-merge_stats_tables(fullfile('figDir','statsTabletestConstr_Filt8.tex'), ...
+strFig = 'PIvsMPC_Filt';
+print(figNo6, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
+print(figNo6, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
+
+% Merged table qLMPC and PI without filter, last column both controllers on
+% the filtered plant at 13 deg/s: figDir/statsTableMerged_NoFilt.tex
+merge_stats_tables(fullfile('figDir','statsTabletestConstr.tex'), ...
     fullfile('figDir','statsTabletestConstrPI_NoFilt.tex'), ...
     fullfile('figDir','statsTableMerged_NoFilt.tex'), 'piNoFilt');
+
+function axPlotAll = plotFilteredComparison(OutTablePI, OutTableMPC, timeData, timeEval, figNo)
+% plotFilteredComparison plots the PI and the qLPV-MPC on the filtered plant
+% (two lines) in the layout of plotOutTable: wind, pitch, rotor speed,
+% tower fore-aft acceleration and generator power. The axes are returned at
+% the positions of plotOutTable (2: generator torque, not plotted).
+n = min([height(OutTablePI), height(OutTableMPC), numel(timeData)]);
+time = timeData(1:n);
+idxTime = time >= timeEval(1) & time <= timeEval(2);
+time = time(idxTime);
+figure(figNo); clf;
+cl = colormap('lines');
+tiledlayout(5, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+% Signal, scale, y label
+sigCell = {'Wind', 1, 'Wind (m/s)'; 'BlPitch1', 1, 'Pitch (°)'; ...
+    'RotSpeed', 1, 'RotSpd (rpm)'; 'NcIMUTAxs', 1, 'TwrAcc_{FA} (m/s^2)'; ...
+    'GenPwr', 1/1000, 'GenPwr (MW)'};
+axIdx = [1, 3, 4, 5, 6];
+axPlotAll = gobjects(1, 6);
+for k = 1:size(sigCell, 1)
+    axPlotAll(axIdx(k)) = nexttile;
+    yPI = OutTablePI.(sigCell{k,1})(1:n);
+    yMPC = OutTableMPC.(sigCell{k,1})(1:n);
+    plot(time, yPI(idxTime)*sigCell{k,2}, 'Color', cl(1,:));
+    hold on;
+    plot(time, yMPC(idxTime)*sigCell{k,2}, 'Color', cl(2,:));
+    hold off;
+    axis tight; grid on;
+    ylabel(sigCell{k,3});
+    if k == 1
+        title(['Filtered wind (13 °/s): {\color[rgb]{', num2str(cl(1,:)), '}PI} ', ...
+            '{\color[rgb]{', num2str(cl(2,:)), '}qLMPC}']);
+    end
+end
+xlabel('Time (s)');
+linkaxes(axPlotAll(isgraphics(axPlotAll, 'axes')), 'x');
+set(gcf, 'Name', 'cmpTimeDomain_All5PIvsMPC_Filt');
+posDefault = [520   378   560   420];
+set(gcf, 'position', [posDefault(1:3), posDefault(4)*1.7]);
+set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
+end
 
 function setPitchRateLimitDD(maxRate)
 % setPitchRateLimitDD sets the pitch rate limit maxRate (deg/s) of the PI
