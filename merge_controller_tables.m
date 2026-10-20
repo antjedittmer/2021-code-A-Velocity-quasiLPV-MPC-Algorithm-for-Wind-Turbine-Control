@@ -1,4 +1,4 @@
-function merge_controller_tables(file_sweep, file_ntw, file_out, file_ntw_filt)
+function merge_controller_tables(file_sweep, file_ntw, file_out, file_ntw_filt, useFilteredNtw)
 % merge_controller_tables merges the table rows written by runCompareCtrl
 % for the stepped wind sweep and the turbulent wind into one LaTeX table.
 %
@@ -10,6 +10,9 @@ function merge_controller_tables(file_sweep, file_ntw, file_out, file_ntw_filt)
 % file_ntw_filt (optional): rows of the turbulent wind with the qLMPC also
 % on the filtered plant and scheduled with the filtered wind (runCompareCtrl
 % with useFiltered = 2), added as a third column.
+% useFilteredNtw (optional, default 1): useFiltered of the turbulent wind
+% column (runCompareCtrl), for the caption: 1 PI on the filtered plant,
+% 0 both controllers on the same plant without filter.
 %
 % Expected row format of the input files (written by runCompareCtrl):
 %   Tower fore-aft acc. (m/s$^2$) & $0.0514 / 0.0319 = 1.61$ \\
@@ -21,6 +24,7 @@ if nargin < 1 || isempty(file_sweep), file_sweep = 'results_tableSweep.tex';  en
 if nargin < 2 || isempty(file_ntw),   file_ntw   = 'results_tableNTW18.tex';  end
 if nargin < 3 || isempty(file_out),   file_out   = 'results_tableMerged.tex'; end
 if nargin < 4, file_ntw_filt = ''; end
+if nargin < 5 || isempty(useFilteredNtw), useFilteredNtw = 1; end
 hasFilt = ~isempty(file_ntw_filt);
 
 [labels_sw,  cells_sw]  = parseRows(file_sweep);
@@ -43,9 +47,15 @@ fprintf(fid, 'turbulent wind (18\\,m/s mean, IEC class B).\n');
 fprintf(fid, 'The standard deviations obtained with the PI controller are divided by those obtained with the qLMPC;\n');
 if hasFilt
     fprintf(fid, 'quotients above~1 indicate improvement. Ratios are computed from unrounded values.\n');
-    fprintf(fid, 'Turbulent wind: PI on the plant with the rotor-effective wind filter, qLMPC on the plant\n');
-    fprintf(fid, 'without filter and scheduled with the unfiltered wind; filtered: qLMPC also on the plant\n');
-    fprintf(fid, 'with the filter and scheduled with the filtered wind.}\n');
+    if useFilteredNtw == 0
+        fprintf(fid, 'Stepped wind sweep and turbulent wind: both controllers on the same plant without the\n');
+        fprintf(fid, 'rotor-effective wind filter, qLMPC scheduled with the unfiltered wind; filtered: both\n');
+        fprintf(fid, 'controllers on the plant with the filter, qLMPC scheduled with the filtered wind.}\n');
+    else
+        fprintf(fid, 'Turbulent wind: PI on the plant with the rotor-effective wind filter, qLMPC on the plant\n');
+        fprintf(fid, 'without filter and scheduled with the unfiltered wind; filtered: qLMPC also on the plant\n');
+        fprintf(fid, 'with the filter and scheduled with the filtered wind.}\n');
+    end
     fprintf(fid, '\\label{tab:ControllerComparisonMerged}\n');
     fprintf(fid, '\\begin{tabular}{l rrr}\n');
     fprintf(fid, '\\toprule\n');
