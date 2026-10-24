@@ -28,7 +28,7 @@ end
 figNo2 = figNo1 + 1;
 
 if nargin < 4 || isempty(yAxCell) % Axes labels for figure
-    yAxCell = {'Wind V (m/s)', 'GenTq T_g (kNm)', 'Pitch \beta (�)', 'RotSpd \omega_r (rpm)',...
+    yAxCell = {'Wind V (m/s)', 'GenTq T_g (kNm)', 'Pitch \beta (°)', 'RotSpd \omega_r (rpm)',...
         'GenPwr P_g (MW)','Twr_{FA} y_t (m/s^2)', 'Twr_{SW} x_t (m/s^2)'};
 end
 
@@ -83,7 +83,8 @@ if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     testCaseStr = 'Wind Sweep';
     step_thresshold = 0;
 elseif strcmp(strWindType,'Step') == 1 % sweep from 4 to 25 in steps
-    [~, outDataSimulationMat] = getWecsModelVersion; % FAST step reference of the model version
+    % [~, outDataSimulationMat] = getWecsModelVersion; % FAST step reference of the model version
+    outDataSimulationMat = 'OutDataStepFASTTool.mat'; % 
     strFig = 'Step';
     testCaseStr = 'Wind Step';
     step_thresshold = 0;
@@ -150,7 +151,7 @@ time = OutTable.Time(idxTime);
 % Evaluation (plots, norms): stepped wind sweeps (Sweep, Step) from 15 s,
 % the start-up transient has decayed within the first 20 s wind level;
 % all other wind cases from 60 s
-if ischar(strWindType) && any(strcmp(strWindType, {'Sweep', 'Step'}))
+if ischar(strWindType) && any(strcmp(strWindType, {'Sweep'}))
     tEvalStart = 15;
 else
     tEvalStart = 60;

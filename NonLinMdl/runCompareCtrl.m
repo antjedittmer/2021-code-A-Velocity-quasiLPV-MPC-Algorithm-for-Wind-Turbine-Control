@@ -140,7 +140,8 @@ if strcmp(strWindType,'Sweep') == 1 % sweep from 4 to 25 in steps
     outDataSimulationMat = 'OutDataSweep.mat'; 
     strFig = '';
 elseif strcmp(strWindType,'Step') == 1 % sweep from 4 to 25 in steps
-    [~, outDataSimulationMat] = getWecsModelVersion; % FAST step reference of the model version
+    %[~, outDataSimulationMat] = getWecsModelVersion; % FAST step reference of the model version
+    outDataSimulationMat = 'OutDataStepFASTTool.mat';
     strFig = 'Step';
 elseif isa(strWindType,'double')  % wind with average 18 m/s
     outDataSimulationMat = sprintf('OutDataWind%02dNTW.mat',strWindType);
@@ -150,8 +151,6 @@ else
     outDataSimulationMat = 'EOG16mpers.mat'; 
     strFig = 'EOG';
 end
-
-
 
 
 
@@ -190,7 +189,7 @@ switch plantMdl
             set_param(blk{1}, 'ModelName', 'Mdl_BianchiOL');
             cleanupMdlPI = onCleanup(@() close_system(simMdlname2, 0));
             wecsMdlCell{1} = 'Mdl_BianchiOL';
-            strPI = '_noFilt';
+            strPI = ''; %'_noFilt';
         end
         wecsLabel = sprintf('Mdl2 (PI: %s, qLMPC: %s)', wecsMdlCell{:});
     case {'Simulink', 'SimFilt'}
@@ -283,9 +282,11 @@ figLabel = sprintf('%s vs. PI | WECS: %s | wind: %s', ctrlLabel, wecsLabel, strW
 meanOpt = strrep(sprintf(' mean cputime MPC: %1.2e s',mean(tictoc_LPVMPC.Data)),'e-0','e-');
 % Evaluation window: stepped wind sweeps from 15 s (the start-up transient
 % has decayed within the first 20 s wind level), otherwise from 60 s
-if ischar(strWindType) && any(strcmp(strWindType, {'Sweep', 'Step'}))
+if ischar(strWindType) && any(strcmp(strWindType, {'Sweep'}))
+    % only the wins sweep (20 sec. const, 400 s overall)
     timeForPlot = [15, OutTable.Time(end)];
 else
+    % for NTM and for 'Step' (100 sec const, 2000 s overall)
     timeForPlot = [60, OutTable.Time(end)];
 end
 DT = 0.008;

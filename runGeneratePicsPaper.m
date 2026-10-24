@@ -7,7 +7,10 @@ Simulink.data.dictionary.closeAll('-discard');
 addpath(genpath('NonLinMdl'));
 addpath(genpath('LinMdl'));
 
+
 initWorkspace;
+mainDir = fileparts(mfilename('fullpath'));
+
 
 % Original models and qLPV-MPC of the paper (same results as the code of the
 % paper): WECS model version 'paper' (getWecsModelVersion: no effective wind
@@ -52,6 +55,7 @@ addFilteredCase = 1;
 loadData = 1; % for runCompareModel (comparison Mdl1, Mdl2 and FAST)
 loadDataCtrlTest = loadData; % for runCompareCtrl (PI and qLMPC based on Mdl2)
 loadData1 = loadData; % for runCompareModels with qLMPC and PI at different rates
+figDirStr = 'figDir';
 
 
 %% Matlab analysis: Bode plots linearized FAST models (reference)
@@ -60,7 +64,7 @@ loadData1 = loadData; % for runCompareModels with qLMPC and PI at different rate
 
 % Create Bode plots for comparison
 speedVec = [1,8,9,22] ;
-figDirStr = 'figDir';
+
 
 useActuatorStates = 0;
 figNoAdd = 0;
@@ -142,10 +146,9 @@ end
 % figNo = figNo + 1;
 % plotNormTimePlots(normStruct,figNo,figDirStr);
 
-%% Comparison qLPV MPC vs. PI in closed loop
+%% Comparison qLPV MPC vs. PI in closed loop without filter
 % 'SimulinkPaper': qLPV-MPC on Mdl_BianchiOL; PI on Mdl_BianchiOL
 % (useFilteredCtrl = 0) or, as in the paper, on Mdl_BianchiOL_WindFiltered
-% (_old files).
 % Additional comparisons (runFASTComparison = 1) with the FAST-matched models
 % (version 'FAST') and the qLPV-MPC design 'beta' of initWorkspace; both
 % controllers run on the same plant model:
@@ -157,33 +160,22 @@ end
 % The qLPV-MPC settings are set in initWorkspace (qMPC, rMPC, pMPC, DTc, ...).
 useFASTForComparison = 0; % compare with the PI on the same plant model
 useTitle = [0,1]; % for thesis
-ctrlCases = {'Sweep', 'SimulinkPaper'; 18, 'SimulinkPaper'};
+
 % Pitch rate limit 13 deg/s for both controllers, set explicitly instead of
 % using the values left in the data dictionaries by the rate loops below
-setPitchRateLimitDD(13);
+setPitchRateLimitDD(13); % 
 fileTableFilt = '';
-if addFilteredCase % turbulent wind, both controllers on the filtered plant
-    figNo = figNo + 1;
-    runCompareCtrl(18, loadDataCtrlTest, figNo, useFASTForComparison, ...
-        figDirStr, useTitle, 'SimulinkPaper', [], 2);
-    fileTableFilt = 'results_tableNTW18_windFilt.tex';
-end
-% Comparison as before (as in the paper; the stepped wind sweep has no
-% filtered PI run, so it is the PI with the filter bypassed): suffix _old
-if addOldCtrl
-    for idxC = 1:size(ctrlCases, 1)
-        figNo = figNo + 1;
-        runCompareCtrl(ctrlCases{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
-            figDirStr, useTitle, ctrlCases{idxC,2}, [], 1, '_old');
-    end
-    merge_controller_tables('results_tableSweep_old.tex', 'results_tableNTW18_old.tex', ...
-        'results_tableMerged_old.tex', fileTableFilt, 1);
-end
-for idxC = 1:size(ctrlCases, 1)
+useFilter = 0;
+
+% Turbulent wind without filter
+% Step, no filter
+ctrlCases = {'Sweep', 'SimulinkPaper'; 18, 'SimulinkPaper'};
+for idxC = 1: size(ctrlCases, 1)
     figNo = figNo + 1;
     runCompareCtrl(ctrlCases{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
         figDirStr, useTitle, ctrlCases{idxC,2}, [], useFilteredCtrl);
 end
+
 merge_controller_tables('results_tableSweep.tex', 'results_tableNTW18.tex', ...
     'results_tableMerged.tex', fileTableFilt, useFilteredCtrl);
 
@@ -219,8 +211,36 @@ end
 % The loops below leave the pitch rate limits in DD_Mdl1.sldd and
 % DD_CtrlBaseline.sldd at the last value (13 deg/s).
 
+% Assign
+mainModel = 'test_SimulinkMdl2_Baseline'; % 1. Define the main model and the referenced model block name
+targetBlockName = 'Mdl_BianchiOL_WindFiltered'; 
+
+if ~bdIsLoaded(mainModel) % 2. Open/Load the main model if it's not already open
+    load_system(mainModel);
+    fprintf('Loaded main model: %s\n', mainModel);
+end
+
+% 3. Find the block handle for the referenced model block
+% (Searching within the loaded main model)
+blk = find_system(mainModel, 'SearchDepth', 10, ...
+                             'BlockType', 'ModelReference', ...
+                             'ModelName', targetBlockName);
+
+% 4. Store the original model name and set up an automatic cleanup to restore it
+originalModel = get_param(blk, 'ModelName');
+%cleanupObj = onCleanup(@() set_param(blk, 'ModelName', originalModel));
+
+% 5. Define the unfiltered model name programmatically
+unfilteredModel = strrep(originalModel, '_WindFiltered', '');
+
+% 6. Change the referenced model to the unfiltered version
+set_param(blk{1}, 'ModelName', unfilteredModel{1});
+
+
 %% Get Data Directory value of pitch actuator rate
 DDName = 'DD_Mdl1.sldd'; %'DD_MdlCtrl_qLPVMPC.sldd';
+dataDirOut = fullfile(mainDir,'NonLinMdl','dataOut','paper'); % same folder as the other simulation results
+
 loadData = loadDataCtrlTest;
 try
     myDictionaryObj = Simulink.data.dictionary.open(DDName);
@@ -240,9 +260,8 @@ controlValue = getValue(controlObj);
 %--- Set vector which pitch rate constraints to be test
 maxRateVector = [1,3,4,5,8,13];
 outDataSimulationMat = 'OutDataWind18NTW.mat';
-%dataDirOut = fullfile(fileparts(mfilename('fullpath')),'dataOut');
+
 [~, ~, dataOutSub] = getWecsModelVersion;
-dataDirOut = fullfile(fileparts(mfilename('fullpath')),'NonLinMdl','dataOut',dataOutSub); % same folder as the other simulation results
 
 if strcmp(outDataSimulationMat, 'OutDataWind18NTW.mat')
     load(fullfile('dataIn',outDataSimulationMat),'OutTable');
@@ -294,9 +313,10 @@ if useFiltered == 2
     restoreBaseVars(oldBaseVars);
 end
 
-% Fourth case: 13 deg/s (last rate of the loop, still set in DD_Mdl1),
+%% Fourth case: 13 deg/s (last rate of the loop, still set in DD_Mdl1),
 % qLPV-MPC on the filtered plant and scheduled with the filtered wind
 OutTableMPCFilt13 = [];
+set_param(blk{1}, 'ModelName', targetBlockName);
 if addFilteredCase && useFiltered ~= 2
     assert(maxRateVector(end) == 13, 'The fourth case needs 13 deg/s as the last rate.');
     load_system(simMdlname);
@@ -324,14 +344,8 @@ maxRateVector1 = 1:13;
 % The PI test model uses the filtered plant Mdl_BianchiOL_WindFiltered; set
 % the filter settings explicitly (as runCompareModels) instead of using the
 % values left in the base workspace
-if useFiltered >= 1
-    filtValues = struct('step_thresshold', 1, 'kVeFilt', 0.25, 'kVeFilt_tau', 0.75);
-    oldBaseVarsPI = struct;
-    for fn = fieldnames(filtValues)'
-        oldBaseVarsPI.(fn{1}) = evalin('base', fn{1});
-    end
-    restoreBaseVars(filtValues);
-end
+
+set_param(blk{1}, 'ModelName', targetBlockName);
 
 for idx = maxRateVector1
     maxRate = maxRateVector1(idx);
@@ -354,14 +368,18 @@ for idx = maxRateVector1
         getSimulationOutputTable(matFileOutTableTest1,loadData1,OutTable,simMdlname,...
         {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', 'NcIMUTAxs', 'NcIMUTAys','zetadotdot'}); % names are truncated to the number of logged signals
 end
-if useFiltered >= 1
-    restoreBaseVars(oldBaseVarsPI);
-end
 
 %--- PI without the wind filter on the plant of the qLPV-MPC, Mdl_BianchiOL
 % (no projection factor; as the controller comparison), at 4, 8 and
 % 13 deg/s for cmpTimeDomain_All5PINewLim_NoFilt. The run at 13 deg/s is the
 % same as the PI of the controller comparison (OutTableTest2NTW18_noFilt.mat).
+
+if ~bdIsLoaded(mainModel) % 2. Open/Load the main model if it's not already open
+    load_system(mainModel);
+    fprintf('Loaded main model: %s\n', mainModel);
+end
+set_param(blk{1}, 'ModelName', unfilteredModel{1});
+
 maxRateVectorNoFilt = [4, 8, 13];
 currentOutTablePINoFiltCell = cell(numel(maxRateVectorNoFilt), 1);
 load_system(simMdlname);
@@ -420,7 +438,6 @@ controlCtrlObj = getEntry(dDataSectCtrlObj,'Control');
 controlValue = getValue(controlCtrlObj);
 
 
-
 % Plot qLmpc result
 OutTable4 = currentOutTablePICell{maxRateVector1 == 4}; % PI results are indexed by maxRateVector1
 OutTable4.Time = OutTable.Time(1:height(OutTable4));
@@ -444,7 +461,7 @@ axPlotAllNoFilt = plotOutTable(OutTable4NoFilt, ...
     testCaseStr, testCaseCellFilt13, figNo3, figDir, 'testConstrPI_NoFilt', timeEvalRate, ...
     currentOutTablePICell{maxRateVector1 == 13}, showFilteredLines);
 
-% PI and qLPV-MPC on the filtered plant at 13 deg/s, the qLPV-MPC scheduled
+%% PI and qLPV-MPC on the filtered plant at 13 deg/s, the qLPV-MPC scheduled
 % with the filtered wind (two lines; cmpTimeDomain_All5PIvsMPC_Filt)
 figNo6 = 204;
 axPlotAllFilt = plotFilteredComparison(currentOutTablePICell{maxRateVector1 == 13}, ...
@@ -491,6 +508,7 @@ merge_stats_tables(fullfile('figDir','statsTabletestConstr.tex'), ...
     fullfile('figDir','statsTabletestConstrPI_NoFilt.tex'), ...
     fullfile('figDir','statsTableMerged_NoFilt.tex'), 'piNoFilt');
 
+%%
 function axPlotAll = plotFilteredComparison(OutTablePI, OutTableMPC, timeData, timeEval, figNo)
 % plotFilteredComparison plots the PI and the qLPV-MPC on the filtered plant
 % (two lines) in the layout of plotOutTable: wind, pitch, rotor speed,
@@ -520,8 +538,8 @@ for k = 1:size(sigCell, 1)
     axis tight; grid on;
     ylabel(sigCell{k,3});
     if k == 1
-        title(['Filtered wind (13 °/s): {\color[rgb]{', num2str(cl(1,:)), '}PI} ', ...
-            '{\color[rgb]{', num2str(cl(2,:)), '}qLMPC}']);
+        title(['{\color[rgb]{', num2str(cl(1,:)), '}Baseline PI} vs. ', ...
+            '{\color[rgb]{', num2str(cl(2,:)), '}qLMPC}, filtered wind, rate limit 13 °/s']);
     end
 end
 xlabel('Time (s)');
