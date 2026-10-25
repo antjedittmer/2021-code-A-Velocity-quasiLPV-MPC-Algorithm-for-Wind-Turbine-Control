@@ -39,6 +39,7 @@ function P = qlmpcDesign(name)
 %   (ipc_dlr: gain set 2 of initDLRparameter scaled by 0.3, without the
 %   tower damping term; ctrlVariant 'flapIPC': test_FAST_qLPVMPCflapIPC,
 %   FAST only)
+% - 'flapNotchSmooth12IPC': flapNotchSmooth12 with the same IPC on top
 %
 % qMPC: 'beta' model x = [Tg, beta, OmegaR, dThetaS, dOmegaR, dOmegaG, dTg,
 % dBeta, dV, dTg_ref(k-1), dBeta_ref(k-1)]; 'flap' model [Tg beta OmegaR v_t
@@ -81,8 +82,8 @@ switch name
         if contains(name, '12'), P.DTc = 0.12; end
         if contains(name, 'Tower'), P.qMPC(4) = 1e2; end % tower velocity v_t
         if endsWith(name, 'KF'), P.towerKFCtrl = 1; end
-    case 'flapNotchIPC'
-        P = qlmpcDesign('flapNotch');
+    case {'flapNotchIPC', 'flapNotchSmooth12IPC'}
+        P = qlmpcDesign(erase(name, 'IPC'));
         P.ctrlVariant = 'flapIPC';
         P.ipcParCtrl = [2 0.3 0];
     otherwise

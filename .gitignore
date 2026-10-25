@@ -21,5 +21,7 @@ results_table*.tex
 # FAST outputs and large local inputs
 NonLinMdl/FASTinputfiles/*.SFunc.*
 NonLinMdl/FASTinputfiles/FAST_exp_*
+NonLinMdl/FASTinputfiles/V2B18/*.SFunc.*
+NonLinMdl/FASTinputfiles/V2B18/FAST_exp_*
 NonLinMdl/FASTinputfiles/*.bts
 NonLinMdl/*.dll
