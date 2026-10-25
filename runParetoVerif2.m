@@ -75,14 +75,12 @@ if ~isfolder(cacheDir), mkdir(cacheDir); end
 Simulink.fileGenControl('set', 'CacheFolder', cacheDir, 'CodeGenFolder', cacheDir, 'createDir', true);
 
 %% Wind of the verification set: hub height wind of a FAST run of the PI
-% The full field wind file (*.bts, not under version control) is copied
-% from the IPC/TEFC repository if missing
-btsFile = fullfile(workDir, 'FASTinputfiles', 'wind18_KlasseB_Verif2.bts');
-btsSource = fullfile(fileparts(mainDir), 'Combined-IPC-TEFC-for-Load-Reduction-of-Wind-Turbines', ...
-    'FAST_Sim_TEF', '5MW-Turbine-Inputfiles', 'Sub-Inputfiles', 'WindData', 'Eigene_Wind_Dateien', '18mps.bts');
-if ~isfile(btsFile) && isfile(btsSource)
-    copyfile(btsSource, btsFile);
-end
+% The FAST runs need the full field wind file
+% NonLinMdl/FASTinputfiles/wind18_KlasseB_Verif2.bts (82 MB, not under
+% version control). It is 18mps.bts of the IPC/TEFC repository
+% https://github.com/antjedittmer/Combined-IPC-TEFC-for-Load-Reduction-of-Wind-Turbines
+% (FAST_Sim_TEF/5MW-Turbine-Inputfiles/Sub-Inputfiles/WindData/Eigene_Wind_Dateien/18mps.bts);
+% copy it there before new FAST runs.
 if ~isfile(windMat)
     setPitchRateLimit('DD_CtrlBaseline.sldd', 'Control', 13);
     generateWindTable(fstFile, windMat, 660, DT);
