@@ -20,7 +20,18 @@ if nargin < 1
 end
 
 % --- Parse std table from a file (second table = stddev) ---
+% The unrounded values of the mat file of plotOutTable (same name as the
+% tex file) are used if available, so that the ratios are computed from
+% unrounded values; otherwise the rounded values of the tex file
 function [cols, data] = parseStdTable(filename)
+    [fPath, fName] = fileparts(filename);
+    matFile = fullfile(fPath, [fName, '.mat']);
+    if isfile(matFile)
+        S = load(matFile, 'stdDevTable');
+        cols = strtrim(S.stdDevTable.Properties.VariableNames(2:end));
+        data = arrayfun(@(r) S.stdDevTable{r, 2:end}, 1:height(S.stdDevTable), 'UniformOutput', false);
+        return
+    end
     fid  = fopen(filename, 'r');
     text = fread(fid, '*char')';
     fclose(fid);
@@ -129,7 +140,7 @@ if isPINoFilt
     fprintf(fid, '    {Standard deviation comparison: Baseline PI vs.\\ qLMPC\n');
     fprintf(fid, '        for turbulent wind with pitch rate limits. Columns 4, 8 and 13\\textdegree/s: both controllers on the\n');
     fprintf(fid, '        same plant without the rotor-effective wind filter. Values in brackets show the ratio to the\n');
-    fprintf(fid, '        standard (8\\textdegree/s) baseline PI value without filter.\n');
+    fprintf(fid, '        standard (8\\textdegree/s) baseline PI value without filter. Ratios are computed from unrounded values.\n');
     if hasFilt
         fprintf(fid, '        Last column: both controllers at %s\\textdegree/s on the plant with the filter, the qLMPC scheduled\n', rateFilt);
         fprintf(fid, '        with the filtered wind. The qLMPC value is normalized with the filtered PI value, the PI value with\n');

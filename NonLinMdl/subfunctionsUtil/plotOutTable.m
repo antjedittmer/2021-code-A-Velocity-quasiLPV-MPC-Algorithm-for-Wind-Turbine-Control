@@ -257,6 +257,8 @@ writeLatexTable(fid, stdDevTable, ...
     'tab:stddev');
 fclose(fid);
 fprintf('LaTeX tables written to %s\n', fullfile(figDir, ['statsTable',strFig,'.tex']));
+% Unrounded standard deviations for the ratios of merge_stats_tables
+save(fullfile(figDir, ['statsTable',strFig,'.mat']), 'stdDevTable');
 end
 
 % Helper to write one table
