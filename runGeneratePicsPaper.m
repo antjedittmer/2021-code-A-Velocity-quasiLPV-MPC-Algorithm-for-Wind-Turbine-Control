@@ -7,6 +7,10 @@ Simulink.data.dictionary.closeAll('-discard');
 addpath(genpath('NonLinMdl'));
 addpath(genpath('LinMdl'));
 
+% Copy of the data dictionaries changed by the runs below (pitch rate
+% limits, model scaling), restored at the end of the script
+copyDataDictionaries('backup');
+
 
 initWorkspace;
 mainDir = fileparts(mfilename('fullpath'));
@@ -91,7 +95,13 @@ end
 yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch (°)', 'RotSpd (rpm)',...
     'GenPwr (MW)','TwrAcc_{FA} (m/s^2)', 'TwrAcc_{SW} (m/s^2)'};
 
-figNo = 2; % 4 m/s -> 
+% Mdl2 on the plant without filter Mdl_BianchiOL (in memory only; Mdl1 is
+% saved with Mdl_TuDelftOL), as the PI of the controller comparison
+load_system('test_SimulinkMdl2_Baseline');
+blkMdl2 = find_system('test_SimulinkMdl2_Baseline', 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+set_param(blkMdl2{1}, 'ModelName', 'Mdl_BianchiOL');
+
+figNo = 2; % 4 m/s ->
 %updateDDMdl1(multRb,useTurn, x,scaleFactor)
 updateDDMdl1(0.75, [],[], 0.96);
 normStruct.Sweep = runCompareModels('Step',loadData,figNo,yAxCell,figDirStr,allPlots);
@@ -148,7 +158,9 @@ end
 
 %% Comparison qLPV MPC vs. PI in closed loop without filter
 % 'SimulinkPaper': qLPV-MPC on Mdl_BianchiOL; PI on Mdl_BianchiOL
-% (useFilteredCtrl = 0) or, as in the paper, on Mdl_BianchiOL_WindFiltered
+% (useFilteredCtrl = 0, PI files OutTableTest2*_noFilt.mat, the turbulent
+% wind run is the same as OutTableTest_rate13_PI_noFilt.mat below) or, as
+% in the paper, on Mdl_BianchiOL_WindFiltered
 % Additional comparisons (runFASTComparison = 1) with the FAST-matched models
 % (version 'FAST') and the qLPV-MPC design 'beta' of initWorkspace; both
 % controllers run on the same plant model:
@@ -467,13 +479,13 @@ figNo6 = 204;
 axPlotAllFilt = plotFilteredComparison(currentOutTablePICell{maxRateVector1 == 13}, ...
     OutTableMPCFilt13, OutTable.Time, timeEvalRate, figNo6);
 
-% Set the axis for all axes: identical y limits in the qLMPC figure, the PI
-% figure, the PI figure without filter and the figure with the filtered wind
-axCell = {axPlotAllMPC, axPlotAll, axPlotAllNoFilt, axPlotAllFilt};
-for idx = 1:length(axPlotAllMPC)
-    if all(cellfun(@(a) idx <= length(a) && isgraphics(a(idx)), axCell))
-        lims = cell2mat(cellfun(@(a) get(a(idx),'YLim'), axCell, 'UniformOutput', false)');
-        newLim = [min(lims(:,1)), max(lims(:,2))];
+% Set the axis for all axes: the y limits of the PI figure without filter
+% are used in the qLMPC figure, the PI figure and the figure with the
+% filtered wind
+axCell = {axPlotAllMPC, axPlotAll, axPlotAllFilt};
+for idx = 1:length(axPlotAllNoFilt)
+    if isgraphics(axPlotAllNoFilt(idx)) && all(cellfun(@(a) idx <= length(a) && isgraphics(a(idx)), axCell))
+        newLim = get(axPlotAllNoFilt(idx),'YLim');
         cellfun(@(a) set(a(idx),'YLim',newLim), axCell);
     end
 end
@@ -507,6 +519,9 @@ print(figNo6, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
 merge_stats_tables(fullfile('figDir','statsTabletestConstr.tex'), ...
     fullfile('figDir','statsTabletestConstrPI_NoFilt.tex'), ...
     fullfile('figDir','statsTableMerged_NoFilt.tex'), 'piNoFilt');
+
+% Restore the data dictionaries of the start of the script
+copyDataDictionaries('restore');
 
 %%
 function axPlotAll = plotFilteredComparison(OutTablePI, OutTableMPC, timeData, timeEval, figNo)
@@ -549,6 +564,28 @@ posDefault = [520   378   560   420];
 set(gcf, 'position', [posDefault(1:3), posDefault(4)*1.7]);
 set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
+end
+
+function copyDataDictionaries(direction)
+% copyDataDictionaries copies the data dictionaries changed by the script to
+% tempdir ('backup') or back ('restore'; models and dictionaries are closed
+% first, the files are locked while open). File names are determined here,
+% since initWorkspace clears the workspace.
+ddFiles = cellfun(@which, {'DD_test.sldd', 'DD_CtrlBaseline.sldd', 'DD_Mdl1.sldd'}, 'UniformOutput', false);
+for idxD = 1:numel(ddFiles)
+    [~, name, ext] = fileparts(ddFiles{idxD});
+    ddBackup = fullfile(tempdir, ['runGeneratePicsPaper_', name, ext, '.bak']);
+    if strcmp(direction, 'backup')
+        copyfile(ddFiles{idxD}, ddBackup, 'f');
+    else
+        if idxD == 1
+            bdclose('all');
+            Simulink.data.dictionary.closeAll('-discard');
+        end
+        copyfile(ddBackup, ddFiles{idxD}, 'f');
+        delete(ddBackup);
+    end
+end
 end
 
 function setPitchRateLimitDD(maxRate)

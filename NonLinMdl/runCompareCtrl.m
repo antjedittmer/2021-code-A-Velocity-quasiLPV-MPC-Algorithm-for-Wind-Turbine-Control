@@ -189,7 +189,7 @@ switch plantMdl
             set_param(blk{1}, 'ModelName', 'Mdl_BianchiOL');
             cleanupMdlPI = onCleanup(@() close_system(simMdlname2, 0));
             wecsMdlCell{1} = 'Mdl_BianchiOL';
-            strPI = ''; %'_noFilt';
+            strPI = '_noFilt';
         end
         wecsLabel = sprintf('Mdl2 (PI: %s, qLMPC: %s)', wecsMdlCell{:});
     case {'Simulink', 'SimFilt'}
