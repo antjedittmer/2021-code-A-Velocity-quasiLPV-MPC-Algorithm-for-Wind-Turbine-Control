@@ -63,16 +63,18 @@ nP = numel(panels);
 grpCol = [1, 0.9, 0; 1, 0.45, 0; 1, 0.3, 0.65];
 grpAlpha = 0.18;
 grpFill = (1 - grpAlpha) + grpAlpha*grpCol;
+ovalAlpha = 0.06; % ovals: very light fill and dashed outline
+ovalFill = (1 - ovalAlpha) + ovalAlpha*grpCol;
 grpDark = [0.7, 0.55, 0; 0.8, 0.4, 0; 0.75, 0.15, 0.45];
 % Oval labels: controller, label, position of the label at the oval (right,
-% left, above, below, aboveleft)
-ovalLabel = {"qLMPC", 'qLMPC, Mdl2', 'right';
-    "qLMPC flapNotch", 'qLMPC, FAST', 'aboveleft';
-    "qLMPC flapNotchSmooth12", 'qLMPC smooth, FAST', 'above';
-    "IPC", 'IPC', 'below';
-    "AALC", 'AALC', 'above';
-    "qLMPC flapNotchIPC", 'qLMPC + IPC, FAST', 'aboveleft';
-    "qLMPC flapNotchSmooth12IPC", 'qLMPC smooth + IPC, FAST', 'above'};
+% left, above, below, aboveleft), shift [dx, dy] in data units
+ovalLabel = {"qLMPC", 'qLMPC, Mdl2', 'right', [-0.2, 0.07];
+    "qLMPC flapNotch", 'qLMPC, FAST', 'aboveleft', [0, 0];
+    "qLMPC flapNotchSmooth12", 'qLMPC smooth, FAST', 'above', [0, 0];
+    "IPC", 'IPC', 'above', [0.5, 0];
+    "AALC", 'AALC', 'above', [0, 0.03];
+    "qLMPC flapNotchIPC", 'qLMPC + IPC, FAST', 'aboveleft', [0, 0];
+    "qLMPC flapNotchSmooth12IPC", 'qLMPC smooth + IPC, FAST', 'above', [0, 0]};
 yMax = max(1.1, ceil(10*max([T.C_DEL_b; T.C_DEL_t; T.C_DEL_tt; T.C_dP; T.C_TwrAcc], [], 'omitnan'))/10) + 0.1; % room for the ovals
 xMax = ceil(max([T.C_Act; T.C_ActEst], [], 'omitnan'));
 figure(1); clf;
@@ -84,7 +86,7 @@ for idxP = 1:nP
     set(ax, 'Layer', 'top');
     % Ovals around all points of each bright controller, behind the curves
     for g = 1:numel(panels{idxP})
-        plotOval(ax, T, panels{idxP}(g), ovalLabel, grpFill(g, :), grpDark(g, :));
+        plotOval(ax, T, panels{idxP}(g), ovalLabel, ovalFill(g, :), grpDark(g, :));
     end
     for k = 1:size(ctrl, 1)
         if any(ctrl{k, 1} == panelsPale{idxP})
@@ -244,7 +246,7 @@ S = P./[rx, ry];
 [V, D] = eig(A);
 phi = linspace(0, 2*pi, 100);
 E = (c + V*diag(1./sqrt(diag(D)))*[cos(phi); sin(phi)]).*[rx; ry];
-patch(ax, E(1, :), E(2, :), colFill, 'EdgeColor', colDark, 'LineWidth', 1, ...
+patch(ax, E(1, :), E(2, :), colFill, 'EdgeColor', colDark, 'LineWidth', 1, 'LineStyle', '--', ...
     'HandleVisibility', 'off');
 idx = [ovalLabel{:, 1}] == name;
 lab = ovalLabel{idx, 2};
@@ -257,7 +259,8 @@ switch ovalLabel{idx, 3}
     case 'aboveleft', p = {xMin, yMax, 'right', 'top'};
     otherwise, p = {E(1, iB), yMin, 'center', 'top'};
 end
-text(ax, p{1}, p{2}, lab, 'Color', colDark, 'FontSize', 9, 'FontWeight', 'bold', ...
+dxy = ovalLabel{idx, 4};
+text(ax, p{1} + dxy(1), p{2} + dxy(2), lab, 'Color', colDark, 'FontSize', 9, 'FontWeight', 'bold', ...
     'HorizontalAlignment', p{3}, 'VerticalAlignment', p{4});
 end
 
