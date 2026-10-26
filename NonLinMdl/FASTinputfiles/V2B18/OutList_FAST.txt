@@ -41,5 +41,6 @@ BlPitch3
 RootMzb1
 RootMzb2
 RootMzb3
+YawBrMyp
 GenPwr
 GenTq

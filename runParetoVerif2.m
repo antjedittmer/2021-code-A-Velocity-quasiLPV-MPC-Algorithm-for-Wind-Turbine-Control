@@ -23,7 +23,8 @@
 % the IPC/TEFC repository:
 % - C_DEL_b: blade root out-of-plane DEL (RootMyc = RootMOoP, Woehler
 %   exponent 10, sum of the three blades), C_DEL_t: tower base fore-aft
-%   DEL (TwrBsMyt, exponent 4), both with calculateDamageBladesNew
+%   DEL (TwrBsMyt, exponent 4), C_DEL_tt: tower top fore-aft DEL
+%   (YawBrMyp, exponent 4), all with calculateDamageBladesNew
 % - C_P: mean of the generator power, C_dP: std of the generator power
 % - C_Act: actuator power, mean over the blades and time of |pitch rate *
 %   pitch moment RootMzb| (as makeAALC_SummaryTable)
@@ -174,7 +175,7 @@ S = load(fullfile(ipcDir, 'IPCcheck_AALCfromIPC_RL08_KlasseB', '18mps', 'TimeSer
 rows(end+1, :) = [criteriaRow("AALC", "OpenFAST", 8, signalsOpenFAST(S.TimeSeries.Optimum), ...
     signalsOpenFAST(S.TimeSeries.Baseline), tEvalStart), {NaN}];
 ParetoTable = cell2table(rows, 'VariableNames', {'Controller', 'Plant', 'RateLimit_degps', ...
-    'C_DEL_b', 'C_DEL_t', 'C_P', 'C_dP', 'C_Act', 'C_TwrAcc', 'C_PitchRate', 'C_ActEst'});
+    'C_DEL_b', 'C_DEL_t', 'C_DEL_tt', 'C_P', 'C_dP', 'C_Act', 'C_TwrAcc', 'C_PitchRate', 'C_ActEst'});
 ParetoTable = sortrows(ParetoTable, {'Controller', 'RateLimit_degps'});
 disp(ParetoTable);
 save(fullfile(outDir, 'ParetoVerif2.mat'), 'ParetoTable', 'tEvalStart');
@@ -258,10 +259,10 @@ end
 function R = getFASTRun(matFile, loadData, ctrlName, OutTable, fstFile, maxRate)
 % getFASTRun loads the stored closed-loop FAST run or runs the simulation
 % (as runGeneratePicsFASTthesis, with the FAST output channels of the
-% evaluation criteria)
+% evaluation criteria; stored runs without the tower top moment are repeated)
 if loadData && isfile(matFile)
     tmp = load(matFile, 'R');
-    if ~isempty(tmp.R.FASTOut)
+    if ~isempty(tmp.R.FASTOut) && ismember('YawBrMyp', tmp.R.FASTOut.Properties.VariableNames)
         R = tmp.R;
         fprintf('Loaded %s\n', matFile);
         return
@@ -312,7 +313,7 @@ outFile = fullfile(fileparts(fstRun), 'FAST_exp_pareto.SFunc.out');
 if isfile(outFile)
     R.FASTOut = readFASTOut(outFile, {'Time', 'RootMOoP1', 'RootMOoP2', 'RootMOoP3', ...
         'BlPitch1', 'BlPitch2', 'BlPitch3', 'RootMzb1', 'RootMzb2', 'RootMzb3', ...
-        'TwrBsMyt', 'NcIMUTAxs', 'GenPwr'});
+        'TwrBsMyt', 'YawBrMyp', 'NcIMUTAxs', 'GenPwr'});
 end
 delete(fullfile(fileparts(fstRun), 'FAST_exp_pareto.*'));
 if R.status ~= "ok"
@@ -398,6 +399,7 @@ s.twrAcc = F.NcIMUTAxs;
 s.myc = [F.RootMOoP1, F.RootMOoP2, F.RootMOoP3]; % RootMOoP = RootMyc
 s.mzb = [F.RootMzb1, F.RootMzb2, F.RootMzb3];
 s.twrMy = F.TwrBsMyt;
+s.twrTopMy = F.YawBrMyp;
 end
 
 function s = signalsOpenFAST(ts)
@@ -411,13 +413,14 @@ s.twrAcc = ch("NcIMUTAxs");
 s.myc = [ch("RootMyc1"), ch("RootMyc2"), ch("RootMyc3")];
 s.mzb = [ch("RootMzb1"), ch("RootMzb2"), ch("RootMzb3")];
 s.twrMy = ch("TwrBsMyt");
+s.twrTopMy = ch("YawBrMyp");
 end
 
 function row = criteriaRow(ctrl, plant, rate, s, b, tStart)
 % criteriaRow evaluation criteria of the run s, normalized with the PI run b
 c = criteria(s, tStart);
 cB = criteria(b, tStart);
-row = {ctrl, plant, rate, c.delB/cB.delB, c.delT/cB.delT, c.meanP/cB.meanP, c.stdP/cB.stdP, ...
+row = {ctrl, plant, rate, c.delB/cB.delB, c.delT/cB.delT, c.delTT/cB.delTT, c.meanP/cB.meanP, c.stdP/cB.stdP, ...
     c.act/cB.act, c.stdTwrAcc/cB.stdTwrAcc, c.pitchRate/cB.pitchRate};
 end
 
@@ -431,10 +434,11 @@ c.meanP = mean(s.genPwr(idx));
 c.stdP = std(s.genPwr(idx));
 c.stdTwrAcc = std(s.twrAcc(idx));
 c.pitchRate = mean(abs(rate), 'all');
-[c.delB, c.delT, c.act] = deal(NaN);
+[c.delB, c.delT, c.delTT, c.act] = deal(NaN);
 if isfield(s, 'myc')
     c.delB = calculateDamageBladesNew(s.myc(idx, :), 10); % sum of the blades
     c.delT = calculateDamageBladesNew(s.twrMy(idx), 4);
+    c.delTT = calculateDamageBladesNew(s.twrTopMy(idx), 4);
     mzb = s.mzb(idx, :);
     c.act = mean(abs(rate.*mzb(1:end-1, :)), 'all');
 end
