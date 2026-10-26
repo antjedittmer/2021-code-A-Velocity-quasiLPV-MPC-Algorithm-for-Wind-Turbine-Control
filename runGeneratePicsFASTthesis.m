@@ -58,8 +58,9 @@ designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmoo
 % - thesis qLMPC results: original design and the two FAST designs, sweep and 18 m/s
 % - thesis comparison: notch filter design without and with IPC, 18 m/s
 % - all designs (file names without suffix)
-% Third column: line colours 'fixed' (the same colour per controller in all
-% figures, ctrlStyle) or 'default' (MATLAB default colour order by position)
+% Third column: line colours and styles 'fixed' (the same per controller in all
+% figures, ctrlStyle) or 'default' (MATLAB default colour order and the line
+% styles solid, dash-dot, dashed, dotted by position)
 ctrlSets = {designNames([1, 3, 4]), {'NTM18B', 'Sweep'}, 'fixed';
     designNames([3, 6]), {'NTM18B'}, 'default';
     designNames, {'NTM18B', 'Sweep'}, 'fixed'};
@@ -414,21 +415,25 @@ for k = 1:numel(yAxCell)
 end
 tqRange = [Inf, -Inf]; % torque range of all runs (kNm)
 hTq = gobjects(numel(runs), 1);
-% Line colours: fixed per controller (ctrlStyle) or the default colour order
-% by position (colorMode 'default'); line styles always fixed per controller
+% Line colours and styles: fixed per controller (ctrlStyle) or, for
+% colorMode 'default', the default colour order and the line styles
+% solid, dash-dot, dashed, dotted by position
 cols = zeros(numel(runs), 3);
+styles = cell(numel(runs), 1);
 defaultCols = lines(numel(runs));
+defaultStyles = {'-', '-.', '--', ':'};
 for idxC = 1:numel(runs)
-    cols(idxC, :) = ctrlStyle(ctrlNames{idxC});
+    [cols(idxC, :), styles{idxC}] = ctrlStyle(ctrlNames{idxC});
     if strcmp(colorMode, 'default')
         cols(idxC, :) = defaultCols(idxC, :);
+        styles{idxC} = defaultStyles{mod(idxC - 1, numel(defaultStyles)) + 1};
     end
 end
 for idxC = 1:numel(runs)
     [T, t] = runTable(runs{idxC}, DT);
     if isempty(T), continue, end
     idx = t >= timeEval(1) & t <= timeEval(2);
-    [~, ls] = ctrlStyle(ctrlNames{idxC});
+    ls = styles{idxC};
     col = cols(idxC, :);
     lw = 0.75 + 0.45*strcmp(ls, ':'); % dotted lines 1.2, otherwise 0.75
     if idxC == 1
