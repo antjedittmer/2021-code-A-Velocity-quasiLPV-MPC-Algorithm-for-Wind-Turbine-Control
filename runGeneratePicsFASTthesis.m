@@ -417,23 +417,24 @@ for idxC = 1:numel(runs)
     if isempty(T), continue, end
     idx = t >= timeEval(1) & t <= timeEval(2);
     [col, ls] = ctrlStyle(ctrlNames{idxC}); % fixed colour and line style per controller
+    lw = 0.5 + strcmp(ls, ':'); % dotted lines 1.5, otherwise the default 0.5
     if idxC == 1
         plot(ax(1), t(idx), T.Wind(idx), 'k');
     end
-    hTq(idxC) = plot(ax(2), t(idx), T.GenTq(idx)/1000, ls, 'Color', col, 'DisplayName', ctrlLabel(ctrlNames{idxC}));
+    hTq(idxC) = plot(ax(2), t(idx), T.GenTq(idx)/1000, ls, 'Color', col, 'LineWidth', lw, 'DisplayName', ctrlLabel(ctrlNames{idxC}));
     tqRange = [min(tqRange(1), min(T.GenTq(idx))/1000), max(tqRange(2), max(T.GenTq(idx))/1000)];
-    plot(ax(4), t(idx), T.RotSpeed(idx), ls, 'Color', col);
-    plot(ax(5), t(idx), T.NcIMUTAxs(idx), ls, 'Color', col);
-    plot(ax(6), t(idx), T.GenPwr(idx)/1000, ls, 'Color', col);
+    plot(ax(4), t(idx), T.RotSpeed(idx), ls, 'Color', col, 'LineWidth', lw);
+    plot(ax(5), t(idx), T.NcIMUTAxs(idx), ls, 'Color', col, 'LineWidth', lw);
+    plot(ax(6), t(idx), T.GenPwr(idx)/1000, ls, 'Color', col, 'LineWidth', lw);
     % Blade 1 pitch and root moment from the FAST output (individual pitch)
     F = runs{idxC}.FASTOut;
     if ~isempty(F)
         idxF = F.Time >= timeEval(1) & F.Time <= timeEval(2);
-        plot(ax(3), F.Time(idxF), F.BlPitch1(idxF), ls, 'Color', col);
-        plot(ax(7), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls, 'Color', col);
+        plot(ax(3), F.Time(idxF), F.BlPitch1(idxF), ls, 'Color', col, 'LineWidth', lw);
+        plot(ax(7), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls, 'Color', col, 'LineWidth', lw);
     else
-        plot(ax(3), t(idx), T.BlPitch1(idx), ls, 'Color', col);
-        plot(ax(7), NaN, NaN, ls, 'Color', col);
+        plot(ax(3), t(idx), T.BlPitch1(idx), ls, 'Color', col, 'LineWidth', lw);
+        plot(ax(7), NaN, NaN, ls, 'Color', col, 'LineWidth', lw);
     end
 end
 tRef = (timeEval(1):DT:timeEval(2))';
@@ -443,14 +444,14 @@ yline(ax(4), rpmRated, 'k:', 'HandleVisibility', 'off');
 titleStr = sprintf('FAST v8.16, %s, pitch rate limit %g°/s', windLabel, maxRate);
 if numel(runs) < 6
     % Few controllers: second title line with the controller names in their
-    % line colours, each preceded by its line style
+    % line colours
     names = cell(1, numel(runs));
     for idxC = 1:numel(runs)
         if ~isgraphics(hTq(idxC)), continue, end
-        [col, ~, glyph] = ctrlStyle(ctrlNames{idxC});
-        names{idxC} = sprintf('\\color[rgb]{%.3f,%.3f,%.3f}%s %s', col, glyph, ctrlLabel(ctrlNames{idxC}));
+        col = ctrlStyle(ctrlNames{idxC});
+        names{idxC} = sprintf('\\color[rgb]{%.3f,%.3f,%.3f}%s', col, ctrlLabel(ctrlNames{idxC}));
     end
-    title(ax(1), {titleStr, strjoin(names(~cellfun(@isempty, names)), '  ')});
+    title(ax(1), {titleStr, strjoin(names(~cellfun(@isempty, names)), '   ')});
 else
     % All designs: legend below the axes
     title(ax(1), titleStr);
@@ -484,16 +485,14 @@ else
 end
 end
 
-function [col, ls, glyph] = ctrlStyle(name)
-% ctrlStyle fixed line colour, line style and the line style as text of a
-% controller, the same in all figures
+function [col, ls] = ctrlStyle(name)
+% ctrlStyle fixed line colour and line style of a controller, the same in
+% all figures
 order = {'PI', 'beta', 'flapNotch', 'flapNotchSmooth12', 'flapNotchIPC', 'omega', 'flapNotchSmooth12Tower'};
 lineStyles = {'-', '-.', '--', ':'};
-lineGlyphs = {char(8212), ['-', char(183), '-'], '- -', repmat(char(183), 1, 3)};
 k = find(strcmp(order, name), 1);
 if isempty(k), k = numel(order) + 1; end
 colors = lines(numel(order) + 1);
 col = colors(k, :);
 ls = lineStyles{mod(k - 1, numel(lineStyles)) + 1};
-glyph = lineGlyphs{mod(k - 1, numel(lineGlyphs)) + 1};
 end
