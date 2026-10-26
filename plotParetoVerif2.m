@@ -2,8 +2,8 @@ function plotParetoVerif2(rateBar)
 %PLOTPARETOVERIF2 Pareto and bar plot of the evaluation criteria (18 m/s, Verif. 2)
 %   plotParetoVerif2 plots the table figDirPareto/ParetoVerif2.mat of
 %   runParetoVerif2 (no simulations):
-%   - Pareto plot in three panels, (a) qLMPC on Mdl2 and FAST with the IPC
-%     and AALC pale, (b) IPC and AALC with the qLMPC of (a) pale, (c) qLMPC
+%   - Pareto plot in three panels (top to bottom), qLMPC on Mdl2 and FAST with the IPC
+%     and AALC pale, IPC and AALC with the qLMPC of the top panel pale, qLMPC
 %     + IPC on FAST with the qLMPC on FAST and the IPC pale: blade DEL (blue), tower base DEL (green), tower top
 %     DEL (dark green, FAST only) and power std (purple) over the actuator power C_Act for the qLMPC on Mdl2 (dotted,
 %     hexagrams), the qLMPC designs flapNotch (solid, diamonds),
@@ -49,13 +49,13 @@ ctrl = {"qLMPC", 'qLMPC (Mdl2, proxies)', ':', 'h';
 rateFill = [4, 8, 13];
 fillCol = {'w', [0.6 0.6 0.6], 'k'};
 
-%% Pareto plot: (a) qLMPC with IPC and AALC pale, (b) IPC and AALC with
-% the qLMPC pale, (c) qLMPC + IPC with the qLMPC on FAST and the IPC pale
+%% Pareto plot: panels top to bottom: qLMPC with IPC and AALC pale, IPC and AALC with
+% the qLMPC pale, qLMPC + IPC with the qLMPC on FAST and the IPC pale
 qLMPC = ["qLMPC", "qLMPC flapNotch", "qLMPC flapNotchSmooth12"];
 panels = {qLMPC, ["IPC", "AALC"], ["qLMPC flapNotchIPC", "qLMPC flapNotchSmooth12IPC"]};
 panelsPale = {["IPC", "AALC"], qLMPC, ["qLMPC flapNotch", "qLMPC flapNotchSmooth12", "IPC"]};
-titles = {'(a) qLMPC (pale: IPC and AALC)', '(b) IPC and AALC (pale: qLMPC)', ...
-    '(c) qLMPC + IPC (pale: qLMPC and IPC alone)'};
+titles = {'qLMPC (pale: IPC and AALC)', 'IPC and AALC (pale: qLMPC)', ...
+    'qLMPC + IPC (pale: qLMPC and IPC alone)'};
 nP = numel(panels);
 % Group colours by position in the panel (yellow, orange, pink), the same in
 % the bar plot: light fill (mixed with white, opaque for the eps) for the
@@ -144,7 +144,7 @@ isMdl2 = B.Controller == "qLMPC";
 B.C_Act(isMdl2) = B.C_ActEst(isMdl2);
 B.C_DEL_t(isMdl2) = B.C_TwrAcc(isMdl2);
 yMaxBar = 1.2*max(B{:, crit}, [], 'all', 'omitnan');
-titlesBar = {'(a) qLMPC', '(b) IPC and AALC', '(c) qLMPC + IPC'};
+titlesBar = {'qLMPC', 'IPC and AALC', 'qLMPC + IPC'};
 
 figure(2); clf;
 set(gcf, 'Name', sprintf('Criteria %g deg/s, Verif. 2, 18 m/s', rateBar), 'NumberTitle', 'off', ...
