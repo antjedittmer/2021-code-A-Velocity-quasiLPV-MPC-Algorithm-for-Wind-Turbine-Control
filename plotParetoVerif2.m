@@ -87,27 +87,22 @@ for idxP = 1:nP
         'FontAngle', 'italic', 'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom');
 end
 xlabel(ax, 'C_{Act} (-) (Mdl2: estimated pitch moment)');
-% Legend above the panels, four columns filled row by row: controllers in
-% black (rows 1-2, short labels, qLMPC on FAST unless Mdl2, padded with a
-% blank entry), criteria in colour (row 3, *Mdl2: tower acceleration), rate
-% limits as marker fill (row 4)
-ctrlShort = {'qLMPC (Mdl2)', 'qLMPC', 'qLMPC + IPC', 'qLMPC smooth', 'qLMPC smooth + IPC', 'IPC', 'AALC'};
+% Legend above the panels in two columns: the seven controllers in black,
+% the four criteria in colour and the three rate limits as marker fill
 hL = gobjects(0);
 for k = 1:size(ctrl, 1)
     hL(end+1) = plot(ax, NaN, NaN, 'LineStyle', ctrl{k, 3}, 'Marker', ctrl{k, 4}, 'Color', 'k', ...
-        'LineWidth', lw, 'MarkerSize', ms, 'DisplayName', ctrlShort{k}); %#ok<AGROW>
+        'LineWidth', lw, 'MarkerSize', ms, 'DisplayName', ctrl{k, 2}); %#ok<AGROW>
 end
-hL(end+1) = plot(ax, NaN, NaN, 'LineStyle', 'none', 'Marker', 'none', 'DisplayName', ' ');
 hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colB, 'LineWidth', 3, 'DisplayName', 'C_{DEL,b}');
-hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,base}^*');
+hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,base} (Mdl2: tower acc.)');
 hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colTT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,top}');
 hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colP, 'LineWidth', 3, 'DisplayName', 'C_{\delta P}');
 for i = 1:numel(rateFill)
     hL(end+1) = plot(ax, NaN, NaN, 'LineStyle', 'none', 'Marker', 'o', 'Color', 'k', 'MarkerFaceColor', fillCol{i}, ...
         'LineWidth', lw, 'MarkerSize', ms, 'DisplayName', sprintf('%g\\circ/s', rateFill(i))); %#ok<AGROW>
 end
-lgd = legend(ax, hL, 'NumColumns', 4, 'Orientation', 'horizontal', 'FontSize', 9, 'Box', 'off');
-lgd.ItemTokenSize = [22, 18];
+lgd = legend(ax, hL, 'NumColumns', 2, 'FontSize', 10, 'Box', 'off');
 lgd.Layout.Tile = 'north';
 saveFig(gcf, fullfile(outDir, 'afig01_IPCMPCpareto'));
 
