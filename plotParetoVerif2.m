@@ -14,9 +14,9 @@ function plotParetoVerif2(rateBar)
 %     The qLMPC on Mdl2 has no loads and no pitch moment: tower fore-aft
 %     acceleration as proxy for the tower DEL, C_Act with the estimated
 %     pitch moment (C_ActEst of runParetoVerif2).
-%   - bar plot of the criteria blade DEL (blue), tower DEL (green), C_P
-%     (grey), C_dP (purple) and C_Act (red) at the rate limit rateBar (default
-%     8 deg/s), grouped by controller (as fcnPlotBar), one panel per Pareto
+%   - bar plot of the criteria blade DEL (blue), tower base DEL (green),
+%     tower top DEL (dark green), C_P (grey), C_dP (purple) and C_Act (red)
+%     at the rate limit rateBar (default 8 deg/s), grouped by controller (as fcnPlotBar), one panel per Pareto
 %     panel with its bright controllers.
 %   Figures: figDirPareto/afig01_IPCMPCpareto and afig01_IPCMPCbar (.eps
 %   and .png, names of the thesis figures in figures/figures_WESC25).
@@ -105,19 +105,19 @@ saveFig(gcf, fullfile(outDir, 'afig01_IPCMPCpareto'));
 
 %% Bar plot at rateBar, grouped by controller (colours as fcnPlotBar),
 % one panel per Pareto panel with the controllers shown bright there
-% Order of the thesis tables: blade DEL, tower DEL, mean power, power std,
-% actuator power
-crit = {'C_DEL_b', 'C_DEL_t', 'C_P', 'C_dP', 'C_Act'};
-critLabel = {'C_{DEL,b}', 'C_{DEL,t}', 'C_{P}', 'C_{\delta P}', 'C_{Act}'};
+% Order of the thesis tables: blade DEL, tower base and top DEL, mean power,
+% power std, actuator power
+crit = {'C_DEL_b', 'C_DEL_t', 'C_DEL_tt', 'C_P', 'C_dP', 'C_Act'};
+critLabel = {'C_{DEL,b}', 'C_{DEL,t,base}', 'C_{DEL,t,top}', 'C_{P}', 'C_{\delta P}', 'C_{Act}'};
 cl1 = lines(7);
-critCol = [cl1(1, :); cl1(5, :); 0.5, 0.5, 0.5; cl1(4, :); 1, 0, 0];
+critCol = [cl1(1, :); cl1(5, :); 0.5*cl1(5, :); 0.5, 0.5, 0.5; cl1(4, :); 1, 0, 0];
 B = T(T.RateLimit_degps == rateBar, :);
 % Mdl2: C_Act with the estimated pitch moment, tower acceleration as proxy
-% for the tower DEL
+% for the tower base DEL (no tower top DEL)
 isMdl2 = B.Controller == "qLMPC";
 B.C_Act(isMdl2) = B.C_ActEst(isMdl2);
 B.C_DEL_t(isMdl2) = B.C_TwrAcc(isMdl2);
-yMaxBar = 1.15*max(B{:, crit}, [], 'all', 'omitnan');
+yMaxBar = 1.2*max(B{:, crit}, [], 'all', 'omitnan');
 titlesBar = {'(a) qLMPC', '(b) IPC and AALC', '(c) qLMPC + IPC'};
 
 figure(2); clf;
@@ -137,8 +137,8 @@ for idxP = 1:nP
     for k = 1:numel(crit)
         b(k).FaceColor = critCol(k, :);
         ok = ~isnan(b(k).YData);
-        text(ax, b(k).XEndPoints(ok), b(k).YEndPoints(ok), compose('%.2f', b(k).YData(ok)), ...
-            'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', 8);
+        text(ax, b(k).XEndPoints(ok), b(k).YEndPoints(ok), compose(' %.2f', b(k).YData(ok)), ...
+            'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'Rotation', 90, 'FontSize', 8);
     end
     yline(ax, 1, 'k--', 'HandleVisibility', 'off');
     grid(ax, 'on');
