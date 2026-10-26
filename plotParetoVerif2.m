@@ -87,30 +87,28 @@ for idxP = 1:nP
         'FontAngle', 'italic', 'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom');
 end
 xlabel(ax, 'C_{Act} (-) (Mdl2: estimated pitch moment)');
-% Legends in two rows each: controllers in black above the panels (short
-% labels, qLMPC on FAST unless Mdl2), criteria in colour and rate limits as
-% marker fill below
+% Legend above the panels, four columns filled row by row: controllers in
+% black (rows 1-2, short labels, qLMPC on FAST unless Mdl2, padded with a
+% blank entry), criteria in colour (row 3, *Mdl2: tower acceleration), rate
+% limits as marker fill (row 4)
 ctrlShort = {'qLMPC (Mdl2)', 'qLMPC', 'qLMPC + IPC', 'qLMPC smooth', 'qLMPC smooth + IPC', 'IPC', 'AALC'};
 hL = gobjects(0);
 for k = 1:size(ctrl, 1)
     hL(end+1) = plot(ax, NaN, NaN, 'LineStyle', ctrl{k, 3}, 'Marker', ctrl{k, 4}, 'Color', 'k', ...
         'LineWidth', lw, 'MarkerSize', ms, 'DisplayName', ctrlShort{k}); %#ok<AGROW>
 end
-lgd = legend(ax, hL, 'NumColumns', 4, 'Orientation', 'horizontal', 'FontSize', 9, 'Box', 'off');
-lgd.Layout.Tile = 'north';
-% Second legend on the first tile (one legend per axes)
-ax1 = tl.Children(end);
-hK = gobjects(0);
-hK(end+1) = plot(ax1, NaN, NaN, '-', 'Color', colB, 'LineWidth', 3, 'DisplayName', 'C_{DEL,b}');
-hK(end+1) = plot(ax1, NaN, NaN, '-', 'Color', colT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,base} (Mdl2: acc.)');
-hK(end+1) = plot(ax1, NaN, NaN, '-', 'Color', colTT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,top}');
-hK(end+1) = plot(ax1, NaN, NaN, '-', 'Color', colP, 'LineWidth', 3, 'DisplayName', 'C_{\delta P}');
+hL(end+1) = plot(ax, NaN, NaN, 'LineStyle', 'none', 'Marker', 'none', 'DisplayName', ' ');
+hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colB, 'LineWidth', 3, 'DisplayName', 'C_{DEL,b}');
+hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,base}^*');
+hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colTT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,top}');
+hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colP, 'LineWidth', 3, 'DisplayName', 'C_{\delta P}');
 for i = 1:numel(rateFill)
-    hK(end+1) = plot(ax1, NaN, NaN, 'LineStyle', 'none', 'Marker', 'o', 'Color', 'k', 'MarkerFaceColor', fillCol{i}, ...
+    hL(end+1) = plot(ax, NaN, NaN, 'LineStyle', 'none', 'Marker', 'o', 'Color', 'k', 'MarkerFaceColor', fillCol{i}, ...
         'LineWidth', lw, 'MarkerSize', ms, 'DisplayName', sprintf('%g\\circ/s', rateFill(i))); %#ok<AGROW>
 end
-lgdK = legend(ax1, hK, 'NumColumns', 4, 'Orientation', 'horizontal', 'FontSize', 9, 'Box', 'off');
-lgdK.Layout.Tile = 'south';
+lgd = legend(ax, hL, 'NumColumns', 4, 'Orientation', 'horizontal', 'FontSize', 9, 'Box', 'off');
+lgd.ItemTokenSize = [22, 18];
+lgd.Layout.Tile = 'north';
 saveFig(gcf, fullfile(outDir, 'afig01_IPCMPCpareto'));
 
 %% Bar plot at rateBar, grouped by controller (colours as fcnPlotBar),
@@ -161,6 +159,7 @@ for idxP = 1:nP
     ax.XTickLabelRotation = 0;
 end
 lgd = legend(b, critLabel, 'NumColumns', numel(crit), 'FontSize', 10, 'Box', 'off');
+lgd.ItemTokenSize = [22, 18];
 lgd.Layout.Tile = 'north';
 saveFig(gcf, fullfile(outDir, 'afig01_IPCMPCbar'));
 end
