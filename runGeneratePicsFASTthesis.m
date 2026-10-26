@@ -58,9 +58,11 @@ designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmoo
 % - thesis qLMPC results: original design and the two FAST designs, sweep and 18 m/s
 % - thesis comparison: notch filter design without and with IPC, 18 m/s
 % - all designs (file names without suffix)
-ctrlSets = {designNames([1, 3, 4]), {'NTM18B', 'Sweep'};
-    designNames([3, 6]), {'NTM18B'};
-    designNames, {'NTM18B', 'Sweep'}};
+% Third column: line colours 'fixed' (the same colour per controller in all
+% figures, ctrlStyle) or 'default' (MATLAB default colour order by position)
+ctrlSets = {designNames([1, 3, 4]), {'NTM18B', 'Sweep'}, 'fixed';
+    designNames([3, 6]), {'NTM18B'}, 'default';
+    designNames, {'NTM18B', 'Sweep'}, 'fixed'};
 
 
 % Wind cases: name, reference data (initial values, stop time), FAST input file,
@@ -135,7 +137,7 @@ for idxSet = 1:size(ctrlSets, 1)
         writeTable(resultsFAST.(windName), figDir, [windName, fileSuffix], windCases{idxW, 4}, maxRate);
 
         % Time series
-        plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, [windName, fileSuffix], windCases{idxW, 4}, fstFile, maxRate);
+        plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, [windName, fileSuffix], windCases{idxW, 4}, fstFile, maxRate, ctrlSets{idxSet, 3});
         figNo = figNo + 1;
     end
     save(fullfile(dataDirOut, ['resultsFASTthesis', fileSuffix, '.mat']), 'resultsFAST', 'ctrlNames', 'windCases', 'maxRate', 'timeEvalCase');
@@ -392,7 +394,7 @@ fprintf(fid, '\\end{table}\n');
 fclose(fid);
 end
 
-function plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windLabel, fstFile, maxRate)
+function plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windLabel, fstFile, maxRate, colorMode)
 % plotRuns plots wind, generator torque, blade 1 pitch, rotor speed, tower
 % fore-aft acceleration, generator power and blade 1 root out-of-plane moment
 % of all runs in the evaluation window. Torque axis: minimum - 10 % to
@@ -412,11 +414,22 @@ for k = 1:numel(yAxCell)
 end
 tqRange = [Inf, -Inf]; % torque range of all runs (kNm)
 hTq = gobjects(numel(runs), 1);
+% Line colours: fixed per controller (ctrlStyle) or the default colour order
+% by position (colorMode 'default'); line styles always fixed per controller
+cols = zeros(numel(runs), 3);
+defaultCols = lines(numel(runs));
+for idxC = 1:numel(runs)
+    cols(idxC, :) = ctrlStyle(ctrlNames{idxC});
+    if strcmp(colorMode, 'default')
+        cols(idxC, :) = defaultCols(idxC, :);
+    end
+end
 for idxC = 1:numel(runs)
     [T, t] = runTable(runs{idxC}, DT);
     if isempty(T), continue, end
     idx = t >= timeEval(1) & t <= timeEval(2);
-    [col, ls] = ctrlStyle(ctrlNames{idxC}); % fixed colour and line style per controller
+    [~, ls] = ctrlStyle(ctrlNames{idxC});
+    col = cols(idxC, :);
     lw = 0.75 + 0.45*strcmp(ls, ':'); % dotted lines 1.2, otherwise 0.75
     if idxC == 1
         plot(ax(1), t(idx), T.Wind(idx), 'k');
@@ -448,8 +461,7 @@ if numel(runs) < 6
     names = cell(1, numel(runs));
     for idxC = 1:numel(runs)
         if ~isgraphics(hTq(idxC)), continue, end
-        col = ctrlStyle(ctrlNames{idxC});
-        names{idxC} = sprintf('\\color[rgb]{%.3f,%.3f,%.3f}%s', col, ctrlLabel(ctrlNames{idxC}));
+        names{idxC} = sprintf('\\color[rgb]{%.3f,%.3f,%.3f}%s', cols(idxC, :), ctrlLabel(ctrlNames{idxC}));
     end
     title(ax(1), {titleStr, strjoin(names(~cellfun(@isempty, names)), '   ')});
 else
