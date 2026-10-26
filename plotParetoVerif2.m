@@ -4,8 +4,8 @@ function plotParetoVerif2(rateBar)
 %   runParetoVerif2 (no simulations):
 %   - Pareto plot in three panels, (a) qLMPC on Mdl2 and FAST with the IPC
 %     and AALC pale, (b) IPC and AALC with the qLMPC of (a) pale, (c) qLMPC
-%     + IPC on FAST with the qLMPC on FAST and the IPC pale: blade DEL (blue), tower DEL (green) and power std
-%     (purple) over the actuator power C_Act for the qLMPC on Mdl2 (dotted,
+%     + IPC on FAST with the qLMPC on FAST and the IPC pale: blade DEL (blue), tower base DEL (green), tower top
+%     DEL (dark green, FAST only) and power std (purple) over the actuator power C_Act for the qLMPC on Mdl2 (dotted,
 %     hexagrams), the qLMPC designs flapNotch (solid, diamonds),
 %     flapNotchIPC (solid, triangles), flapNotchSmooth12 and
 %     flapNotchSmooth12IPC (dash-dotted, down/right triangles) on FAST, the
@@ -30,7 +30,8 @@ S = load(fullfile(outDir, 'ParetoVerif2.mat'), 'ParetoTable');
 T = S.ParetoTable;
 
 colB = [0, 0.4470, 0.7410];      % blade DEL
-colT = [0.4660, 0.6740, 0.1880]; % tower DEL
+colT = [0.4660, 0.6740, 0.1880]; % tower base DEL
+colTT = 0.5*colT;                % tower top DEL
 colP = [0.4940, 0.1840, 0.5560]; % power std
 lw = 1.5;
 ms = 7;
@@ -56,7 +57,7 @@ panelsPale = {["IPC", "AALC"], qLMPC, ["qLMPC flapNotch", "qLMPC flapNotchSmooth
 titles = {'(a) qLMPC (pale: IPC and AALC)', '(b) IPC and AALC (pale: qLMPC)', ...
     '(c) qLMPC + IPC (pale: qLMPC and IPC alone)'};
 nP = numel(panels);
-yMax = max(1.1, ceil(10*max([T.C_DEL_b; T.C_DEL_t; T.C_dP; T.C_TwrAcc], [], 'omitnan'))/10);
+yMax = max(1.1, ceil(10*max([T.C_DEL_b; T.C_DEL_t; T.C_DEL_tt; T.C_dP; T.C_TwrAcc], [], 'omitnan'))/10);
 xMax = ceil(max([T.C_Act; T.C_ActEst], [], 'omitnan'));
 figure(1); clf;
 set(gcf, 'Name', 'Pareto Verif. 2, 18 m/s', 'NumberTitle', 'off', 'Position', [50, 20, 560, 966]); % 2.3 times the default figure height (420)
@@ -66,12 +67,12 @@ for idxP = 1:nP
     hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on');
     for k = 1:size(ctrl, 1)
         if any(ctrl{k, 1} == panelsPale{idxP})
-            plotController(ax, T, ctrl(k, :), {colB, colT, colP}, rateFill, fillCol, lw, ms, 0.7);
+            plotController(ax, T, ctrl(k, :), {colB, colT, colTT, colP}, rateFill, fillCol, lw, ms, 0.7);
         end
     end
     for k = 1:size(ctrl, 1)
         if any(ctrl{k, 1} == panels{idxP})
-            plotController(ax, T, ctrl(k, :), {colB, colT, colP}, rateFill, fillCol, lw, ms, 0);
+            plotController(ax, T, ctrl(k, :), {colB, colT, colTT, colP}, rateFill, fillCol, lw, ms, 0);
         end
     end
     title(ax, titles{idxP}, 'FontWeight', 'normal');
@@ -86,21 +87,30 @@ for idxP = 1:nP
         'FontAngle', 'italic', 'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom');
 end
 xlabel(ax, 'C_{Act} (-) (Mdl2: estimated pitch moment)');
-% Legend: controllers in black, criteria in colour, rate limits as marker fill
+% Legends in two rows each: controllers in black above the panels (short
+% labels, qLMPC on FAST unless Mdl2), criteria in colour and rate limits as
+% marker fill below
+ctrlShort = {'qLMPC (Mdl2)', 'qLMPC', 'qLMPC + IPC', 'qLMPC smooth', 'qLMPC smooth + IPC', 'IPC', 'AALC'};
 hL = gobjects(0);
 for k = 1:size(ctrl, 1)
     hL(end+1) = plot(ax, NaN, NaN, 'LineStyle', ctrl{k, 3}, 'Marker', ctrl{k, 4}, 'Color', 'k', ...
-        'LineWidth', lw, 'MarkerSize', ms, 'DisplayName', ctrl{k, 2}); %#ok<AGROW>
+        'LineWidth', lw, 'MarkerSize', ms, 'DisplayName', ctrlShort{k}); %#ok<AGROW>
 end
-hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colB, 'LineWidth', 3, 'DisplayName', 'C_{DEL,b}');
-hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t} (Mdl2: tower acc.)');
-hL(end+1) = plot(ax, NaN, NaN, '-', 'Color', colP, 'LineWidth', 3, 'DisplayName', 'C_{\delta P}');
+lgd = legend(ax, hL, 'NumColumns', 4, 'Orientation', 'horizontal', 'FontSize', 9, 'Box', 'off');
+lgd.Layout.Tile = 'north';
+% Second legend on the first tile (one legend per axes)
+ax1 = tl.Children(end);
+hK = gobjects(0);
+hK(end+1) = plot(ax1, NaN, NaN, '-', 'Color', colB, 'LineWidth', 3, 'DisplayName', 'C_{DEL,b}');
+hK(end+1) = plot(ax1, NaN, NaN, '-', 'Color', colT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,base} (Mdl2: acc.)');
+hK(end+1) = plot(ax1, NaN, NaN, '-', 'Color', colTT, 'LineWidth', 3, 'DisplayName', 'C_{DEL,t,top}');
+hK(end+1) = plot(ax1, NaN, NaN, '-', 'Color', colP, 'LineWidth', 3, 'DisplayName', 'C_{\delta P}');
 for i = 1:numel(rateFill)
-    hL(end+1) = plot(ax, NaN, NaN, 'LineStyle', 'none', 'Marker', 'o', 'Color', 'k', 'MarkerFaceColor', fillCol{i}, ...
+    hK(end+1) = plot(ax1, NaN, NaN, 'LineStyle', 'none', 'Marker', 'o', 'Color', 'k', 'MarkerFaceColor', fillCol{i}, ...
         'LineWidth', lw, 'MarkerSize', ms, 'DisplayName', sprintf('%g\\circ/s', rateFill(i))); %#ok<AGROW>
 end
-lgd = legend(hL, 'NumColumns', 3, 'FontSize', 10, 'Box', 'off');
-lgd.Layout.Tile = 'north';
+lgdK = legend(ax1, hK, 'NumColumns', 4, 'Orientation', 'horizontal', 'FontSize', 9, 'Box', 'off');
+lgdK.Layout.Tile = 'south';
 saveFig(gcf, fullfile(outDir, 'afig01_IPCMPCpareto'));
 
 %% Bar plot at rateBar, grouped by controller (colours as fcnPlotBar),
@@ -164,10 +174,10 @@ if isempty(R), return, end
 if c{1} == "qLMPC" % Mdl2: proxies
     x = R.C_ActEst;
     ys = {R.C_TwrAcc, R.C_dP};
-    cols = colCrit(2:3);
+    cols = colCrit([2, 4]);
 else
     x = R.C_Act;
-    ys = {R.C_DEL_b, R.C_DEL_t, R.C_dP};
+    ys = {R.C_DEL_b, R.C_DEL_t, R.C_DEL_tt, R.C_dP};
     cols = colCrit;
 end
 mix = @(col) (1 - pale)*validatecolor(col) + pale;
