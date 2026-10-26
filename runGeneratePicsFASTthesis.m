@@ -417,7 +417,7 @@ for idxC = 1:numel(runs)
     if isempty(T), continue, end
     idx = t >= timeEval(1) & t <= timeEval(2);
     [col, ls] = ctrlStyle(ctrlNames{idxC}); % fixed colour and line style per controller
-    lw = 0.5 + strcmp(ls, ':'); % dotted lines 1.5, otherwise the default 0.5
+    lw = 0.75 + 0.45*strcmp(ls, ':'); % dotted lines 1.2, otherwise 0.75
     if idxC == 1
         plot(ax(1), t(idx), T.Wind(idx), 'k');
     end
