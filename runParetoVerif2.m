@@ -15,12 +15,13 @@
 % - IPC (gains optimized with fmincon for each rate limit) and AALC (gains
 %   optimized at 18 m/s for 8 deg/s) on OpenFAST v3.2.1, from the saved
 %   results of checkIPC_WindSpeeds of the IPC/TEFC repository (folders
-%   Main/Post_processing/IPCcheck_fixedRL<rate>_KlasseB and
-%   IPCcheck_AALCfromIPC_RL08_KlasseB, 18mps)
+%   Main/Post_processing/IPCcheck_fixedRL<rate>_KlasseB_T60 and
+%   IPCcheck_AALCfromIPC_RL08_KlasseB_T60, 18mps; runs with the FAST output
+%   from 60 s)
 % for the pitch rate limits 4, 8 and 13 deg/s (AALC: 8 deg/s only).
 %
-% Criteria (ratio to the PI, < 1 = reduction), evaluation from 66 s as in
-% the IPC/TEFC repository:
+% Criteria (ratio to the PI, < 1 = reduction), evaluation from 60 s (the
+% usual start-up time of the 660 s runs):
 % - C_DEL_b: blade root out-of-plane DEL (RootMyc = RootMOoP, Woehler
 %   exponent 10, sum of the three blades), C_DEL_t: tower base fore-aft
 %   DEL (TwrBsMyt, exponent 4), C_DEL_tt: tower top fore-aft DEL
@@ -58,7 +59,7 @@ initWorkspace;
 loadData = 1; % load the stored simulation results if available
 rateLimits = [4, 8, 13]; % deg/s
 designNames = {'flapNotch', 'flapNotchIPC', 'flapNotchSmooth12', 'flapNotchSmooth12IPC'}; % qLMPC designs on FAST
-tEvalStart = 66; % s
+tEvalStart = 60; % s
 
 %% Directories
 mainDir = fileparts(which('runParetoVerif2'));
@@ -166,12 +167,12 @@ for idxR = 1:nR
             {actEst(s, windHub, cMzb, DT, tEvalStart)/actEst(base, windHub, cMzb, DT, tEvalStart)}]; %#ok<SAGROW>
     end
     % IPC (OpenFAST)
-    S = load(fullfile(ipcDir, sprintf('IPCcheck_fixedRL%02d_KlasseB', rate), '18mps', ...
+    S = load(fullfile(ipcDir, sprintf('IPCcheck_fixedRL%02d_KlasseB_T60', rate), '18mps', ...
         sprintf('TimeSeries_RL%02d.mat', rate)), 'TimeSeries');
     rows(end+1, :) = [criteriaRow("IPC", "OpenFAST", rate, signalsOpenFAST(S.TimeSeries.Optimum), ...
         signalsOpenFAST(S.TimeSeries.Baseline), tEvalStart), {NaN}]; %#ok<SAGROW>
 end
-S = load(fullfile(ipcDir, 'IPCcheck_AALCfromIPC_RL08_KlasseB', '18mps', 'TimeSeries_RL08.mat'), 'TimeSeries');
+S = load(fullfile(ipcDir, 'IPCcheck_AALCfromIPC_RL08_KlasseB_T60', '18mps', 'TimeSeries_RL08.mat'), 'TimeSeries');
 rows(end+1, :) = [criteriaRow("AALC", "OpenFAST", 8, signalsOpenFAST(S.TimeSeries.Optimum), ...
     signalsOpenFAST(S.TimeSeries.Baseline), tEvalStart), {NaN}];
 ParetoTable = cell2table(rows, 'VariableNames', {'Controller', 'Plant', 'RateLimit_degps', ...
