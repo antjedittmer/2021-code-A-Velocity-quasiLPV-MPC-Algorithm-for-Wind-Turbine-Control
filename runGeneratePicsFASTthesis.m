@@ -489,8 +489,20 @@ posDefault = get(0, 'DefaultFigurePosition');
 set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*1.2, posDefault(3), posDefault(4)*2.3]);
 set(findall(gcf, '-property', 'FontSize'), 'FontSize', 11);
 
-print(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), '-dpng');
-print(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), '-depsc');
+printFigFixed(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), [14.8 25.6]);
+end
+
+function printFigFixed(h, fName, sizeCm)
+% Save the figure as vector .eps and 300 dpi .png with the fixed size sizeCm
+% = [width height] in cm, independent of the screen: the output is laid out
+% for the paper size (not the window, which Windows shrinks to the screen),
+% the eps bounding box is the full paper size (-loose), so that all figures
+% of the same size have the same size in LaTeX, and -painters avoids that
+% MATLAB embeds a bitmap for plots with many points.
+set(h, 'PaperUnits', 'centimeters', 'PaperPositionMode', 'manual', ...
+    'PaperSize', sizeCm, 'PaperPosition', [0 0 sizeCm]);
+print(h, fName, '-depsc', '-painters', '-loose');
+print(h, fName, '-dpng', '-r300');
 end
 
 function label = ctrlLabel(name)

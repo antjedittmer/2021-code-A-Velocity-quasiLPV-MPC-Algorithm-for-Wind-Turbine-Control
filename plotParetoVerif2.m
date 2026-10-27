@@ -287,7 +287,15 @@ A = inv(P*diag(u)*P' - c*c')/d;
 end
 
 function saveFig(h, fName)
-print(h, fName, '-depsc');
-print(h, fName, '-dpng', '-r150');
+% Save as vector .eps and 300 dpi .png with the fixed size of 14.8 x 25.6 cm
+% (560 x 966 px at 96 dpi), independent of the screen: the output is laid
+% out for the paper size, not the window, which Windows shrinks to the
+% screen; the eps bounding box is the full paper size (-loose), so that bar
+% and Pareto plot have the same size in LaTeX.
+sizeCm = [14.8 25.6];
+set(h, 'PaperUnits', 'centimeters', 'PaperPositionMode', 'manual', ...
+    'PaperSize', sizeCm, 'PaperPosition', [0 0 sizeCm]);
+print(h, fName, '-depsc', '-painters', '-loose');
+print(h, fName, '-dpng', '-r300');
 fprintf('Saved %s.eps/.png\n', fName);
 end
