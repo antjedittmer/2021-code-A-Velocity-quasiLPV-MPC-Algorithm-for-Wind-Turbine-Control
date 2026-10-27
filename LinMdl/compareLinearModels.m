@@ -448,9 +448,10 @@ for index =  speedVec
         figFolderStrEps = fullfile(figFolder,sprintf('BodeV%d',Vbar));
         posaxes =   get(0,'defaultFigurePosition');
         set(gcf,'Position',[posaxes(1:3),posaxes(4)*1.1]);
+        setFigureSize(gcf, [1 1.1]); % export size independent of the screen
 
-        print(figFolderStr, '-dpng');
-        print(figFolderStrEps, '-depsc');
+        printFigure(gcf, figFolderStr, {'png'});
+        printFigure(gcf, figFolderStrEps, {'eps'});
 
 
     end

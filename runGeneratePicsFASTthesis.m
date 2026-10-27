@@ -11,10 +11,11 @@
 % output files and data dictionaries).
 %
 % Outputs:
-% - time series figures (PI and qLMPC designs) per wind case in figDirFASTthesis
-% - comparison table per wind case: console, figDirFASTthesis/
-%   resultsFASTthesis_<wind>.csv and .tex, NonLinMdl/dataOut/FASTthesis/
-%   resultsFASTthesis.mat (variable resultsFAST)
+% - per controller set (ctrlSets) and wind case: time series figure
+%   figDirFASTthesis/cmpCtrlFASTthesis_<wind><suffix>.eps/.png and comparison
+%   table (console, figDirFASTthesis/resultsFASTthesis_<wind><suffix>.csv
+%   and .tex); per set NonLinMdl/dataOut/FASTthesis/resultsFASTthesis<suffix>.mat
+%   (variable resultsFAST); <suffix>: _PI_<design>_... (empty for all designs)
 %
 % Metrics (evaluation window: 60 to 660 s for the 18 m/s wind, 15 to 400 s for
 % the sweep): std
@@ -50,9 +51,19 @@ ipcMaxRateCtrl = maxRate;
 %   (ipc_dlr, adapted to FAST: gain set 2 scaled by 0.3, no tower term)
 designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmooth12Tower', ...
     'flapNotchIPC'};
-designNames = designNames([1,2,3]);
-%designNames = designNames([1,3]);
-% designNames = designNames([5,6]);
+% Controller sets: designs (with the PI) and wind cases of one figure and
+% table per wind case. Sets with fewer than 5 designs get the controller
+% names as file name suffix, e.g. cmpCtrlFASTthesis_NTM18B_PI_flapNotch_flapNotchIPC
+% and resultsFASTthesis_NTM18B_PI_flapNotch_flapNotchIPC.tex
+% - thesis qLMPC results: original design and the two FAST designs, sweep and 18 m/s
+% - thesis comparison: notch filter design without and with IPC, 18 m/s
+% - all designs (file names without suffix)
+% Third column: line colours and styles 'fixed' (the same per controller in all
+% figures, ctrlStyle) or 'default' (MATLAB default colour order and the line
+% styles solid, dash-dot, dashed, dotted by position)
+ctrlSets = {designNames([1, 3, 4]), {'NTM18B', 'Sweep'}, 'fixed';
+    designNames([3, 6]), {'NTM18B'}, 'default';
+    designNames, {'NTM18B', 'Sweep'}, 'fixed'};
 
 
 % Wind cases: name, reference data (initial values, stop time), FAST input file,
@@ -82,49 +93,56 @@ setPitchRateLimit('DD_Mdl1.sldd', 'controlValue', maxRate);
 setPitchRateLimit('DD_CtrlBaseline.sldd', 'Control', maxRate);
 
 %% Closed-loop runs and comparison
-ctrlNames = [{'PI'}, designNames];
-resultsFAST = struct;
 figNo = 300;
-for idxW = 1:size(windCases, 1)
-    windName = windCases{idxW, 1};
-    S = load(fullfile(mainDir, 'dataIn', windCases{idxW, 2}), 'OutTable');
-    OutTable = S.OutTable;
-    fstFile = fullfile(workDir, 'FASTinputfiles', windCases{idxW, 3});
-    timeEval = [tEvalStart.(windName), OutTable.Time(end)]; % evaluation window (s)
-    timeEvalCase.(windName) = timeEval;
-
-    % Run or load the simulations
-    runs = cell(size(ctrlNames));
-    for idxC = 1:numel(ctrlNames)
-        matFile = fullfile(dataDirOut, sprintf('OutTable_%s_%s.mat', windName, ctrlNames{idxC}));
-        runs{idxC} = getFASTRun(matFile, loadData, ctrlNames{idxC}, OutTable, fstFile, maxRate);
+for idxSet = 1:size(ctrlSets, 1)
+    ctrlNames = [{'PI'}, ctrlSets{idxSet, 1}];
+    if numel(ctrlNames) < 6
+        fileSuffix = sprintf('_%s', ctrlNames{:});
+    else
+        fileSuffix = '';
     end
+    resultsFAST = struct;
+    for idxW = find(ismember(windCases(:, 1), ctrlSets{idxSet, 2}))'
+        windName = windCases{idxW, 1};
+        S = load(fullfile(mainDir, 'dataIn', windCases{idxW, 2}), 'OutTable');
+        OutTable = S.OutTable;
+        fstFile = fullfile(workDir, 'FASTinputfiles', windCases{idxW, 3});
+        timeEval = [tEvalStart.(windName), OutTable.Time(end)]; % evaluation window (s)
+        timeEvalCase.(windName) = timeEval;
 
-    % Power reference of the qLMPC (depends on the measured wind only, the
-    % FAST wind field is the same for all controllers); used for all runs
-    % (taken from the longest run, an aborted run has a shorter reference)
-    refEnd = -Inf(size(runs));
-    for idxC = 1:numel(runs)
-        if ~isempty(runs{idxC}.GenPwrRef)
-            refEnd(idxC) = runs{idxC}.GenPwrRef(end, 1);
+        % Run or load the simulations
+        runs = cell(size(ctrlNames));
+        for idxC = 1:numel(ctrlNames)
+            matFile = fullfile(dataDirOut, sprintf('OutTable_%s_%s.mat', windName, ctrlNames{idxC}));
+            runs{idxC} = getFASTRun(matFile, loadData, ctrlNames{idxC}, OutTable, fstFile, maxRate);
         end
-    end
-    if all(isinf(refEnd))
-        error('No power reference logged for wind case %s.', windName);
-    end
-    [~, idxRef] = max(refEnd);
-    GenPwrRef = runs{idxRef}.GenPwrRef;
 
-    % Metrics
-    resultsFAST.(windName) = evaluateRuns(runs, ctrlNames, GenPwrRef, timeEval);
-    printTable(resultsFAST.(windName), windCases{idxW, 4}, maxRate);
-    writeTable(resultsFAST.(windName), figDir, windName, windCases{idxW, 4}, maxRate);
+        % Power reference of the qLMPC (depends on the measured wind only, the
+        % FAST wind field is the same for all controllers); used for all runs
+        % (taken from the longest run, an aborted run has a shorter reference)
+        refEnd = -Inf(size(runs));
+        for idxC = 1:numel(runs)
+            if ~isempty(runs{idxC}.GenPwrRef)
+                refEnd(idxC) = runs{idxC}.GenPwrRef(end, 1);
+            end
+        end
+        if all(isinf(refEnd))
+            error('No power reference logged for wind case %s.', windName);
+        end
+        [~, idxRef] = max(refEnd);
+        GenPwrRef = runs{idxRef}.GenPwrRef;
 
-    % Time series
-    plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windCases{idxW, 4}, fstFile, maxRate);
-    figNo = figNo + 1;
+        % Metrics
+        resultsFAST.(windName) = evaluateRuns(runs, ctrlNames, GenPwrRef, timeEval);
+        printTable(resultsFAST.(windName), windCases{idxW, 4}, maxRate);
+        writeTable(resultsFAST.(windName), figDir, [windName, fileSuffix], windCases{idxW, 4}, maxRate);
+
+        % Time series
+        plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, [windName, fileSuffix], windCases{idxW, 4}, fstFile, maxRate, ctrlSets{idxSet, 3});
+        figNo = figNo + 1;
+    end
+    save(fullfile(dataDirOut, ['resultsFASTthesis', fileSuffix, '.mat']), 'resultsFAST', 'ctrlNames', 'windCases', 'maxRate', 'timeEvalCase');
 end
-save(fullfile(dataDirOut, 'resultsFASTthesis.mat'), 'resultsFAST', 'designNames', 'windCases', 'maxRate', 'timeEvalCase');
 
 %% Local functions
 function setPitchRateLimit(DDName, entryName, maxRate)
@@ -335,20 +353,23 @@ fid = fopen(fullfile(figDir, ['resultsFASTthesis_', windName, '.tex']), 'w');
 fprintf(fid, '\\begin{table}[h]\n');
 fprintf(fid, '\\centering\n');
 fprintf(fid, ['\\caption[Controller comparison on FAST, %s.]{Controller comparison on FAST v8.16, %s, ', ...
-    'pitch rate limit %g\\,\\si{\\degree/s}. Standard deviations (top) and blade pitch rate, ', ...
-    'blade root out-of-plane moment standard deviation and damage equivalent loads of the blade root ', ...
-    '(Woehler exponent 10, maximum of the blades) and tower base (exponent 4) (bottom); in parentheses ', ...
-    'the ratio PI/qLMPC, values above 1 indicate improvement.}\n'], windLabel, windLabel, maxRate);
+    'pitch rate limit %g\\textdegree/s. Top: standard deviations of the tower fore-aft acceleration, ', ...
+    'the power tracking error, the rotor speed, and the (collective) pitch rate. Bottom: standard ', ...
+    'deviations of the blade 1 pitch rate and the ', ...
+    'blade root out-of-plane moment (mean of the blades), and damage equivalent loads of the blade root ', ...
+    '(W\\"ohler exponent 10, maximum of the blades) and the tower base (exponent 4). In parentheses ', ...
+    'the ratio baseline PI/controller, values above 1 indicate an improvement.}\n'], windLabel, windLabel, maxRate);
 fprintf(fid, '\\label{tab:CtrlComparisonFAST%s}\n', windName);
-% Control performance (std) and loads (blade pitch rate std, blade root
-% out-of-plane moment std, DELs)
-headers = {['{Controller} & {$\\omega_r$ (rpm)} & {$|P_{g,\\text{ref}}-P_g|$ (kW)} & ', ...
-    '{Twr$_\\text{FA}$ (m/s$^2$)} & {$\\dot T_g$ (kNm/s)} & {$\\dot\\beta$ (\\si{\\degree/s})} \\\\\n'], ...
-    ['{Controller} & {$\\dot\\beta_1$ (\\si{\\degree/s})} & {$M_{yb}$ (kNm)} & ', ...
+% Control performance (std as in the thesis tables of the qLPV model:
+% tower acceleration, power error, rotor speed, pitch rate) and loads
+% (blade pitch rate std, blade root out-of-plane moment std, DELs)
+headers = {['{Controller} & {Tower acc.\\ (m/s$^2$)} & {Power error (kW)} & ', ...
+    '{Rotor speed (rpm)} & {Pitch rate (\\textdegree/s)} \\\\\n'], ...
+    ['{Controller} & {$\\dot\\beta_1$ (\\textdegree/s)} & {$M_{yb}$ (kNm)} & ', ...
     '{DEL$_b$ (kNm)} & {DEL$_t$ (kNm)} \\\\\n']};
-metricSets = {{'RotSpdStd', 'PwrErrStd', 'TwrFAStd', 'GenTqRateStd', 'PitchRateStd'}, ...
+metricSets = {{'TwrFAStd', 'PwrErrStd', 'RotSpdStd', 'PitchRateStd'}, ...
     {'BlPitchRateStd', 'BlMOoPStd', 'BlDEL', 'TwrDEL'}};
-fmtSets = {{'%.3f', '%.1f', '%.3f', '%.2f', '%.2f'}, {'%.2f', '%.0f', '%.0f', '%.0f'}};
+fmtSets = {{'%.4f', '%.2f', '%.4f', '%.2f'}, {'%.2f', '%.0f', '%.0f', '%.0f'}};
 for idxS = 1:2
     metricNames = metricSets{idxS};
     fprintf(fid, '\\begin{tabular}{l%s}\n', repmat('c', 1, numel(metricNames)));
@@ -365,7 +386,7 @@ for idxS = 1:2
             end
             cells{m} = val;
         end
-        fprintf(fid, '%s & %s \\\\\n', Tres.Row{k}, strjoin(cells, ' & '));
+        fprintf(fid, '%s & %s \\\\\n', ctrlLabel(Tres.Row{k}), strjoin(cells, ' & '));
     end
     fprintf(fid, '\\bottomrule\n');
     fprintf(fid, '\\end{tabular}\n');
@@ -377,7 +398,7 @@ fprintf(fid, '\\end{table}\n');
 fclose(fid);
 end
 
-function plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windLabel, fstFile, maxRate)
+function plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windLabel, fstFile, maxRate, colorMode)
 % plotRuns plots wind, generator torque, blade 1 pitch, rotor speed, tower
 % fore-aft acceleration, generator power and blade 1 root out-of-plane moment
 % of all runs in the evaluation window. Torque axis: minimum - 10 % to
@@ -395,48 +416,115 @@ for k = 1:numel(yAxCell)
     ax(k) = nexttile; hold on; grid on;
     ylabel(yAxCell{k});
 end
-lineStyles = {'-', '-.', '--', ':'};
 tqRange = [Inf, -Inf]; % torque range of all runs (kNm)
+hTq = gobjects(numel(runs), 1);
+% Line colours and styles: fixed per controller (ctrlStyle) or, for
+% colorMode 'default', the default colour order and the line styles
+% solid, dash-dot, dashed, dotted by position
+cols = zeros(numel(runs), 3);
+styles = cell(numel(runs), 1);
+defaultCols = lines(numel(runs));
+defaultStyles = {'-', '-.', '--', ':'};
+for idxC = 1:numel(runs)
+    [cols(idxC, :), styles{idxC}] = ctrlStyle(ctrlNames{idxC});
+    if strcmp(colorMode, 'default')
+        cols(idxC, :) = defaultCols(idxC, :);
+        styles{idxC} = defaultStyles{mod(idxC - 1, numel(defaultStyles)) + 1};
+    end
+end
 for idxC = 1:numel(runs)
     [T, t] = runTable(runs{idxC}, DT);
     if isempty(T), continue, end
     idx = t >= timeEval(1) & t <= timeEval(2);
-    ls = lineStyles{mod(idxC - 1, numel(lineStyles)) + 1};
+    ls = styles{idxC};
+    col = cols(idxC, :);
+    lw = 0.75 + 0.45*strcmp(ls, ':'); % dotted lines 1.2, otherwise 0.75
     if idxC == 1
         plot(ax(1), t(idx), T.Wind(idx), 'k');
     end
-    plot(ax(2), t(idx), T.GenTq(idx)/1000, ls, 'DisplayName', ctrlNames{idxC});
+    hTq(idxC) = plot(ax(2), t(idx), T.GenTq(idx)/1000, ls, 'Color', col, 'LineWidth', lw, 'DisplayName', ctrlLabel(ctrlNames{idxC}));
     tqRange = [min(tqRange(1), min(T.GenTq(idx))/1000), max(tqRange(2), max(T.GenTq(idx))/1000)];
-    plot(ax(4), t(idx), T.RotSpeed(idx), ls);
-    plot(ax(5), t(idx), T.NcIMUTAxs(idx), ls);
-    plot(ax(6), t(idx), T.GenPwr(idx)/1000, ls);
+    plot(ax(4), t(idx), T.RotSpeed(idx), ls, 'Color', col, 'LineWidth', lw);
+    plot(ax(5), t(idx), T.NcIMUTAxs(idx), ls, 'Color', col, 'LineWidth', lw);
+    plot(ax(6), t(idx), T.GenPwr(idx)/1000, ls, 'Color', col, 'LineWidth', lw);
     % Blade 1 pitch and root moment from the FAST output (individual pitch)
     F = runs{idxC}.FASTOut;
     if ~isempty(F)
         idxF = F.Time >= timeEval(1) & F.Time <= timeEval(2);
-        plot(ax(3), F.Time(idxF), F.BlPitch1(idxF), ls);
-        plot(ax(7), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls);
+        plot(ax(3), F.Time(idxF), F.BlPitch1(idxF), ls, 'Color', col, 'LineWidth', lw);
+        plot(ax(7), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls, 'Color', col, 'LineWidth', lw);
     else
-        plot(ax(3), t(idx), T.BlPitch1(idx), ls);
-        plot(ax(7), NaN, NaN, ls);
+        plot(ax(3), t(idx), T.BlPitch1(idx), ls, 'Color', col, 'LineWidth', lw);
+        plot(ax(7), NaN, NaN, ls, 'Color', col, 'LineWidth', lw);
     end
 end
 tRef = (timeEval(1):DT:timeEval(2))';
 tRef = tRef(tRef <= GenPwrRef(end, 1));
 plot(ax(6), tRef, interp1(GenPwrRef(:, 1), GenPwrRef(:, 2), tRef, 'previous', 'extrap')/1000, 'k--');
 yline(ax(4), rpmRated, 'k:', 'HandleVisibility', 'off');
-title(ax(1), sprintf('FAST v8.16, %s, pitch rate limit %g°/s', windLabel, maxRate));
-lgd = legend(ax(2));
-lgd.Layout.Tile = 'east'; % outside the tiles, all axes keep the same width
+titleStr = sprintf('FAST v8.16, %s, pitch rate limit %g°/s', windLabel, maxRate);
+if numel(runs) < 6
+    % Few controllers: second title line with the controller names in their
+    % line colours
+    names = cell(1, numel(runs));
+    for idxC = 1:numel(runs)
+        if ~isgraphics(hTq(idxC)), continue, end
+        names{idxC} = sprintf('\\color[rgb]{%.3f,%.3f,%.3f}%s', cols(idxC, :), ctrlLabel(ctrlNames{idxC}));
+    end
+    title(ax(1), {titleStr, strjoin(names(~cellfun(@isempty, names)), '   ')});
+else
+    % All designs: legend below the axes
+    title(ax(1), titleStr);
+    lgd = legend(ax(2));
+    lgd.Layout.Tile = 'south'; % outside the tiles, all axes keep the same width
+    lgd.Box = 0;
+    lgd.NumColumns = 2;
+end
 xlabel(ax(end), 'Time (s)');
 linkaxes(ax, 'x'); axis(ax, 'tight');
 if all(isfinite(tqRange))
     ylim(ax(2), [0.9*tqRange(1), 1.1*tqRange(2)]);
 end
 posDefault = get(0, 'DefaultFigurePosition');
-set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*1.2, posDefault(3)*1.4, posDefault(4)*2.3]);
+set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*1.2, posDefault(3), posDefault(4)*2.3]);
 set(findall(gcf, '-property', 'FontSize'), 'FontSize', 11);
-print(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), '-dpng');
-print(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), '-depsc');
+
+printFigFixed(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), [14.8 25.6]);
 end
 
+function printFigFixed(h, fName, sizeCm)
+% Save the figure as vector .eps and 300 dpi .png with the fixed size sizeCm
+% = [width height] in cm, independent of the screen: the output is laid out
+% for the paper size (not the window, which Windows shrinks to the screen),
+% the eps bounding box is the full paper size (-loose), so that all figures
+% of the same size have the same size in LaTeX, and -painters avoids that
+% MATLAB embeds a bitmap for plots with many points.
+set(h, 'PaperUnits', 'centimeters', 'PaperPositionMode', 'manual', ...
+    'PaperSize', sizeCm, 'PaperPosition', [0 0 sizeCm]);
+print(h, fName, '-depsc', '-painters', '-loose');
+print(h, fName, '-dpng', '-r300');
+end
+
+function label = ctrlLabel(name)
+% ctrlLabel name of a controller in the figures (thesis terms)
+labels = struct('PI', 'Baseline PI', 'beta', 'original qLMPC', 'omega', 'speed tracking qLMPC', ...
+    'flapNotch', 'notch filter design', 'flapNotchSmooth12', 'smooth design', ...
+    'flapNotchSmooth12Tower', 'smooth design, tower weight', 'flapNotchIPC', 'notch filter design + IPC');
+if isfield(labels, name)
+    label = labels.(name);
+else
+    label = name;
+end
+end
+
+function [col, ls] = ctrlStyle(name)
+% ctrlStyle fixed line colour and line style of a controller, the same in
+% all figures
+order = {'PI', 'beta', 'flapNotch', 'flapNotchSmooth12', 'flapNotchIPC', 'omega', 'flapNotchSmooth12Tower'};
+lineStyles = {'-', '-.', '--', ':'};
+k = find(strcmp(order, name), 1);
+if isempty(k), k = numel(order) + 1; end
+colors = lines(numel(order) + 1);
+col = colors(k, :);
+ls = lineStyles{mod(k - 1, numel(lineStyles)) + 1};
+end

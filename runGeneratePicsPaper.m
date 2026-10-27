@@ -499,20 +499,16 @@ figDir = figDirConstr;
 strFig = 'MPCNewLim';
 figMPC = ancestor(axPlotAllMPC(isgraphics(axPlotAllMPC)), 'figure');
 if iscell(figMPC), figMPC = figMPC{1}; end
-saveas(figMPC, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), 'png');
-saveas(figMPC, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), 'epsc');
+printFigure(figMPC, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]));
 
 strFig = 'PINewLim';
-print(figNo2, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
-print(figNo2, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
+printFigure(figNo2, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]));
 
 strFig = 'PINewLim_NoFilt';
-print(figNo3, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
-print(figNo3, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
+printFigure(figNo3, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]));
 
 strFig = 'PIvsMPC_Filt';
-print(figNo6, fullfile(figDirConstr,['cmpTimeDomain_All5',strFig]), '-dpng');
-print(figNo6, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]), '-depsc');
+printFigure(figNo6, fullfile(figDirConstr, ['cmpTimeDomain_All5', strFig]));
 
 % Merged table qLMPC and PI without filter, last column both controllers on
 % the filtered plant at 13 deg/s: figDir/statsTableMerged_NoFilt.tex
@@ -562,6 +558,7 @@ linkaxes(axPlotAll(isgraphics(axPlotAll, 'axes')), 'x');
 set(gcf, 'Name', 'cmpTimeDomain_All5PIvsMPC_Filt');
 posDefault = [520   378   560   420];
 set(gcf, 'position', [posDefault(1:3), posDefault(4)*1.7]);
+setFigureSize(gcf, [1 1.7]); % export size independent of the screen
 set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 end
