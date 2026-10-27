@@ -158,14 +158,14 @@ linkaxes(axPlotAll(isgraphics(axPlotAll, 'axes')), 'x');
 set(gcf,'Name',['cmpTimeDomain_All',strFig])
 posDefault = [520   378   560   420]; %get(gcf, 'position');
 set(gcf, 'position', [posDefault(1:3),posDefault(4)*1.7]);
+setFigureSize(gcf, [1 1.7]); % export size independent of the screen
 % set(groot,'defaultLineLineWidth',defaultLineWidth);
 
 set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
 % 
-print(fullfile(figDir,['cmpTimeDomain_All',strFig]), '-dpng');
-print(fullfile(figDir,['cmpTimeDomain_All',strFig]), '-depsc');
+printFigure(gcf, fullfile(figDir,['cmpTimeDomain_All',strFig]));
 
 
 %% Calculate variance and standard deviation for key signals

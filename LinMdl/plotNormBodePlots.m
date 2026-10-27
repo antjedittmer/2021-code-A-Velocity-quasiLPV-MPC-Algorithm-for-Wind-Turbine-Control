@@ -74,6 +74,7 @@ scaleF = 100;
 figure(1);
 pos0 = get(0,'defaultFigurePosition');
 set(gcf,'Position',[pos0(1)-pos0(3)*0.7,pos0(2),pos0(3)*1.5,pos0(4)])
+setFigureSize(gcf, [1.5 1]); % export size: 1.5 times the standard width
 t = tiledlayout(3,3);
 
 t.TileSpacing = 'compact';
@@ -138,8 +139,7 @@ end
 figStr = 'Norm';
 figFolderStr = fullfile(figFolder,figStr);
 figFolderStrEps = figFolderStr;
-print(figFolderStr, '-dpng');
-print(figFolderStrEps, '-depsc');
+printFigure(gcf, figFolderStr);
 
 if ~createNugapPlot
     return;
@@ -153,6 +153,7 @@ legCell = ['                          Nugap: \color{black}Mdl1: Rot+Twr ',...
     '\color[rgb]{',num2str(lc(1,:)),'}Mdl2:',Mdl2Str];
 
 figure(2);
+setFigureSize(gcf, [1 1]);
 for idx = 1:9
     subplot(3,3,idx)
     b = bar([aMatrix(vec+ 2*len,idx),aMatrix(vec+3*len,idx)]);
@@ -179,5 +180,4 @@ end
 figStr = 'Nugap';
 figFolderStr = fullfile(figFolder,figStr);
 figFolderStrEps = figFolderStr;
-print(figFolderStr, '-dpng');
-print(figFolderStrEps, '-depsc');
+printFigure(gcf, figFolderStr);

@@ -448,13 +448,13 @@ if useTitle(2) == 0 % either plot the
 
     posDefault = [520   378   560   420]; %get(gcf, 'position');
     set(gcf, 'position', [posDefault(1:3),posDefault(4)*1.1]);
+    setFigureSize(gcf, [1 1.1]); % export size independent of the screen
 
     set(findall(gcf,'-property','FontSize'),'FontSize',12.5)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',1.2)
 
 
-    print(gcf,[fullfile(figDir,'aCmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))], '-dpng');
-    print(gcf,[fullfile(figDir,'aCmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))], '-depsc');
+    printFigure(gcf, [fullfile(figDir,'aCmpCtrlSimulink_PI_MPC'),'_',figStr,'_',num2str(timeVecPlot(end))]);
 
     figNo1 = figNo1 + 1;
 
@@ -569,12 +569,12 @@ linkaxes(axPlotAll,'x');
 set(gcf,'Name',figLabel,'NumberTitle','off')
 posDefault = get(0,'DefaultFigurePosition');
 set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*1.7]);
+setFigureSize(gcf, [1 1.7]); % export size independent of the screen
 
 set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
 %set(groot,'defaultLineLineWidth',defaultLineWidth);
 
-print(fullfile(figDir,['cmpCtrlTimeDomain_All_',figStr]), '-dpng');
-print(fullfile(figDir,['cmpCtrlTimeDomain_All_',figStr]), '-depsc');
+printFigure(gcf, fullfile(figDir,['cmpCtrlTimeDomain_All_',figStr]));
 
