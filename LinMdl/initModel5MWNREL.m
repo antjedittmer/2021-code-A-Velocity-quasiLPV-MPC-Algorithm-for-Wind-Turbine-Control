@@ -330,6 +330,5 @@ else
     set(gca,'Fontsize',fs)
 end
 
-print(gcf,fullfile(figDir,figStr), '-dpng');
-print(gcf,fullfile(figDir,figStr), '-depsc');
+printFigure(gcf, fullfile(figDir,figStr)); % fixed width 14.82 cm (standard figure)
 end
