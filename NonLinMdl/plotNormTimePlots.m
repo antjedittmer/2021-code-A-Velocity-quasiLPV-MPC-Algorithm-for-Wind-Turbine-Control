@@ -83,5 +83,5 @@ figFolder = figDirStr;
 figStr = 'NormTime';
 figFolderStr = fullfile(figFolder,figStr);
 figFolderStrEps = figFolderStr;
-print(figFolderStr, '-dpng');
-print(figFolderStrEps, '-depsc');
+printFigure(gcf, figFolderStr, {'png'}); % fixed width 14.82 cm (standard figure)
+printFigure(gcf, figFolderStrEps, {'eps'});
