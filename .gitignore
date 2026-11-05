@@ -3,6 +3,7 @@ codegen/
 slprj/
 figDir/
 figDirConstr1/
+figDirFASTthesis/
 
 *.asv
 *.csv
