@@ -21,3 +21,10 @@ results_table*.tex
 NonLinMdl/FASTinputfiles/*.sum
 NonLinMdl/FASTinputfiles/*.out
 NonLinMdl/FASTinputfiles/*.bts
+
+# Generated figures (all folders)
+*.png
+*.eps
+*.fig
+*.jpg
+*.svg
