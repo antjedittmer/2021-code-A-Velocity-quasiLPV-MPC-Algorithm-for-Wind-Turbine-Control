@@ -18,4 +18,6 @@ figDirFASTthesis/
 NonLinMdl/dataOut/
 results_table*.tex
 
-NonLinMdl/FASTinputfiles/*
+NonLinMdl/FASTinputfiles/*.sum
+NonLinMdl/FASTinputfiles/*.out
+NonLinMdl/FASTinputfiles/*.bts
