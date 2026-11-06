@@ -291,7 +291,7 @@ end
 %% Figure for paper and dissertation
 figure(figNo1 + 2*allPlots)
 nAx = 7;
-tiledlayout(nAx,1,'TileSpacing','Compact');
+tiledlayout(nAx,1,'TileSpacing','compact','Padding','compact'); % small, equal gaps between the tiles (tightenTiles)
 
 axPlotAll(1) = nexttile; %subplot(nAx,1,1);
 plot(time,vectAmpWind(idxTime),time,OutTableTest1.Wind(idxTime),'k--');
@@ -343,6 +343,7 @@ if ~isempty(ylimVal), ylim(gca,ylimVal(7,:)); end
 ylabel(yAxCell{5}); %'GenPwr P_g [MW]')
 xlabel('Time (s)')
 linkaxes(axPlotAll,'x');
+tightenTiles(axPlotAll); % x tick labels only at the bottom, same tile spacing in all figures
 
 set(gcf,'Name',['cmpTimeDomain_All',strFig])
 posDefault = get(0,'DefaultFigurePosition');
@@ -362,7 +363,7 @@ if OutTable.Time(end) >1000
 
     % Create zoomed-in version of the figure
     figure(figNo1 + 2*allPlots + 1) % new figure number
-    tiledlayout(nAx,1,'TileSpacing','Compact');
+    tiledlayout(nAx,1,'TileSpacing','compact','Padding','compact'); % small, equal gaps between the tiles (tightenTiles)
 
     for i = 1:nAx
         axZoom(i) = nexttile;
@@ -396,6 +397,7 @@ if OutTable.Time(end) >1000
     % Link and zoom
     linkaxes(axZoom, 'x');
     xlim(axZoom(1), [600 1000]); % This sets zoom for all
+    tightenTiles(axZoom); % x tick labels only at the bottom, same tile spacing in all figures
 
     set(gcf,'Name',['cmpTimeDomain_AllZoom_',strFig])
     posDefault = get(0,'DefaultFigurePosition');
