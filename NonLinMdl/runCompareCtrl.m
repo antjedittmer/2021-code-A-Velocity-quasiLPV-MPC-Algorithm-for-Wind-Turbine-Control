@@ -575,6 +575,6 @@ set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
 %set(groot,'defaultLineLineWidth',defaultLineWidth);
-
+ppGCF = get(gcf, 'PaperPosition')
 printFigure(gcf, fullfile(figDir,['cmpCtrlTimeDomain_All_',figStr]));
 

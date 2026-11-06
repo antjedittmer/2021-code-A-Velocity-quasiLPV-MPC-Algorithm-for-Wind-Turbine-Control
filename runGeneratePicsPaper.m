@@ -14,7 +14,7 @@ copyDataDictionaries('backup');
 
 initWorkspace;
 mainDir = fileparts(mfilename('fullpath'));
-
+   
 
 % Original models and qLPV-MPC of the paper (same results as the code of the
 % paper): WECS model version 'paper' (getWecsModelVersion: no effective wind

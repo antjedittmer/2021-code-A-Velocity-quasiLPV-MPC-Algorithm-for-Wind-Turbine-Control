@@ -171,19 +171,3 @@ fprintf('  2. Export as vector format using exportThesisFigure() below\n');
 end
 
 
-function exportThesisFigure(modelName, outputFile)
-% Export Simulink model as vector PDF for thesis
-% Usage: exportThesisFigure('your_model', 'figure.pdf')
-
-if nargin < 2
-    outputFile = [modelName '.pdf'];
-end
-
-% Print to PDF (vector format)
-print(['-s' modelName], '-dpdf', '-bestfit', outputFile);
-
-% Alternative: EPS format
-% print(['-s' modelName], '-depsc2', [modelName '.eps']);
-
-fprintf('Exported to: %s\n', outputFile);
-end
