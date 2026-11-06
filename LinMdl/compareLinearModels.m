@@ -450,6 +450,26 @@ for index =  speedVec
         set(gcf,'Position',[posaxes(1:3),posaxes(4)*1.1]);
         setFigureSize(gcf, [1 1.1]); % export size independent of the screen
 
+        % Line width 1 and frequency ticks 0.01, 0.3, 0.7 (first blade
+        % frequency), 1 and 2 Hz (labels only on the axes that show x tick
+        % labels, i.e. the bottom row)
+        set(findall(ff, 'Type', 'line'), 'LineWidth', 1);
+        fTicks = [0.01 0.3 0.7 1 2];
+        axBode = findall(ff, 'Type', 'axes', 'Visible', 'on');
+        for idxAx = 1:numel(axBode)
+            hasLabels = ~isempty(get(axBode(idxAx), 'XTickLabel'));
+            set(axBode(idxAx), 'XTick', fTicks);
+            if hasLabels
+                % Labels rotated by 45 deg (horizontally, the 2 and the 0.01
+                % of neighbouring axes overlap) and closer to the axis
+                set(axBode(idxAx), 'XTickLabel', {'0.01', '0.3', '0.7', '1', '2'}, ...
+                    'XTickLabelRotation', 45);
+                axBode(idxAx).XAxis.TickLabelGapOffset = -2; % default 2 points
+            else
+                set(axBode(idxAx), 'XTickLabel', []);
+            end
+        end
+
         printFigure(gcf, figFolderStr, {'png'});
         printFigure(gcf, figFolderStrEps, {'eps'});
 

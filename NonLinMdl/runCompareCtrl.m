@@ -84,6 +84,8 @@ if nargin < 10 || isempty(strOut)
     strOut = '';
 end
 
+addPgrefText = 0; % do not show textbox for pgref bz default
+
 %% Set path to directories
 
 % Set path to inputdata directory
@@ -293,9 +295,9 @@ DT = 0.008;
 r = GenPwrRef;
 
 % Plot and compare closed-loop results
-plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt)
+plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt,addPgrefText)
 
-function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt)
+function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt,addPgrefText)
 %plotComparison plots the time series obtained with baseline and qLPVMPC
 
 %% Handle optional inputs
@@ -493,7 +495,7 @@ titleStr = sprintf(['\\color[rgb]{%.3f %.3f %.3f}Baseline PI', ...
 
 %titleStr = ['Baseline PI vs. qLPV MPC; ', meanOpt];
 nAx = 5;
-tiledlayout(nAx,1,'TileSpacing','Compact');
+tiledlayout(nAx,1,'TileSpacing','compact','Padding','compact'); % small, equal gaps between the tiles (tightenTiles)
 
 if nAx ~= 7
     yAxCell = yAxCell5;
@@ -553,6 +555,7 @@ axis tight; grid on;
 ylabel(yAxCell{idxT}); %'GenPwr P_g [MW]')
 
 ax_pwr = gca;
+if addPgrefText == 1
 text(ax_pwr, ...
     0.55, 0.17, 'P_{g,ref} (black dashed line)', ...
     ...  % 0.85, 0.17, 'P_{g,ref}',..
@@ -562,17 +565,20 @@ text(ax_pwr, ...
     'BackgroundColor', [1 1 1 0.7], ...
     'Margin', 0.01, ...          % default is 3, reducing tightens the box
     'Color', 'k');
+end
 
 xlabel('Time (s)')
 linkaxes(axPlotAll,'x');
+tightenTiles(axPlotAll); % x tick labels only at the bottom, same tile spacing in all figures
 
 set(gcf,'Name',figLabel,'NumberTitle','off')
 posDefault = get(0,'DefaultFigurePosition');
 set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*1.7]);
 setFigureSize(gcf, [1 1.7]); % export size independent of the screen
 
-set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+set(findall(gcf,'-property','FontSize'),'FontSize',12)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
+hold on; plot(timeVecPlot,PGRef/1000,'k--','LineWidth',1.5)
 
 %set(groot,'defaultLineLineWidth',defaultLineWidth);
 ppGCF = get(gcf, 'PaperPosition')

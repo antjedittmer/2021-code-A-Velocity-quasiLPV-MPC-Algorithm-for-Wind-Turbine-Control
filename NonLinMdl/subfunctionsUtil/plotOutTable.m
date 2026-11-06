@@ -93,7 +93,7 @@ plotGenTq = std(OutTableTest2.GenTq(idxTime)/10^3) > 1 || ...
 nPlots = 5 + plotGenTq;
 
 figure(figNo2)
-t = tiledlayout(nPlots, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+t = tiledlayout(nPlots, 1, 'TileSpacing', 'compact', 'Padding', 'compact'); % small, equal gaps between the tiles (tightenTiles)
 
 % --- Wind speed
 axPlotAll(1) = nexttile;
@@ -153,7 +153,11 @@ axis tight; grid on;
 ylabel(yAxCell{5});
 xlabel('Time (s)');
 
-linkaxes(axPlotAll(isgraphics(axPlotAll, 'axes')), 'x');
+axValid = axPlotAll(isgraphics(axPlotAll, 'axes'));
+linkaxes(axValid, 'x');
+% x tick labels only at the bottom, same tile spacing in all figures (call
+% tightenTiles again if the y limits are changed afterwards)
+tightenTiles(axValid);
 
 set(gcf,'Name',['cmpTimeDomain_All',strFig])
 posDefault = [520   378   560   420]; %get(gcf, 'position');

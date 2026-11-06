@@ -489,6 +489,8 @@ for idx = 1:length(axPlotAllNoFilt)
         cellfun(@(a) set(a(idx),'YLim',newLim), axCell);
     end
 end
+% Ticks for the new y limits (no ticks at the limits: same tile spacing in all figures)
+cellfun(@tightenTiles, [axCell, {axPlotAllNoFilt}]);
 
 figDirConstr = 'figDirConstr1';
 if ~isdir(figDirConstr)
@@ -531,7 +533,7 @@ idxTime = time >= timeEval(1) & time <= timeEval(2);
 time = time(idxTime);
 figure(figNo); clf;
 cl = colormap('lines');
-tiledlayout(5, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+tiledlayout(5, 1, 'TileSpacing', 'compact', 'Padding', 'compact'); % small, equal gaps between the tiles (tightenTiles)
 % Signal, scale, y label
 sigCell = {'Wind', 1, 'Wind (m/s)'; 'BlPitch1', 1, 'Pitch (°)'; ...
     'RotSpeed', 1, 'RotSpd (rpm)'; 'NcIMUTAxs', 1, 'TwrAcc_{FA} (m/s^2)'; ...
@@ -554,7 +556,9 @@ for k = 1:size(sigCell, 1)
     end
 end
 xlabel('Time (s)');
-linkaxes(axPlotAll(isgraphics(axPlotAll, 'axes')), 'x');
+axValid = axPlotAll(isgraphics(axPlotAll, 'axes'));
+linkaxes(axValid, 'x');
+tightenTiles(axValid); % x tick labels only at the bottom, same tile spacing in all figures
 set(gcf, 'Name', 'cmpTimeDomain_All5PIvsMPC_Filt');
 posDefault = [520   378   560   420];
 set(gcf, 'position', [posDefault(1:3), posDefault(4)*1.7]);
