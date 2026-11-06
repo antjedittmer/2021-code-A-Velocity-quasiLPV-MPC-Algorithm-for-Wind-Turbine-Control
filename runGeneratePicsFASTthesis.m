@@ -499,7 +499,7 @@ for idxC = 1:numel(runs)
 end
 tqChanges = all(isfinite(tqRange)) && diff(tqRange) > 1e-3*max(abs(tqRange));
 showTq = tqChanges || ~any(endsWith(ctrlNames, 'IPC'));
-yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch Bl1 (°)', 'RotSpd (rpm)', 'TwrAcc_{FA} (m/s^2)', 'GenPwr (MW)', 'Bl1 MOoP(MNm)'}; %  M_{yb,1}
+yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch Bl1 (°)', 'RotSpd (rpm)', 'TwrAcc_{FA} (m/s^2)', 'GenPwr (MW)', 'MOoP Bl1 (MNm)'}; %  M_{yb,1}
 % Tile of each signal (0: not shown)
 iW = 1; iTq = 2*showTq; iP = 2 + showTq; iS = iP + 1; iA = iP + 2; iPw = iP + 3; iM = iP + 4;
 if ~showTq, yAxCell(2) = []; end
