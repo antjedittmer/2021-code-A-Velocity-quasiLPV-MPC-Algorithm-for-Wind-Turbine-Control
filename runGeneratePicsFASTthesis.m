@@ -483,9 +483,26 @@ function plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName,
 % plotRuns plots wind, generator torque, blade 1 pitch, rotor speed, tower
 % fore-aft acceleration, generator power and blade 1 root out-of-plane moment
 % of all runs in the evaluation window. Torque axis: minimum - 10 % to
-% maximum + 10 % (above rated the torque is nearly constant).
+% maximum + 10 % (above rated the torque is nearly constant). The torque
+% tile is left out for controller sets with IPC if the torque does not
+% change (constant above rated torque in all runs).
 DT = 0.008;
-yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch_1 (°)', 'RotSpd (rpm)', 'TwrAcc_{FA} (m/s^2)', 'GenPwr (MW)', 'M_{yb,1} (MNm)'};
+Tc = cell(numel(runs), 1); tc = cell(numel(runs), 1);
+for idxC = 1:numel(runs)
+    [Tc{idxC}, tc{idxC}] = runTable(runs{idxC}, DT);
+end
+tqRange = [Inf, -Inf]; % torque range of all runs (kNm)
+for idxC = 1:numel(runs)
+    if isempty(Tc{idxC}), continue, end
+    idx = tc{idxC} >= timeEval(1) & tc{idxC} <= timeEval(2);
+    tqRange = [min(tqRange(1), min(Tc{idxC}.GenTq(idx))/1000), max(tqRange(2), max(Tc{idxC}.GenTq(idx))/1000)];
+end
+tqChanges = all(isfinite(tqRange)) && diff(tqRange) > 1e-3*max(abs(tqRange));
+showTq = tqChanges || ~any(endsWith(ctrlNames, 'IPC'));
+yAxCell = {'Wind (m/s)', 'GenTq (kNm)', 'Pitch Bl1 (°)', 'RotSpd (rpm)', 'TwrAcc_{FA} (m/s^2)', 'GenPwr (MW)', 'Bl1 MOoP(MNm)'}; %  M_{yb,1}
+% Tile of each signal (0: not shown)
+iW = 1; iTq = 2*showTq; iP = 2 + showTq; iS = iP + 1; iA = iP + 2; iPw = iP + 3; iM = iP + 4;
+if ~showTq, yAxCell(2) = []; end
 rpmRated = 12.1; % rated rotor speed of the NREL 5 MW turbine
 [~, fstName] = fileparts(fstFile);
 figure(figNo); clf;
@@ -495,11 +512,13 @@ set(gcf, 'Name', sprintf('PI vs. qLMPC designs (%s) | WECS: FAST v8.16 (%s.fst) 
 tiledlayout(numel(yAxCell), 1, 'TileSpacing', 'compact', 'Padding', 'compact');
 ax = gobjects(numel(yAxCell), 1);
 for k = 1:numel(yAxCell)
-    ax(k) = nexttile; hold on; grid on;
+    % box on: with hold on before the first plot, the new axes keep the
+    % default Box 'off' (lines only at the left and bottom), unlike the
+    % figures in figDir (plot first, then hold on)
+    ax(k) = nexttile; hold on; grid on; box on;
     ylabel(yAxCell{k});
 end
-tqRange = [Inf, -Inf]; % torque range of all runs (kNm)
-hTq = gobjects(numel(runs), 1);
+hLeg = gobjects(numel(runs), 1); % pitch lines, named for the legend
 % Line colours and styles: fixed per controller (ctrlStyle) or, for
 % colorMode 'default', the default colour order and the line styles
 % solid, dash-dot, dashed, dotted by position
@@ -515,64 +534,68 @@ for idxC = 1:numel(runs)
     end
 end
 for idxC = 1:numel(runs)
-    [T, t] = runTable(runs{idxC}, DT);
+    T = Tc{idxC}; t = tc{idxC};
     if isempty(T), continue, end
     idx = t >= timeEval(1) & t <= timeEval(2);
     ls = styles{idxC};
     col = cols(idxC, :);
     lw = 0.75 + 0.45*strcmp(ls, ':'); % dotted lines 1.2, otherwise 0.75
     if idxC == 1
-        plot(ax(1), t(idx), T.Wind(idx), 'k');
+        plot(ax(iW), t(idx), T.Wind(idx), 'k');
     end
-    hTq(idxC) = plot(ax(2), t(idx), T.GenTq(idx)/1000, ls, 'Color', col, 'LineWidth', lw, 'DisplayName', ctrlLabel(ctrlNames{idxC}));
-    tqRange = [min(tqRange(1), min(T.GenTq(idx))/1000), max(tqRange(2), max(T.GenTq(idx))/1000)];
-    plot(ax(4), t(idx), T.RotSpeed(idx), ls, 'Color', col, 'LineWidth', lw);
-    plot(ax(5), t(idx), T.NcIMUTAxs(idx), ls, 'Color', col, 'LineWidth', lw);
-    plot(ax(6), t(idx), T.GenPwr(idx)/1000, ls, 'Color', col, 'LineWidth', lw);
+
+    if showTq
+        plot(ax(iTq), t(idx), T.GenTq(idx)/1000, ls, 'Color', col, 'LineWidth', lw);
+    end
+    plot(ax(iS), t(idx), T.RotSpeed(idx), ls, 'Color', col, 'LineWidth', lw);
+    plot(ax(iA), t(idx), T.NcIMUTAxs(idx), ls, 'Color', col, 'LineWidth', lw);
+    plot(ax(iPw), t(idx), T.GenPwr(idx)/1000, ls, 'Color', col, 'LineWidth', lw);
     % Blade 1 pitch and root moment from the FAST output (individual pitch)
     F = runs{idxC}.FASTOut;
     if ~isempty(F)
         idxF = F.Time >= timeEval(1) & F.Time <= timeEval(2);
-        plot(ax(3), F.Time(idxF), F.BlPitch1(idxF), ls, 'Color', col, 'LineWidth', lw);
-        plot(ax(7), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls, 'Color', col, 'LineWidth', lw);
+        hLeg(idxC) = plot(ax(iP), F.Time(idxF), F.BlPitch1(idxF), ls, 'Color', col, 'LineWidth', lw);
+        plot(ax(iM), F.Time(idxF), F.RootMOoP1(idxF)/1000, ls, 'Color', col, 'LineWidth', lw);
     else
-        plot(ax(3), t(idx), T.BlPitch1(idx), ls, 'Color', col, 'LineWidth', lw);
-        plot(ax(7), NaN, NaN, ls, 'Color', col, 'LineWidth', lw);
+        hLeg(idxC) = plot(ax(iP), t(idx), T.BlPitch1(idx), ls, 'Color', col, 'LineWidth', lw);
+        plot(ax(iM), NaN, NaN, ls, 'Color', col, 'LineWidth', lw);
     end
+    hLeg(idxC).DisplayName = ctrlLabel(ctrlNames{idxC});
 end
 tRef = (timeEval(1):DT:timeEval(2))';
 tRef = tRef(tRef <= GenPwrRef(end, 1));
-plot(ax(6), tRef, interp1(GenPwrRef(:, 1), GenPwrRef(:, 2), tRef, 'previous', 'extrap')/1000, 'k--');
-yline(ax(4), rpmRated, 'k:', 'HandleVisibility', 'off');
+plot(ax(iPw), tRef, interp1(GenPwrRef(:, 1), GenPwrRef(:, 2), tRef, 'previous', 'extrap')/1000, 'k--');
+yline(ax(iS), rpmRated, 'k:', 'HandleVisibility', 'off');
 titleStr = sprintf('FAST v8.16, %s, pitch rate limit %g°/s', windLabel, maxRate);
 if numel(runs) < 5
     % Up to four controllers: second title line with the controller names in their
     % line colours
     names = cell(1, numel(runs));
     for idxC = 1:numel(runs)
-        if ~isgraphics(hTq(idxC)), continue, end
+        if ~isgraphics(hLeg(idxC)), continue, end
         names{idxC} = sprintf('\\color[rgb]{%.3f,%.3f,%.3f}%s', cols(idxC, :), ctrlLabel(ctrlNames{idxC}));
     end
     title(ax(1), {titleStr, strjoin(names(~cellfun(@isempty, names)), '   ')});
 else
     % All designs: legend below the axes
     title(ax(1), titleStr);
-    lgd = legend(ax(2));
+    lgd = legend(ax(iP), hLeg(isgraphics(hLeg)));
     lgd.Layout.Tile = 'south'; % outside the tiles, all axes keep the same width
     lgd.Box = 0;
     lgd.NumColumns = 2;
 end
 xlabel(ax(end), 'Time (s)');
 linkaxes(ax, 'x'); axis(ax, 'tight');
-if all(isfinite(tqRange))
-    ylim(ax(2), [0.9*tqRange(1), 1.1*tqRange(2)]);
+if showTq && all(isfinite(tqRange))
+    ylim(ax(iTq), [0.9*tqRange(1), 1.1*tqRange(2)]);
 end
 tightenTiles(ax); % x tick labels only at the bottom, same tile spacing in all figures
 posDefault = get(0, 'DefaultFigurePosition');
 set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*1.2, posDefault(3), posDefault(4)*2.3]);
 set(findall(gcf, '-property', 'FontSize'), 'FontSize', 11);
 
-printFigFixed(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), [14.8 25.6]);
+% without the torque tile one tile height less: same tile height in all figures
+printFigFixed(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), [14.8 25.6 - 3.2*~showTq]);
 end
 
 function printFigFixed(h, fName, sizeCm)
