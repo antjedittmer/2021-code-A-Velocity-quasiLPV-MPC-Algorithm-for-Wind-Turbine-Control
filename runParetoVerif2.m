@@ -28,7 +28,8 @@
 %   (YawBrMyp, exponent 4), all with calculateDamageBladesNew
 % - C_P: mean of the generator power, C_dP: std of the generator power
 % - C_Act: actuator power, mean over the blades and time of |pitch rate *
-%   pitch moment RootMzb| (as makeAALC_SummaryTable)
+%   pitch moment RootMzb| (as makeAALC_SummaryTable, but with the pitch rate
+%   differenced over 0.04 s, see pitchRate)
 % - proxies, also for Mdl2 (no blade and tower loads, no pitch moment):
 %   C_TwrAcc (std of the tower top fore-aft acceleration NcIMUTAxs) and
 %   C_PitchRate (mean of |pitch rate|)
@@ -378,7 +379,8 @@ function a = actEst(s, windHub, c, DT, tStart)
 pitch = s.pitch(:, 1);
 mzb = pitchMomentRegressors(pitch, windHub, DT)*c;
 idx = find(s.t >= tStart);
-a = mean(abs(diff(pitch(idx))/DT.*mzb(idx(1:end-1))));
+rate = pitchRate(s.t(idx), pitch(idx));
+a = mean(abs(rate.*mzb(idx(1:numel(rate)))));
 end
 
 function s = signalsMdl2(T, DT)
@@ -429,8 +431,7 @@ function c = criteria(s, tStart)
 % criteria in the evaluation window t >= tStart (loads NaN without load signals)
 idx = s.t >= tStart;
 t = s.t(idx);
-dt = diff(t);
-rate = diff(s.pitch(idx, :))./dt;
+rate = pitchRate(t, s.pitch(idx, :)); % from the samples 1:end-k
 c.meanP = mean(s.genPwr(idx));
 c.stdP = std(s.genPwr(idx));
 c.stdTwrAcc = std(s.twrAcc(idx));
@@ -441,6 +442,19 @@ if isfield(s, 'myc')
     c.delT = calculateDamageBladesNew(s.twrMy(idx), 4);
     c.delTT = calculateDamageBladesNew(s.twrTopMy(idx), 4);
     mzb = s.mzb(idx, :);
-    c.act = mean(abs(rate.*mzb(1:end-1, :)), 'all');
+    c.act = mean(abs(rate.*mzb(1:size(rate, 1), :)), 'all');
 end
+end
+
+function rate = pitchRate(t, pitch, rateStep)
+% pitchRate pitch rate (deg/s) as difference quotient over rateStep
+% (default 0.04 s, overlapping intervals; row j from the samples j and j+k)
+% instead of one time step: the blade pitch of the FAST v8.16 output at
+% 0.008 s jitters from sample to sample with the qLMPC (FAST extrapolates
+% the Simulink pitch command, InterpOrder = 2), which raises the one-step
+% rate of the qLMPC designs by up to 65% without being pitch motion. Same
+% step for all plants (OpenFAST at 0.01 s and Mdl2 are hardly affected).
+if nargin < 3, rateStep = 0.04; end
+k = max(1, round(rateStep/median(diff(t))));
+rate = (pitch(1+k:end, :) - pitch(1:end-k, :))./(t(1+k:end) - t(1:end-k));
 end

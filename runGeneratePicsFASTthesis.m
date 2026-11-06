@@ -21,7 +21,8 @@
 % the sweep): std
 % of the rotor speed, the power tracking error |P_g,ref - P_g|, the tower
 % fore-aft acceleration, the generator torque rate, the (collective) pitch
-% rate and the blade 1 pitch rate; from the FAST output file the std of the
+% rate and the blade 1 pitch rate (both differenced over 0.04 s, see
+% pitchRate); from the FAST output file the std of the
 % blade root out-of-plane moments (mean of the three blades), the blade root
 % DEL (Woehler exponent 10, maximum of the three blades) and the tower base
 % fore-aft DEL (TwrBsMyt, exponent 4), as in thesis section 4.2. The ratio
@@ -49,21 +50,31 @@ ipcMaxRateCtrl = maxRate;
 % - 'flapNotchSmooth12Tower': as above with the tower velocity weight
 % - 'flapNotchIPC': flapNotch with the DLR individual pitch controller
 %   (ipc_dlr, adapted to FAST: gain set 2 scaled by 0.3, no tower term)
+% - 'flapNotchSmooth12IPC': flapNotchSmooth12 with the same IPC
 designNames = {'beta', 'omega', 'flapNotch', 'flapNotchSmooth12', 'flapNotchSmooth12Tower', ...
-    'flapNotchIPC'};
+    'flapNotchIPC', 'flapNotchSmooth12IPC'};
 % Controller sets: designs (with the PI) and wind cases of one figure and
 % table per wind case. Sets with fewer than 5 designs get the controller
 % names as file name suffix, e.g. cmpCtrlFASTthesis_NTM18B_PI_flapNotch_flapNotchIPC
 % and resultsFASTthesis_NTM18B_PI_flapNotch_flapNotchIPC.tex
 % - thesis qLMPC results: original design and the two FAST designs, sweep and 18 m/s
 % - thesis comparison: notch filter design without and with IPC, 18 m/s
+% - diagnostic: smooth design without and with IPC, 18 m/s
+% - thesis IPC table: notch filter and smooth design, each without and with
+%   IPC, 18 m/s
 % - all designs (file names without suffix)
 % Third column: line colours and styles 'fixed' (the same per controller in all
 % figures, ctrlStyle) or 'default' (MATLAB default colour order and the line
 % styles solid, dash-dot, dashed, dotted by position)
-ctrlSets = {designNames([1, 3, 4]), {'NTM18B', 'Sweep'}, 'fixed';
-    designNames([3, 6]), {'NTM18B'}, 'default';
-    designNames, {'NTM18B', 'Sweep'}, 'fixed'};
+% Fourth column: file name and label of a thesis table with the signals as
+% rows and the controllers as columns (writeTableThesis; the designs in pairs
+% without and with IPC), empty for none
+ctrlSets = {designNames([1, 3, 4]), {'NTM18B', 'Sweep'}, 'fixed', {};
+    designNames([3, 6]), {'NTM18B'}, 'default', {};
+    designNames([4, 7]), {'NTM18B'}, 'default', {};
+    designNames([3, 6, 4, 7]), {'NTM18B'}, 'fixed', ...
+    {'tab_CtrlComparisonFASTIPC', 'tab:CtrlComparisonFASTNTM18B_PI_flapNotch_flapNotchIPC'};
+    designNames, {'NTM18B', 'Sweep'}, 'fixed', {}};
 
 
 % Wind cases: name, reference data (initial values, stop time), FAST input file,
@@ -136,6 +147,9 @@ for idxSet = 1:size(ctrlSets, 1)
         resultsFAST.(windName) = evaluateRuns(runs, ctrlNames, GenPwrRef, timeEval);
         printTable(resultsFAST.(windName), windCases{idxW, 4}, maxRate);
         writeTable(resultsFAST.(windName), figDir, [windName, fileSuffix], windCases{idxW, 4}, maxRate);
+        if ~isempty(ctrlSets{idxSet, 4})
+            writeTableThesis(resultsFAST.(windName), figDir, ctrlSets{idxSet, 4}{:}, windCases{idxW, 4}, maxRate);
+        end
 
         % Time series
         plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, [windName, fileSuffix], windCases{idxW, 4}, fstFile, maxRate, ctrlSets{idxSet, 3});
@@ -294,7 +308,7 @@ for idxC = 1:nC
     PwrErrStd(idxC) = std(abs(PGRef - T.GenPwr(idx)));
     TwrFAStd(idxC) = std(T.NcIMUTAxs(idx));
     GenTqRateStd(idxC) = std(diff(T.GenTq(idx)/1000)/DT);
-    PitchRateStd(idxC) = std(diff(T.BlPitch1(idx))/DT);
+    PitchRateStd(idxC) = std(pitchRate(t(idx), T.BlPitch1(idx)));
     if ~isempty(runs{idxC}.tictoc)
         tCpuMean(idxC) = mean(runs{idxC}.tictoc);
     end
@@ -303,7 +317,7 @@ for idxC = 1:nC
     if ~isempty(F)
         idxF = F.Time >= timeEval(1) & F.Time <= timeEval(2);
         tF = F.Time(idxF);
-        BlPitchRateStd(idxC) = std(diff(F.BlPitch1(idxF))./diff(tF));
+        BlPitchRateStd(idxC) = std(pitchRate(tF, F.BlPitch1(idxF)));
         Myb = [F.RootMOoP1(idxF), F.RootMOoP2(idxF), F.RootMOoP3(idxF)];
         BlMOoPStd(idxC) = mean(std(Myb));
         BlDEL(idxC) = max([damageEquivalentLoad(Myb(:, 1), tF, 10), ...
@@ -321,6 +335,19 @@ metricNames = {'RotSpdStd', 'PwrErrStd', 'TwrFAStd', 'GenTqRateStd', 'PitchRateS
 for k = 1:numel(metricNames)
     Tres.(['ratio_', metricNames{k}]) = Tres.(metricNames{k})(1)./Tres.(metricNames{k});
 end
+end
+
+function rate = pitchRate(t, pitch, rateStep)
+% pitchRate pitch rate (deg/s) as difference quotient over rateStep
+% (default 0.04 s, overlapping intervals) instead of one time step: the
+% blade pitch of the FAST v8.16 output at 0.008 s jitters from sample to
+% sample with the qLMPC (FAST extrapolates the Simulink pitch command,
+% InterpOrder = 2; text output with four digits), which doubles the std of
+% the one-step rate of the qLMPC designs without being pitch motion. Over
+% 0.04 s blade 1 and the logged collective pitch agree without IPC.
+if nargin < 3, rateStep = 0.04; end
+k = max(1, round(rateStep/median(diff(t))));
+rate = (pitch(1+k:end, :) - pitch(1:end-k, :))./(t(1+k:end) - t(1:end-k));
 end
 
 function printTable(Tres, windLabel, maxRate)
@@ -398,6 +425,60 @@ fprintf(fid, '\\end{table}\n');
 fclose(fid);
 end
 
+function writeTableThesis(Tres, figDir, fileName, tabLabel, windLabel, maxRate)
+% writeTableThesis writes the thesis table <fileName>.tex with the signals as
+% rows and the controllers as columns: baseline PI, then the qLMPC designs in
+% pairs without and with IPC (e.g. flapNotch, flapNotchIPC), each value with
+% the ratio PI/controller in parentheses
+ctrlNames = Tres.Row(:)';
+designs = ctrlNames(2:end);
+assert(strcmp(ctrlNames{1}, 'PI') && mod(numel(designs), 2) == 0 && ...
+    all(strcmp(strcat(designs(1:2:end), 'IPC'), designs(2:2:end))), ...
+    'writeTableThesis: expected PI followed by pairs <design>, <design>IPC');
+nP = numel(designs)/2;
+rows = {'TwrFAStd', 'Tower acc.\ (m/s$^2$)', '%.4f';
+    'PwrErrStd', 'Power error (kW)', '%.2f';
+    'RotSpdStd', 'Rotor speed (rpm)', '%.4f';
+    'PitchRateStd', 'Collective pitch rate (\textdegree/s)', '%.2f';
+    'BlPitchRateStd', 'Blade 1 pitch rate (\textdegree/s)', '%.2f';
+    'BlMOoPStd', 'Blade root OoP moment (kNm)', '%.0f';
+    'BlDEL', 'Blade root DEL (kNm)', '%.0f';
+    'TwrDEL', 'Tower base DEL (kNm)', '%.0f'};
+nStd = 6; % rows 1 to nStd: standard deviations, then the DELs
+groupLabels = cellfun(@(d) [upper(d(1)), d(2:end)], cellfun(@ctrlLabel, designs(1:2:end), ...
+    'UniformOutput', false), 'UniformOutput', false);
+
+fid = fopen(fullfile(figDir, [fileName, '.tex']), 'w');
+fprintf(fid, '\\begin{table}[h]\n    \\centering\n');
+fprintf(fid, ['    \\caption[Controller comparison on FAST, %s: %s, each with and without IPC.]', ...
+    '{Controller comparison on FAST v8.16, %s, pitch rate limit %g\\textdegree/s, %s, each without ', ...
+    'and with IPC. Top: standard deviations of the tower fore-aft acceleration, the power tracking ', ...
+    'error, the rotor speed, the collective and the blade 1 pitch rate (differenced over 0.04\\,s), and ', ...
+    'the blade root out-of-plane moment (mean of the blades). Bottom: damage equivalent loads of the ', ...
+    'blade root (W\\"ohler exponent 10, maximum of the blades) and the tower base (exponent 4). In ', ...
+    'parentheses the ratio baseline PI/controller; values above 1 indicate an improvement.}\n'], ...
+    windLabel, strjoin(lower(groupLabels), ' and '), windLabel, maxRate, strjoin(lower(groupLabels), ' and '));
+fprintf(fid, '    \\label{%s}\n', tabLabel);
+fprintf(fid, '    \\begin{tabular}{l r%s}\n        \\toprule\n', repmat('rr', 1, nP));
+fprintf(fid, '        & %s \\\\\n', strjoin([{''}, strcat('\multicolumn{2}{c}{', groupLabels, '}')], ' & '));
+fprintf(fid, '        %s\n', strjoin(arrayfun(@(k) sprintf('\\cmidrule(lr){%d-%d}', 2*k + 1, 2*k + 2), ...
+    1:nP, 'UniformOutput', false), ' '));
+fprintf(fid, '        Signal & Baseline PI%s \\\\\n        \\midrule\n', repmat(' & without IPC & with IPC', 1, nP));
+for idxR = 1:size(rows, 1)
+    if idxR == nStd + 1
+        fprintf(fid, '        \\midrule\n');
+    end
+    vals = Tres.(rows{idxR, 1});
+    ratios = Tres.(['ratio_', rows{idxR, 1}]);
+    cells = [{sprintf(rows{idxR, 3}, vals(1))}, arrayfun(@(k) sprintf([rows{idxR, 3}, ' (%.2f)'], ...
+        vals(k), ratios(k)), 2:numel(vals), 'UniformOutput', false)];
+    fprintf(fid, '        %s & %s \\\\\n', rows{idxR, 2}, strjoin(cells, ' & '));
+end
+fprintf(fid, '        \\bottomrule\n    \\end{tabular}\n\\end{table}\n');
+fclose(fid);
+fprintf('Saved %s\n', fullfile(figDir, [fileName, '.tex']));
+end
+
 function plotRuns(runs, ctrlNames, GenPwrRef, timeEval, figNo, figDir, windName, windLabel, fstFile, maxRate, colorMode)
 % plotRuns plots wind, generator torque, blade 1 pitch, rotor speed, tower
 % fore-aft acceleration, generator power and blade 1 root out-of-plane moment
@@ -410,7 +491,8 @@ rpmRated = 12.1; % rated rotor speed of the NREL 5 MW turbine
 figure(figNo); clf;
 set(gcf, 'Name', sprintf('PI vs. qLMPC designs (%s) | WECS: FAST v8.16 (%s.fst) | wind: %s | rate limit %g deg/s', ...
     strjoin(ctrlNames(2:end), ', '), fstName, windLabel, maxRate), 'NumberTitle', 'off');
-tiledlayout(numel(yAxCell), 1, 'TileSpacing', 'Compact');
+% Small, equal gaps between the tiles (tightenTiles below: x tick labels only on the bottom tile)
+tiledlayout(numel(yAxCell), 1, 'TileSpacing', 'compact', 'Padding', 'compact');
 ax = gobjects(numel(yAxCell), 1);
 for k = 1:numel(yAxCell)
     ax(k) = nexttile; hold on; grid on;
@@ -463,8 +545,8 @@ tRef = tRef(tRef <= GenPwrRef(end, 1));
 plot(ax(6), tRef, interp1(GenPwrRef(:, 1), GenPwrRef(:, 2), tRef, 'previous', 'extrap')/1000, 'k--');
 yline(ax(4), rpmRated, 'k:', 'HandleVisibility', 'off');
 titleStr = sprintf('FAST v8.16, %s, pitch rate limit %g°/s', windLabel, maxRate);
-if numel(runs) < 6
-    % Few controllers: second title line with the controller names in their
+if numel(runs) < 5
+    % Up to four controllers: second title line with the controller names in their
     % line colours
     names = cell(1, numel(runs));
     for idxC = 1:numel(runs)
@@ -485,6 +567,7 @@ linkaxes(ax, 'x'); axis(ax, 'tight');
 if all(isfinite(tqRange))
     ylim(ax(2), [0.9*tqRange(1), 1.1*tqRange(2)]);
 end
+tightenTiles(ax); % x tick labels only at the bottom, same tile spacing in all figures
 posDefault = get(0, 'DefaultFigurePosition');
 set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*1.2, posDefault(3), posDefault(4)*2.3]);
 set(findall(gcf, '-property', 'FontSize'), 'FontSize', 11);
@@ -509,7 +592,8 @@ function label = ctrlLabel(name)
 % ctrlLabel name of a controller in the figures (thesis terms)
 labels = struct('PI', 'Baseline PI', 'beta', 'original qLMPC', 'omega', 'speed tracking qLMPC', ...
     'flapNotch', 'notch filter design', 'flapNotchSmooth12', 'smooth design', ...
-    'flapNotchSmooth12Tower', 'smooth design, tower weight', 'flapNotchIPC', 'notch filter design + IPC');
+    'flapNotchSmooth12Tower', 'smooth design, tower weight', 'flapNotchIPC', 'notch filter design + IPC', ...
+    'flapNotchSmooth12IPC', 'smooth design + IPC');
 if isfield(labels, name)
     label = labels.(name);
 else
@@ -520,11 +604,13 @@ end
 function [col, ls] = ctrlStyle(name)
 % ctrlStyle fixed line colour and line style of a controller, the same in
 % all figures
-order = {'PI', 'beta', 'flapNotch', 'flapNotchSmooth12', 'flapNotchIPC', 'omega', 'flapNotchSmooth12Tower'};
+order = {'PI', 'beta', 'flapNotch', 'flapNotchSmooth12', 'flapNotchIPC', 'omega', 'flapNotchSmooth12Tower', ...
+    'flapNotchSmooth12IPC'};
 lineStyles = {'-', '-.', '--', ':'};
 k = find(strcmp(order, name), 1);
 if isempty(k), k = numel(order) + 1; end
-colors = lines(numel(order) + 1);
+% lines repeats its 7 colours: grey and black for the 8th and further controllers
+colors = [lines(7); 0.45 0.45 0.45; 0 0 0];
 col = colors(k, :);
 ls = lineStyles{mod(k - 1, numel(lineStyles)) + 1};
 end
