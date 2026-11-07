@@ -1,4 +1,17 @@
 %% Script to generate all figures of the thesis created with MATLAB
+
+% Titles of the figures (with diagnostics such as VAF values, gains or
+% colour keys) per step of the step list in main, in this order:
+%  1 runGeneratePicsPaper           2 runGeneratePicsFASTthesis
+%  3 plotParetoVerif2               4 c_T, c_P, c_Q maps (no titles)
+%  5 mainPlotPaper (IPC/TEFC)       6 plotIPC_RateLimitComparison
+%  7 runWFSimAnimationPlots (none)  8 mainGeneratePlotThesis
+%  9 mainGeneratePlotThesisAdaptiveAIC
+% 10 plotScholarStatisticsWT       11 plotScholarStatisticsWF
+% false: no titles (the title calls of the plot functions are skipped),
+% true: titles as before. Scripts run on their own show the titles.
+showTitles = [false, false, false, false, false, false, false, false, false, true, true];
+
 % Calls the figure scripts of the repositories next to this one (same
 % parent folder):
 %   2021-code-A-Velocity-quasiLPV-MPC-Algorithm-for-Wind-Turbine-Control
@@ -37,14 +50,17 @@
 % call. Thesis figures (eps, png) that none of the scripts creates are
 % listed at the end.
 %
+% Titles: the vector showTitles in the first lines switches the titles of
+% the figures per step (default: off, on for the Google Scholar plots).
+%
 % Each script runs in the base workspace (Simulink models read their
 % variables from there) and may clear it; the state of this script is kept
 % in the local function main. A failing script is reported and skipped;
 % the MATLAB path and the current folder are restored after each script.
 
-main();
+main(showTitles);
 
-function main()
+function main(showTitles)
 %% Folders
 mainDir = fileparts(mfilename('fullpath'));
 parentDir = fileparts(mainDir);
@@ -93,6 +109,9 @@ figRenamed = {
 
 %% Run the figure scripts
 nSteps = size(steps, 1);
+if numel(showTitles) ~= nSteps
+    error('showTitles must have %d elements, one per step.', nSteps);
+end
 status = strings(nSteps, 1);
 for idx = 1:nSteps
     [repoDir, cmd, descr, doRun] = steps{idx, :};
@@ -101,7 +120,7 @@ for idx = 1:nSteps
         continue
     end
     fprintf('\n===== %d/%d %s =====\n', idx, nSteps, descr);
-    status(idx) = runStep(repoDir, cmd);
+    status(idx) = runStep(repoDir, cmd, showTitles(idx));
 end
 
 %% Figures linked in the thesis (subfolder/name, lower case, no extension)
@@ -162,12 +181,15 @@ if ~isempty(missing)
 end
 end
 
-function status = runStep(repoDir, cmd)
+function status = runStep(repoDir, cmd, showTitle)
 % Runs cmd in repoDir: a script file (path relative to repoDir) or a
 % function call in the base workspace, or a function handle; restores the
-% MATLAB path and the current folder afterwards
+% MATLAB path and the current folder afterwards. showTitle: titles of the
+% figures (root application data ShowThesisTitle, read by the plot
+% functions, removed afterwards)
 oldPath = path;
 oldDir = pwd;
+setappdata(groot, 'ShowThesisTitle', logical(showTitle));
 cleanup = onCleanup(@() restoreState(oldPath, oldDir));
 try
     if ~isfolder(repoDir)
@@ -192,6 +214,9 @@ end
 function restoreState(oldPath, oldDir)
 path(oldPath);
 cd(oldDir);
+if isappdata(groot, 'ShowThesisTitle')
+    rmappdata(groot, 'ShowThesisTitle');
+end
 end
 
 function plotCoefficientMaps(velDir)

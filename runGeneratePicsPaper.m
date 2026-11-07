@@ -551,8 +551,10 @@ for k = 1:size(sigCell, 1)
     axis tight; grid on;
     ylabel(sigCell{k,3});
     if k == 1
-        title(['{\color[rgb]{', num2str(cl(1,:)), '}Baseline PI} vs. ', ...
-            '{\color[rgb]{', num2str(cl(2,:)), '}qLMPC}, filtered wind, rate limit 13 °/s']);
+        if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+            title(['{\color[rgb]{', num2str(cl(1,:)), '}Baseline PI} vs. ', ...
+                '{\color[rgb]{', num2str(cl(2,:)), '}qLMPC}, filtered wind, rate limit 13 °/s']);
+        end
     end
 end
 xlabel('Time (s)');

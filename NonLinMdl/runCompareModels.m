@@ -31,6 +31,9 @@ if nargin < 4 || isempty(yAxCell) % Axes labels for figure
     yAxCell = {'Wind V (m/s)', 'GenTq T_g (kNm)', 'Pitch \beta (°)', 'RotSpd \omega_r (rpm)',...
         'GenPwr P_g (MW)','Twr_{FA} y_t (m/s^2)', 'Twr_{SW} x_t (m/s^2)'};
 end
+if numel(yAxCell) < 8 % blade tip out-of-plane displacement (last tile)
+    yAxCell{8} = 'BldTip_{OoP} (m)';
+end
 
 if nargin <5 || isempty(figDirStr)
     figDirStr = 'figDir';
@@ -142,6 +145,11 @@ OutTableTest1 = getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,
 matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strFig,'.mat']);
 OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadData,OutTable,simMdlname2,varnames);
 
+% Blade state theta_b of Mdl2 (not in the output tables; Mdl2 is simulated
+% again with the states logged if the mat file is missing)
+matFileBlade = fullfile(dataDirOut,['BladeStateTest2',strFig,'.mat']);
+[timeBlade, thetaB] = getBladeStateMdl2(matFileBlade,loadData,OutTable,simMdlname2,OutTableTest2);
+
 %% Create output plots (for use in power point)
 % Two plots are created: 1st plot shows wind, rotor speed,
 
@@ -189,7 +197,9 @@ if allPlots == 1
     axis tight; grid on;
     if ~isempty(ylimVal), ylim(ylimVal(1,:)); end
     ylabel('wind [m/s]')
-    title(titleStr1);
+    if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+        title(titleStr1);
+    end
 
     axPlot(2) = subplot(3,1,2);
     if cmpOnly1 <= 1
@@ -233,7 +243,9 @@ if allPlots == 1
     end
     axis tight; grid on;
     ylabel('RotSpd \omega_r [rpm]')
-    title(titleStr2);
+    if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+        title(titleStr2);
+    end
 
     axPlot2(2) = subplot(3,1,2);
     if cmpOnly1 <= 1
@@ -289,8 +301,17 @@ end
 
 
 %% Figure for paper and dissertation
+% Blade tip out-of-plane displacement (last tile): Mdl2 R*theta_b (rigid
+% blade, rotation theta_b about the blade root), FAST mean of the
+% out-of-plane tip deflections of the three blades (relative to the
+% undeflected blade). Mdl1 has no blade degree of freedom.
+Rrotor = 63; % m, rotor radius NREL 5 MW (wecs.Rr)
+bldTipMdl2 = Rrotor*interp1(timeBlade, thetaB, time);
+bldTipFAST = mean([OutTable.OoPDefl1, OutTable.OoPDefl2, OutTable.OoPDefl3], 2);
+bldTipFAST = bldTipFAST(idxTime);
+
 figure(figNo1 + 2*allPlots)
-nAx = 7;
+nAx = 8;
 tiledlayout(nAx,1,'TileSpacing','compact','Padding','compact'); % small, equal gaps between the tiles (tightenTiles)
 
 axPlotAll(1) = nexttile; %subplot(nAx,1,1);
@@ -298,7 +319,9 @@ plot(time,vectAmpWind(idxTime),time,OutTableTest1.Wind(idxTime),'k--');
 axis tight; grid on;
 ylabel(yAxCell{1}); %'wind [m/s]')
 if ~isempty(ylimVal), ylim(gca,ylimVal(1,:)); end
-title(titleStr);
+if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+    title(titleStr);
+end
 
 axPlotAll(2) = nexttile; %axPlotAll(2) = subplot(nAx,1,2);
 plot(time,OutTableTest2.GenTq(idxTime)/10^3,time,OutTable.GenTq(idxTime),time,OutTableTest1.GenTq(idxTime)/10^3,'k--');
@@ -341,13 +364,19 @@ plot(time,OutTableTest2.GenPwr(idxTime)/1000,time,OutTable.GenPwr(idxTime)/1000,
 axis tight; grid on;
 if ~isempty(ylimVal), ylim(gca,ylimVal(7,:)); end
 ylabel(yAxCell{5}); %'GenPwr P_g [MW]')
+
+axPlotAll(8) = nexttile;
+plot(time,bldTipMdl2,time,bldTipFAST);
+axis tight; grid on;
+if size(ylimVal,1) >= 8, ylim(gca,ylimVal(8,:)); end
+ylabel(yAxCell{8});
 xlabel('Time (s)')
 linkaxes(axPlotAll,'x');
 tightenTiles(axPlotAll); % x tick labels only at the bottom, same tile spacing in all figures
 
 set(gcf,'Name',['cmpTimeDomain_All',strFig])
 posDefault = get(0,'DefaultFigurePosition');
-pl = 2.4;
+pl = 2.4*nAx/7; % same tile height as with the seven tiles before
 set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*pl]);
 setFigureSize(gcf, [1 pl]); % export size independent of the screen
 
@@ -371,7 +400,7 @@ if OutTable.Time(end) >1000
 
     % Re-plot each subplot with same data and axes
     plot(axZoom(1), time, vectAmpWind(idxTime), time, OutTableTest1.Wind(idxTime), 'k--');
-    ylabel(axZoom(1), yAxCell{1}); title(axZoom(1), titleStr); grid(axZoom(1), 'on');
+    ylabel(axZoom(1), yAxCell{1}); if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle'), title(axZoom(1), titleStr); end, grid(axZoom(1), 'on');
 
     plot(axZoom(2), time, OutTableTest2.GenTq(idxTime)/1e3, time, OutTable.GenTq(idxTime), time, OutTableTest1.GenTq(idxTime)/1e3, 'k--');
     ylabel(axZoom(2), yAxCell{2}); grid(axZoom(2), 'on');
@@ -392,7 +421,10 @@ if OutTable.Time(end) >1000
     set(axZoom(6),'YLim', get(axZoom(5),'YLim'))
 
     plot(axZoom(7), time, OutTableTest2.GenPwr(idxTime)/1e3, time, OutTable.GenPwr(idxTime)/1e3, time, OutTableTest1.GenPwr(idxTime)/1e3, 'k--');
-    ylabel(axZoom(7), yAxCell{5}); xlabel(axZoom(7), 'Time (s)'); grid(axZoom(7), 'on');
+    ylabel(axZoom(7), yAxCell{5}); grid(axZoom(7), 'on');
+
+    plot(axZoom(8), time, bldTipMdl2, time, bldTipFAST);
+    ylabel(axZoom(8), yAxCell{8}); xlabel(axZoom(8), 'Time (s)'); grid(axZoom(8), 'on');
 
     % Link and zoom
     linkaxes(axZoom, 'x');

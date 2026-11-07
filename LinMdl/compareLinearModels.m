@@ -132,6 +132,9 @@ B1_3 = [zeros(4,3); M\Q3];
 % Options for Bode plots
 opts = bodeoptions('cstprefs');
 opts.FreqUnits = 'Hz'; opts.MagUnits ='Abs'; opts.MagScale ='log'; opts.XLim ={[1e-2 2]};
+if isappdata(groot, 'ShowThesisTitle') && ~getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+    opts.Title.String = ''; % no default title 'Bode Diagram'
+end
 
 % Constant matrices
 % Set airspeed independent system and input matrix
@@ -439,7 +442,9 @@ for index =  speedVec
         % Title string
         titleStr = sprintf('Bode mag. plot for V = %d, pitch = %2.2f, and TSR = %2.4f',Vbar,beta_bar,Lambda_bar);
         titleCell = {titleStr, [legCell{1},legCell{2},strExtr]};
-        title(['V_{\infty}',sprintf(' = %d: %s', Vbar, titleCell{2})]); %title(titleCell)
+        if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+            title(['V_{\infty}',sprintf(' = %d: %s', Vbar, titleCell{2})]); %title(titleCell)
+        end
 
         % Figure information
         figStr = [strrep(titleStr,'Bode mag. plot for V =','Figure_Bode V ='),'.png'];

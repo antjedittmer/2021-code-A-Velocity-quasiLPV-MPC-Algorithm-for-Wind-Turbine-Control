@@ -98,7 +98,9 @@ for idxP = 1:nP
             plotController(ax, T, ctrl(k, :), {colB, colT, colTT, colP}, rateFill, fillCol, lw, ms, 0);
         end
     end
-    title(ax, titles{idxP}, 'FontWeight', 'normal');
+    if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+        title(ax, titles{idxP}, 'FontWeight', 'normal');
+    end
     ylabel(ax, 'Evaluation criteria (-)');
     xlim(ax, [1, xMax + 0.5]); % room for the ovals and labels
     ylim(ax, [0.3, yMax]);
@@ -177,7 +179,9 @@ for idxP = 1:nP
     grid(ax, 'on');
     ylim(ax, [0, yMaxBar]);
     ylabel(ax, 'Evaluation criteria (-)');
-    title(ax, titlesBar{idxP}, 'FontWeight', 'normal');
+    if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+        title(ax, titlesBar{idxP}, 'FontWeight', 'normal');
+    end
     set(ax, 'FontSize', 11);
     ax.XTick = 1:numel(names);
     xlim(ax, [0.5, numel(names) + 0.5]);

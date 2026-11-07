@@ -419,15 +419,19 @@ if useTitle(2) == 0 % either plot the
     ylabel(yAxCell{1});
     axis tight; grid on;
     if useTitle(1)
-        title({['Baseline (PI) vs. qLMPC; ', meanOpt],... %WT mdl: Model2
-            ['q_ = [', qVec,'], r = [',rVec,'], p = ',pVec,'* q']})
+        if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+            title({['Baseline (PI) vs. qLMPC; ', meanOpt],... %WT mdl: Model2
+                ['q_ = [', qVec,'], r = [',rVec,'], p = ',pVec,'* q']})
+        end
     end
 
     % Tower fore-aft acceleration
     ax1(2) = subplot(3,1,2);
     plot(timeVecPlot, OutTableTest2Plot.NcIMUTAxs, timeVecPlot,OutTableMPCPlot.NcIMUTAxs,'-.');
     if useTitle(1)
-        title([yAxCell{2}, ': var_{PI}: ',titleStdPI , ', var_{qLMPC}: ' ,titleStdqLPV,', ratio: ' ,ratioStd])
+        if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+            title([yAxCell{2}, ': var_{PI}: ',titleStdPI , ', var_{qLMPC}: ' ,titleStdqLPV,', ratio: ' ,ratioStd])
+        end
     end
     ylabel(yAxCell{2}); %'y_t [m/s^2]')
     axis tight; grid on;
@@ -436,8 +440,10 @@ if useTitle(2) == 0 % either plot the
     ax1(3) = subplot(3,1,3);
     plot(timeVecPlot, OutTableTest2Plot.GenPwr/1000, timeVecPlot,OutTableMPCPlot.GenPwr/1000,'-.',timeVecPlot,PGRef/1000,'k--');
     if useTitle(1)
-        title(['P_{g,ref}-P_g [kW]: var_{PI}: ',titleStdPI_Pwr, ', var_{qLMPC}: ' ,...
-            titleStdqLPV_Pwr,', ratio: ' ,ratioStd_Pwr])
+        if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+            title(['P_{g,ref}-P_g [kW]: var_{PI}: ',titleStdPI_Pwr, ', var_{qLMPC}: ' ,...
+                titleStdqLPV_Pwr,', ratio: ' ,ratioStd_Pwr])
+        end
     end
     ylabel(strrep(yAxCell{3}, 'kW','MW'))
     axis tight; grid on;
@@ -507,7 +513,9 @@ axPlotAll(idxT) = nexttile; %subplot(nAx,1,1);
 plot(timeVecPlot,OutTableMPCPlot.Wind);
 axis tight; grid on;
 ylabel(yAxCell{idxT}); %'wind [m/s]')
-title(titleStr);
+if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+    title(titleStr);
+end
 idxT = idxT + 1;
 
 axPlotAll(idxT) = nexttile; %axPlotAll(2) = subplot(nAx,1,2);
