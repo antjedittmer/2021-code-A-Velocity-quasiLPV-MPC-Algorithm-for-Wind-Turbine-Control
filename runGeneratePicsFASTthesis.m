@@ -575,10 +575,14 @@ if numel(runs) < 5
         if ~isgraphics(hLeg(idxC)), continue, end
         names{idxC} = sprintf('\\color[rgb]{%.3f,%.3f,%.3f}%s', cols(idxC, :), ctrlLabel(ctrlNames{idxC}));
     end
-    title(ax(1), {titleStr, strjoin(names(~cellfun(@isempty, names)), '   ')});
+    if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+        title(ax(1), {titleStr, strjoin(names(~cellfun(@isempty, names)), '   ')});
+    end
 else
     % All designs: legend below the axes
-    title(ax(1), titleStr);
+    if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+        title(ax(1), titleStr);
+    end
     lgd = legend(ax(iP), hLeg(isgraphics(hLeg)));
     lgd.Layout.Tile = 'south'; % outside the tiles, all axes keep the same width
     lgd.Box = 0;

@@ -100,7 +100,9 @@ axPlotAll(1) = nexttile;
 plot(time, vectAmpWind(idxTime), time, OutTableTest1.Wind(idxTime), '--');
 axis tight; grid on;
 ylabel(yAxCell{1});
-title(titleStr);
+if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') % title switch of runGenerateAllThesisFigures
+    title(titleStr);
+end
 
 % --- Generator torque (conditional)
 if plotGenTq
