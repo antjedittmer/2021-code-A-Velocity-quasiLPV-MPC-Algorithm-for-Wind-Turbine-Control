@@ -1,126 +1,189 @@
 %% Script to generate all figures of the thesis created with MATLAB
-% Calls the figure scripts of the three repositories next to this one
-% (same parent folder):
+% Calls the figure scripts of the repositories next to this one (same
+% parent folder):
 %   2021-code-A-Velocity-quasiLPV-MPC-Algorithm-for-Wind-Turbine-Control
 %     - runGeneratePicsPaper: Bode plots, model and controller comparison
 %       on Mdl1/Mdl2/FAST, pitch rate constraints (figDir, figDirConstr1)
 %     - runGeneratePicsFASTthesis: PI and qLMPC on FAST (figDirFASTthesis)
 %     - plotParetoVerif2: Pareto and bar plot qLMPC/IPC/AALC (figDirPareto)
+%     - initModel5MWNREL: c_T, c_P and c_Q maps of the original NREL 5 MW
+%       look-up tables (model version 'paper', no Cq correction;
+%       figDirECC21)
 %   Combined-IPC-TEFC-for-Load-Reduction-of-Wind-Turbines (Main/plotFunktionen)
 %     - mainPlotPaper: Reynolds number, lift and drag coefficients, TEF
 %       open loop (fig1, fig2)
 %     - plotIPC_RateLimitComparison: IPC time series, IPC rate limit PSD
 %       and AALC PSDs (figIPCThesis)
 %   2023-code-IFAC-Koopman-Model-Predictive-Control-for-Wind-Farm
+%     - runWFSimAnimationPlots (as in mainGeneratePlots): power over yaw
+%       and wake centre lines (figPaper; PowerVsYaw and
+%       gamma0_20_AngleCenter are the thesis figures 01FigPwrVsYaw_tex and
+%       03FigAngle0_20_tex)
 %     - mainGeneratePlotThesis: Koopman WRC/AIC (figures_IFAC23)
 %     - mainGeneratePlotThesisAdaptiveAIC: adaptive AIC (figures_CDC22)
+%   Scholar (https://github.com/antjedittmer/Scholar, MATLABscripts4plots)
+%     - plotScholarStatisticsWT, plotScholarStatisticsWF: Google Scholar
+%       entries per year (dirFigures)
 % The scripts load stored simulation results if available (see the
 % scripts), so a call mainly replots.
 %
 % Afterwards all png and eps files of the figure folders are copied into
-% the folder AllFiguresThesis next to this repository, one subfolder per
-% thesis figure folder (thesis_DLR_20260630/figures/<subfolder>), e.g.
-% AllFiguresThesis/Figures_ADi. Existing files there are overwritten.
+% two folders next to this repository, depending on whether the thesis
+% (thesisDir/dissertation_ADi.tex and the files it includes or inputs)
+% links the figure (png, eps or pdf of the same name):
+%   AllFiguresThesisUsed/<subfolder>, AllFiguresThesisUnused/<subfolder>
+% <subfolder> is the thesis figure folder (thesis figures/<subfolder>),
+% e.g. Figures_ADi. Both folders are deleted and created again on each
+% call. Thesis figures (eps, png) that none of the scripts creates are
+% listed at the end.
 %
 % Each script runs in the base workspace (Simulink models read their
 % variables from there) and may clear it; the state of this script is kept
 % in the local function main. A failing script is reported and skipped;
 % the MATLAB path and the current folder are restored after each script.
-%
-% Thesis figures without a generating script in these repositories (copy
-% them from the thesis folder if needed): figDirECC21 (Cp, Cq, Ct; plotOn
-% in initModel5MWNREL), figDirETC, figures_IFAC23/01FigPwrVsYaw_tex,
-% 03FigAngle0_20_tex, gridmesh2_tex, figuresBlockDiagram_IFAC23 and the
-% pdf/jpg drawings.
 
 main();
 
 function main()
-%% Steps: {repository, folder in the repository, script or function call, description}
-% Set the last column to false to skip a step (e.g. the long Koopman runs).
+%% Folders
 mainDir = fileparts(mfilename('fullpath'));
 parentDir = fileparts(mainDir);
 velDir = mainDir;
 ipcDir = fullfile(parentDir, 'Combined-IPC-TEFC-for-Load-Reduction-of-Wind-Turbines', 'Main', 'plotFunktionen');
 koopDir = fullfile(parentDir, '2023-code-IFAC-Koopman-Model-Predictive-Control-for-Wind-Farm');
+scholarDir = fullfile(parentDir, 'Scholar', 'MATLABscripts4plots');
+thesisDir = fullfile(parentDir, 'thesis_DLR_20260630');
+usedDir = fullfile(parentDir, 'AllFiguresThesisUsed');
+unusedDir = fullfile(parentDir, 'AllFiguresThesisUnused');
 
+%% Steps: {folder, script, function call or function handle, description, run}
+% Set the last column to false to skip a step (e.g. the long Koopman runs).
 steps = {
-    velDir,  'runGeneratePicsPaper.m',                 'Mdl1/Mdl2/FAST, controller comparison, pitch rate', true
-    velDir,  'runGeneratePicsFASTthesis.m',            'PI and qLMPC on FAST', true
-    velDir,  'plotParetoVerif2()',                     'Pareto and bar plot', true
-    ipcDir,  'mainPlotPaper.m',                        'Re, airfoil coefficients, TEF open loop', true
-    ipcDir,  'plotIPC_RateLimitComparison()',          'IPC time series, IPC and AALC PSDs', true
-    koopDir, 'mainGeneratePlotThesis.m',               'Koopman WRC/AIC', true
-    koopDir, 'mainGeneratePlotThesisAdaptiveAIC.m',    'adaptive AIC', true};
+    velDir,     'runGeneratePicsPaper.m',               'Mdl1/Mdl2/FAST, controller comparison, pitch rate', true
+    velDir,     'runGeneratePicsFASTthesis.m',          'PI and qLMPC on FAST', true
+    velDir,     'plotParetoVerif2()',                   'Pareto and bar plot', true
+    velDir,     @() plotCoefficientMaps(velDir),        'c_T, c_P, c_Q maps (initModel5MWNREL)', true
+    ipcDir,     'mainPlotPaper.m',                      'Re, airfoil coefficients, TEF open loop', true
+    ipcDir,     'plotIPC_RateLimitComparison()',        'IPC time series, IPC and AALC PSDs', true
+    koopDir,    fullfile('WFSimCode', 'bin', 'analysis', 'runWFSimAnimationPlots.m'), 'power over yaw, wake centre lines', true
+    koopDir,    'mainGeneratePlotThesis.m',             'Koopman WRC/AIC', true
+    koopDir,    'mainGeneratePlotThesisAdaptiveAIC.m',  'adaptive AIC', true
+    scholarDir, 'plotScholarStatisticsWT.m',            'Google Scholar entries wind turbine control', true
+    scholarDir, 'plotScholarStatisticsWF.m',            'Google Scholar entries wind farm control', true};
 
-%% Figure folders: {source folder, subfolder in AllFiguresThesis (thesis folder name)}
+%% Figure folders: {source folder, thesis subfolder}
 figFolders = {
-    fullfile(velDir, 'figDir'),              'Figures_ADi'
-    fullfile(velDir, 'figDirConstr1'),       'figDirConstr1'
-    fullfile(velDir, 'figDirFASTthesis'),    'figDirFASTthesis'
-    fullfile(velDir, 'figDirPareto'),        'figures_WESC25'
-    fullfile(ipcDir, 'fig1'),                'Images_Torque24'
-    fullfile(ipcDir, 'fig2'),                'Images_Torque24'
-    fullfile(ipcDir, 'figIPCThesis'),        'figIPCThesis'
-    fullfile(koopDir, 'figures_IFAC23'),     'figures_IFAC23'
-    fullfile(koopDir, 'figures_CDC22'),      'figures_CDC22'};
-outDir = fullfile(parentDir, 'AllFiguresThesis');
+    fullfile(velDir, 'figDir'),                     'Figures_ADi'
+    fullfile(velDir, 'figDirConstr1'),              'figDirConstr1'
+    fullfile(velDir, 'figDirFASTthesis'),           'figDirFASTthesis'
+    fullfile(velDir, 'figDirPareto'),               'figures_WESC25'
+    fullfile(velDir, 'figDirECC21'),                'figDirECC21'
+    fullfile(ipcDir, 'fig1'),                       'Images_Torque24'
+    fullfile(ipcDir, 'fig2'),                       'Images_Torque24'
+    fullfile(ipcDir, 'figIPCThesis'),               'figIPCThesis'
+    fullfile(koopDir, 'figPaper'),                  'figPaper'
+    fullfile(koopDir, 'figures_IFAC23'),            'figures_IFAC23'
+    fullfile(koopDir, 'figures_CDC22'),             'figures_CDC22'
+    fullfile(fileparts(scholarDir), 'dirFigures'),  'Figures_ADi'};
+% Figures with another name in the thesis: {source without extension,
+% thesis subfolder, thesis name}
+figRenamed = {
+    fullfile(koopDir, 'figPaper', 'PowerVsYaw'),            'figures_IFAC23', '01FigPwrVsYaw_tex'
+    fullfile(koopDir, 'figPaper', 'gamma0_20_AngleCenter'), 'figures_IFAC23', '03FigAngle0_20_tex'};
 
 %% Run the figure scripts
-status = strings(size(steps, 1), 1);
-for idx = 1:size(steps, 1)
+nSteps = size(steps, 1);
+status = strings(nSteps, 1);
+for idx = 1:nSteps
     [repoDir, cmd, descr, doRun] = steps{idx, :};
     if ~doRun
         status(idx) = "skipped";
         continue
     end
-    fprintf('\n===== %d/%d %s (%s) =====\n', idx, size(steps, 1), cmd, descr);
+    fprintf('\n===== %d/%d %s =====\n', idx, nSteps, descr);
     status(idx) = runStep(repoDir, cmd);
 end
 
-%% Copy the png and eps files
-nCopied = 0;
+%% Figures linked in the thesis (subfolder/name, lower case, no extension)
+linked = thesisFigures(fullfile(thesisDir, 'dissertation_ADi.tex'));
+
+%% Copy the png and eps files into the used and unused folder
+for outDir = {usedDir, unusedDir}
+    if isfolder(outDir{1})
+        rmdir(outDir{1}, 's');
+    end
+    mkdir(outDir{1});
+end
+src = {}; dst = {}; % source files, target subfolder/name
 for idx = 1:size(figFolders, 1)
     [srcDir, subDir] = figFolders{idx, :};
     if ~isfolder(srcDir)
         warning('Figure folder %s not found', srcDir);
         continue
     end
-    dstDir = fullfile(outDir, subDir);
-    if ~isfolder(dstDir)
-        mkdir(dstDir);
-    end
     files = [dir(fullfile(srcDir, '*.png')); dir(fullfile(srcDir, '*.eps'))];
     for idxF = 1:numel(files)
-        copyfile(fullfile(files(idxF).folder, files(idxF).name), fullfile(dstDir, files(idxF).name));
+        src{end+1} = fullfile(files(idxF).folder, files(idxF).name); %#ok<AGROW>
+        dst{end+1} = [subDir, '/', files(idxF).name]; %#ok<AGROW>
     end
-    nCopied = nCopied + numel(files);
+end
+for idx = 1:size(figRenamed, 1)
+    for ext = {'.png', '.eps'}
+        if isfile([figRenamed{idx, 1}, ext{1}])
+            src{end+1} = [figRenamed{idx, 1}, ext{1}]; %#ok<AGROW>
+            dst{end+1} = [figRenamed{idx, 2}, '/', figRenamed{idx, 3}, ext{1}]; %#ok<AGROW>
+        end
+    end
+end
+isUsed = false(size(dst));
+for idx = 1:numel(dst)
+    [subDir, name] = fileparts(dst{idx});
+    isUsed(idx) = ismember(lower([subDir, '/', name]), linked);
+    if isUsed(idx), outDir = usedDir; else, outDir = unusedDir; end
+    if ~isfolder(fullfile(outDir, subDir))
+        mkdir(fullfile(outDir, subDir));
+    end
+    copyfile(src{idx}, fullfile(outDir, subDir, [name, dst{idx}(end-3:end)]));
 end
 
 %% Summary
 fprintf('\n===== Summary =====\n');
-for idx = 1:size(steps, 1)
-    fprintf('%-40s %s\n', steps{idx, 2}, status(idx));
+for idx = 1:nSteps
+    fprintf('%-50s %s\n', steps{idx, 3}, status(idx));
 end
-fprintf('%d png and eps files copied to %s\n', nCopied, outDir);
+fprintf('%d png and eps files linked in the thesis copied to %s\n', nnz(isUsed), usedDir);
+fprintf('%d png and eps files not linked in the thesis copied to %s\n', nnz(~isUsed), unusedDir);
+created = unique(cellfun(@(f) lower(f(1:end-4)), dst, 'UniformOutput', false));
+linkedEpsPng = thesisFigures(fullfile(thesisDir, 'dissertation_ADi.tex'), {'.eps', '.png'});
+missing = setdiff(linkedEpsPng, created);
+if ~isempty(missing)
+    fprintf('Thesis figures (eps, png) not created by the scripts:\n');
+    fprintf('  %s\n', missing{:});
+end
 end
 
 function status = runStep(repoDir, cmd)
-% Runs cmd (script file or function call) in repoDir in the base workspace;
-% restores the MATLAB path and the current folder afterwards
+% Runs cmd in repoDir: a script file (path relative to repoDir) or a
+% function call in the base workspace, or a function handle; restores the
+% MATLAB path and the current folder afterwards
 oldPath = path;
 oldDir = pwd;
 cleanup = onCleanup(@() restoreState(oldPath, oldDir));
 try
+    if ~isfolder(repoDir)
+        error('Folder %s not found', repoDir);
+    end
     cd(repoDir);
-    if endsWith(cmd, '.m')
+    if isa(cmd, 'function_handle')
+        cmd();
+    elseif endsWith(cmd, '.m')
         evalin('base', sprintf('run(''%s'');', fullfile(repoDir, cmd)));
     else
         evalin('base', [cmd, ';']);
     end
     status = "ok";
 catch ME
-    fprintf(2, 'Error in %s: %s\n', cmd, ME.message);
+    fprintf(2, 'Error: %s\n', ME.message);
     status = "failed: " + string(ME.message);
 end
 close all
@@ -129,4 +192,68 @@ end
 function restoreState(oldPath, oldDir)
 path(oldPath);
 cd(oldDir);
+end
+
+function plotCoefficientMaps(velDir)
+% c_T, c_P and c_Q maps of initModel5MWNREL in figDirECC21 with the model
+% version 'paper' (original look-up tables, as in the thesis); the base
+% workspace variable wecsModelVersion is restored afterwards
+addpath(genpath(fullfile(velDir, 'LinMdl')));
+addpath(genpath(fullfile(velDir, 'NonLinMdl')));
+hasVersion = evalin('base', 'exist(''wecsModelVersion'', ''var'')');
+oldVersion = '';
+if hasVersion
+    oldVersion = evalin('base', 'wecsModelVersion');
+end
+assignin('base', 'wecsModelVersion', 'paper');
+cleanup = onCleanup(@() restoreVersion(hasVersion, oldVersion));
+figDir = fullfile(velDir, 'figDirECC21');
+if ~isfolder(figDir)
+    mkdir(figDir);
+end
+initModel5MWNREL(1, '', '', '', '', figDir);
+end
+
+function restoreVersion(hasVersion, oldVersion)
+if hasVersion
+    assignin('base', 'wecsModelVersion', oldVersion);
+else
+    evalin('base', 'clear wecsModelVersion');
+end
+end
+
+function linked = thesisFigures(texFile, exts)
+% Figures of \includegraphics in texFile and the files it includes or
+% inputs (recursively, without comments) as lower case 'subfolder/name'
+% (no extension, without the leading 'figures/'); exts: only these
+% extensions (default: all)
+if nargin < 2, exts = {}; end
+linked = {};
+if ~isfile(texFile)
+    warning('Thesis file %s not found', texFile);
+    return
+end
+rootDir = fileparts(texFile);
+todo = {texFile};
+done = {};
+while ~isempty(todo)
+    f = todo{1}; todo(1) = [];
+    if ismember(f, done) || ~isfile(f), continue, end
+    done{end+1} = f; %#ok<AGROW>
+    txt = regexprep(fileread(f), '(?<!\\)%[^\n]*', ''); % comments
+    inc = regexp(txt, '\\(?:include|input)\s*\{([^}]+)\}', 'tokens');
+    for k = 1:numel(inc)
+        g = fullfile(rootDir, strtrim(inc{k}{1}));
+        if ~endsWith(g, '.tex'), g = [g, '.tex']; end %#ok<AGROW>
+        todo{end+1} = g; %#ok<AGROW>
+    end
+    figs = regexp(txt, '\\includegraphics\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}', 'tokens');
+    for k = 1:numel(figs)
+        [p, name, ext] = fileparts(strrep(strtrim(figs{k}{1}), '\', '/'));
+        if ~isempty(exts) && ~ismember(lower(ext), exts), continue, end
+        p = regexprep(p, '^figures/', '', 'ignorecase'); % not Figures_ADi
+        linked{end+1} = lower([p, '/', name]); %#ok<AGROW>
+    end
+end
+linked = unique(linked);
 end
