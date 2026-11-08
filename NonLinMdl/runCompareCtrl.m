@@ -1,4 +1,4 @@
-function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,plantMdl,ctrlOpts,useFiltered,strOut)
+function  OutTableTest2  = runCompareCtrl(strWindType,loadData,figNo1,useFASTForComparison,figDirStr,useTitle,plantMdl,ctrlOpts,useFiltered,strOut,showTqOv)
 % runComparCtrl compares simulation results for baseline and qLPV MPC
 % controller in closed loop with the Simulink WECS model.
 %
@@ -84,7 +84,11 @@ if nargin < 10 || isempty(strOut)
     strOut = '';
 end
 
-addPgrefText = 0; % do not show textbox for pgref bz default
+if nargin < 11 % Torque is not shown if it does not change
+    showTqOv = 0;
+end
+
+addPgrefText = 0; % do not show textbox for Pgref by default
 
 %% Set path to directories
 
@@ -295,9 +299,9 @@ DT = 0.008;
 r = GenPwrRef;
 
 % Plot and compare closed-loop results
-plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt,addPgrefText)
+plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt,addPgrefText,showTqOv)
 
-function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt,addPgrefText)
+function plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt,addPgrefText,showTqOv)
 %plotComparison plots the time series obtained with baseline and qLPVMPC
 
 %% Handle optional inputs
@@ -504,7 +508,7 @@ titleStr = sprintf(['\\color[rgb]{%.3f %.3f %.3f}Baseline PI', ...
 % plotted time range (above rated wind speed constant rated torque)
 tqAll = [OutTableTest2Plot.GenTq(:); OutTableMPCPlot.GenTq(:)]/1000; % kNm
 tqRange = [min(tqAll), max(tqAll)];
-showTq = all(isfinite(tqRange)) && diff(tqRange) > 1e-3*max(abs(tqRange));
+showTq = (all(isfinite(tqRange)) && diff(tqRange) > 1e-3*max(abs(tqRange))) || showTqOv;
 nAx = 4 + showTq;
 tiledlayout(nAx,1,'TileSpacing','compact','Padding','compact'); % small, equal gaps between the tiles (tightenTiles)
 
@@ -526,7 +530,7 @@ if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') 
 end
 idxT = idxT + 1;
 
-if showTq
+if showTq 
     axPlotAll(idxT) = nexttile; %axPlotAll(2) = subplot(nAx,1,2);
     plot(timeVecPlot,OutTableTest2Plot.GenTq/1000,timeVecPlot,OutTableMPCPlot.GenTq/1000,'-.');
     axis tight;

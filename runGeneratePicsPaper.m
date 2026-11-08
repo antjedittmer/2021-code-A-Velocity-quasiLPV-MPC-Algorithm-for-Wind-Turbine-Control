@@ -186,10 +186,11 @@ useFilter = 0;
 % Turbulent wind without filter
 % Step, no filter
 ctrlCases = {'Sweep', 'SimulinkPaper'; 18, 'SimulinkPaper'};
+showTqOv = 1; % torque is always shown, even if it does not change
 for idxC = 1: size(ctrlCases, 1)
     figNo = figNo + 1;
     runCompareCtrl(ctrlCases{idxC,1}, loadDataCtrlTest, figNo, useFASTForComparison, ...
-        figDirStr, useTitle, ctrlCases{idxC,2}, [], useFilteredCtrl);
+        figDirStr, useTitle, ctrlCases{idxC,2}, [], useFilteredCtrl,'',showTqOv);
 end
 
 merge_controller_tables('results_tableSweep.tex', 'results_tableNTW18.tex', ...
