@@ -66,11 +66,28 @@ mainDir = fileparts(mfilename('fullpath'));
 parentDir = fileparts(mainDir);
 velDir = mainDir;
 ipcDir = fullfile(parentDir, 'Combined-IPC-TEFC-for-Load-Reduction-of-Wind-Turbines', 'Main', 'plotFunktionen');
+if exist(ipcDir,'dir') ~= 7 % ipcDir is on a different location on my PC
+    studentDir = fullfile(parentDir,'Studenten','2023_BernhardOsterwinter','code');
+    ipcDir = strrep(ipcDir,parentDir,studentDir);
+    if exist(ipcDir,'dir') ~= 7,error('ipcdir does not exist. Please check the location'); end
+end   
 koopDir = fullfile(parentDir, '2023-code-IFAC-Koopman-Model-Predictive-Control-for-Wind-Farm');
-scholarDir = fullfile(parentDir, 'Scholar', 'MATLABscripts4plots');
+if exist(koopDir,'dir') ~= 7, error('koopDir does not exist. Please check the location'); end
+scholarDir = fullfile(parentDir, 'Scholar', 'MATLABscripts4plots'); % MATLABprojects\Scholar
+if exist(scholarDir,'dir') ~= 7 % scholarDiris on a different location on my PC
+    scholarDirParent = fullfile(parentDir,'MATLABprojects');
+    scholarDir = strrep(scholarDir,parentDir,scholarDirParent);
+    if exist(scholarDir,'dir') ~= 7,error('scholarDir does not exist. Please check the location'); end
+end 
 thesisDir = fullfile(parentDir, 'thesis_DLR_20260630');
-usedDir = fullfile(parentDir, 'AllFiguresThesisUsed');
-unusedDir = fullfile(parentDir, 'AllFiguresThesisUnused');
+if exist(thesisDir,'dir') ~= 7 % thesisDir is on a different location on my PC
+    thesisDirParent = fullfile(fileparts(parentDir),'Documents','Dissertation');
+    thesisDir = strrep(thesisDir,parentDir, thesisDirParent);
+    if exist(thesisDir,'dir') ~= 7,error('scholarDir does not exist. Please check the location'); end
+end 
+
+usedDir = fullfile(parentDir, 'AllFiguresThesisUsed'); % Outputdir one
+unusedDir = fullfile(parentDir, 'AllFiguresThesisUnused'); % Outputdir one
 
 %% Steps: {folder, script, function call or function handle, description, run}
 % Set the last column to false to skip a step (e.g. the long Koopman runs).
