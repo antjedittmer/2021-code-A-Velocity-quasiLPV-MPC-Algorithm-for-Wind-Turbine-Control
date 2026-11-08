@@ -25,6 +25,18 @@ mainDir = fileparts(mfilename('fullpath'));
 % initWorkspace sets the default version 'FAST' again.
 setModelVersionPaper('paper');
 
+% Blade model of Mdl2 in the chapter 3 plots (getBladeModelVersion; after
+% initWorkspace, which clears the workspace):
+% 'original' (thesis: fixed r_b = 0.75 R and Kb) or variant B fitted to the
+% quasi-steady FAST blade tip deflection (fitBladeModelB), 'B1': load point
+% r_b(lambda, beta) and stiffness Kb(lambda, beta), 'B2': as B1 with the
+% modal mass scaled with Kb (blade frequency kept). Variant B: figure and
+% result files with the suffix _Blade<version>; bladeModelCompare = 1:
+% original Mdl2 and variant B (yellow, dash-dotted) in the same figures.
+% The controller comparisons below use the original blade model.
+bladeModelVersion = 'original';
+bladeModelCompare = 0;
+
 % Blade tip out-of-plane displacement as last tile of the model comparison
 % time series (runCompareModels; 0: not shown, thesis)
 showBladeTip = 0;
@@ -153,6 +165,12 @@ if onlyDissPics == 0
     figNo = figNo + 1;
     normStruct.EOG = runCompareModels('EOG',loadData,figNo,yAxCell,figDirStr,[],'',showBladeTip);
     save('normsGapCell','gapCell', 'normStruct');
+end
+
+% Controller comparisons with the original blade model of Mdl2 (thesis)
+if ~strcmp(bladeModelVersion, 'original')
+    bladeModelVersion = 'original';
+    updateDDMdl1(0.75, [], [], 0.9475); % last setting of the model comparison
 end
 
 

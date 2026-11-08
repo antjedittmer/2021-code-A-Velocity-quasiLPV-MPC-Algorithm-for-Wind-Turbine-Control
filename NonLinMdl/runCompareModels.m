@@ -84,6 +84,21 @@ end
 simMdlname1 = 'test_SimulinkMdl1_Baseline';
 simMdlname2 = 'test_SimulinkMdl2_Baseline';
 
+% Blade model of Mdl2 (getBladeModelVersion): 'original' (thesis, default)
+% or variant B ('B1', 'B2': WECS models Mdl_BianchiOL_BladeB and
+% Mdl_BianchiOL_BladeB_WindFiltered with the parameters wecs.blade* of the
+% data dictionary, set by updateDDMdl1). With variant B, the result and
+% figure files get the suffix _Blade<version>; with bladeModelCompare, Mdl2
+% with the original blade model is shown as before and variant B as an
+% additional yellow dash-dotted line.
+[bladeVersion, bladeCompare] = getBladeModelVersion;
+bladeOn = ~strcmp(bladeVersion, 'original');
+strBlade = '';
+if bladeOn
+    strBlade = ['_Blade', bladeVersion];
+    checkBladeDD(bladeVersion);
+end
+
 % Provide names of FAST simulation data to be loaded
 step_thresshold = ~isempty(ylimVal); % This is for now used as a switch for the filter 
 kVeFilt = 0.25;
@@ -151,19 +166,38 @@ varnames = {'Wind', 'RotSpeed', 'GenPwr', 'GenTq', 'BlPitch1', 'NcIMUTAxs', 'NcI
 matFileOutTableTest1 = fullfile(dataDirOut,['OutTableTest1',strFig,'.mat']);
 OutTableTest1 = getSimulationOutputTable(matFileOutTableTest1,loadData,OutTable,simMdlname1,varnames);
 
-matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strFig,'.mat']);
-OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadData,OutTable,simMdlname2,varnames);
+if ~bladeOn || bladeCompare % Mdl2 with the original blade model
+    matFileOutTableTest2 = fullfile(dataDirOut,['OutTableTest2',strFig,'.mat']);
+    OutTableTest2 = getSimulationOutputTable(matFileOutTableTest2,loadData,OutTable,simMdlname2,varnames);
 
-% Blade state theta_b of Mdl2 (not in the output tables; Mdl2 is simulated
-% again with the states logged if the mat file is missing)
-matFileBlade = fullfile(dataDirOut,['BladeStateTest2',strFig,'.mat']);
-[timeBlade, thetaB] = getBladeStateMdl2(matFileBlade,loadData,OutTable,simMdlname2,OutTableTest2);
+    % Blade state theta_b of Mdl2 (not in the output tables; Mdl2 is simulated
+    % again with the states logged if the mat file is missing)
+    matFileBlade = fullfile(dataDirOut,['BladeStateTest2',strFig,'.mat']);
+    [timeBlade, thetaB] = getBladeStateMdl2(matFileBlade,loadData,OutTable,simMdlname2,OutTableTest2);
+end
+
+if bladeOn % Mdl2 with the blade model variant B
+    restoreMdl2 = setMdl2BladeModel(simMdlname2); %#ok<NASGU> original WECS model restored on clean-up
+    matFileOutTableTest2B = fullfile(dataDirOut,['OutTableTest2',strFig,strBlade,'.mat']);
+    OutTableTest2B = getSimulationOutputTable(matFileOutTableTest2B,loadData,OutTable,simMdlname2,varnames);
+    matFileBladeB = fullfile(dataDirOut,['BladeStateTest2',strFig,strBlade,'.mat']);
+    [timeBladeB, thetaBB] = getBladeStateMdl2(matFileBladeB,loadData,OutTable,simMdlname2,OutTableTest2B);
+    clear restoreMdl2
+    if ~bladeCompare % variant B is Mdl2
+        OutTableTest2 = OutTableTest2B;
+        timeBlade = timeBladeB;
+        thetaB = thetaBB;
+    end
+end
 
 %% Create output plots (for use in power point)
 % Two plots are created: 1st plot shows wind, rotor speed,
 
 % Create output plot time reference
 idxTime = 1: min([length(idxTime), height(OutTableTest1),height(OutTableTest2)]);
+if bladeOn && bladeCompare
+    idxTime = idxTime(idxTime <= height(OutTableTest2B));
+end
 time = OutTable.Time(idxTime);
 % Evaluation (plots, norms): stepped wind sweeps (Sweep, Step) from 15 s,
 % the start-up transient has decayed within the first 20 s wind level;
@@ -240,7 +274,7 @@ if allPlots == 1
     set(gcf,'Name',['cmpTimeDomain_Wind',strFig])
 
     setFigureSize(gcf, [1 1]);
-    printFigure(gcf, fullfile(figDir,nameFig), {'png'});
+    printFigure(gcf, fullfile(figDir,[nameFig,strBlade]), {'png'});
 
     % 2nd figure
     figure(figNo2)
@@ -287,7 +321,7 @@ if allPlots == 1
     set(gcf,'Name',nameFig)
 
     setFigureSize(gcf, [1 1]);
-    printFigure(gcf, fullfile(figDir,nameFig), {'png'});
+    printFigure(gcf, fullfile(figDir,[nameFig,strBlade]), {'png'});
 end
 
 
@@ -319,6 +353,15 @@ bldTipMdl2 = Rrotor*interp1(timeBlade, thetaB, time);
 bldTipFAST = mean([OutTable.OoPDefl1, OutTable.OoPDefl2, OutTable.OoPDefl3], 2);
 bldTipFAST = bldTipFAST(idxTime);
 
+% Comparison of the blade models (bladeModelCompare): Mdl2 with the blade
+% model variant B as additional yellow dash-dotted line in all tiles but the
+% wind
+addB = bladeOn && bladeCompare;
+if addB
+    bldTipMdl2B = Rrotor*interp1(timeBladeB, thetaBB, time);
+    plotB = @(ax, y) plot(ax, time, y, '-.', 'Color', cl(3,:));
+end
+
 figure(figNo1 + 2*allPlots)
 nAx = 7 + logical(showBladeTip); % blade tip tile optional
 tiledlayout(nAx,1,'TileSpacing','compact','Padding','compact'); % small, equal gaps between the tiles (tightenTiles)
@@ -334,6 +377,7 @@ end
 
 axPlotAll(2) = nexttile; %axPlotAll(2) = subplot(nAx,1,2);
 plot(time,OutTableTest2.GenTq(idxTime)/10^3,time,OutTable.GenTq(idxTime),time,OutTableTest1.GenTq(idxTime)/10^3,'k--');
+if addB, hold on; plotB(gca, OutTableTest2B.GenTq(idxTime)/10^3); end
 axis tight;
 posAxis = axis;
 axis([posAxis(1:2), min(43,posAxis(3)), 44]);
@@ -345,24 +389,28 @@ ylabel(yAxCell{2}); %'GenTq T_g [Nm]')
 
 axPlotAll(3) = nexttile; %axPlotAll(3) = subplot(nAx,1,3);
 plot(time,OutTableTest2.BlPitch1(idxTime),time,OutTable.BlPitch1(idxTime),time,OutTableTest1.BlPitch1(idxTime),'k--');
+if addB, hold on; plotB(gca, OutTableTest2B.BlPitch1(idxTime)); end
 axis tight; grid on;
 if ~isempty(ylimVal), ylim(gca,ylimVal(3,:)); end
 ylabel(yAxCell{3}); %'Pitch \beta [�]')
 
 axPlotAll(4) = nexttile; %axPlotAll(4) = subplot(nAx,1,4);
 plot(time,OutTableTest2.RotSpeed(idxTime), time,OutTable.RotSpeed(idxTime),time,OutTableTest1.RotSpeed(idxTime),'k--');
+if addB, hold on; plotB(gca, OutTableTest2B.RotSpeed(idxTime)); end
 axis tight; grid on;
 if ~isempty(ylimVal), ylim(gca,ylimVal(4,:)); end
 ylabel(yAxCell{4}); %'RotSpd \omega_r [rpm]')
 
 axPlotAll(5) = nexttile; %axPlotAll(5) = subplot(nAx,1,5);
 plot(time,OutTableTest2.NcIMUTAxs(idxTime),time,OutTable.NcIMUTAxs(idxTime),time,OutTableTest1.NcIMUTAxs(idxTime),'k--');
+if addB, hold on; plotB(gca, OutTableTest2B.NcIMUTAxs(idxTime)); end
 axis tight; grid on;
 if ~isempty(ylimVal), ylim(gca,ylimVal(5,:)); end
 ylabel(yAxCell{6}); %'Twr_{FA} y_t[m/s^2]')
 
 axPlotAll(6) = nexttile; %axPlotAll(6) = subplot(nAx,1,6);
 plot(time,OutTableTest2.NcIMUTAys(idxTime),time,OutTable.NcIMUTAys(idxTime),time,OutTableTest1.NcIMUTAys(idxTime),'k--');
+if addB, hold on; plotB(gca, OutTableTest2B.NcIMUTAys(idxTime)); end
 grid on; axis tight;
 if ~isempty(ylimVal), ylim(gca,ylimVal(5,:)); end
 ylabel(yAxCell{7}); %'Twr_{SW} x_t[m/s^2]')
@@ -370,6 +418,7 @@ set(axPlotAll(6),'YLim', get(axPlotAll(5) ,'YLim'))
 
 axPlotAll(7) = nexttile; %axPlotAll(7) = subplot(nAx,1,7);
 plot(time,OutTableTest2.GenPwr(idxTime)/1000,time,OutTable.GenPwr(idxTime)/1000,time,OutTableTest1.GenPwr(idxTime)/1000,'k--');
+if addB, hold on; plotB(gca, OutTableTest2B.GenPwr(idxTime)/1000); end
 axis tight; grid on;
 if ~isempty(ylimVal), ylim(gca,ylimVal(7,:)); end
 ylabel(yAxCell{5}); %'GenPwr P_g [MW]')
@@ -377,6 +426,7 @@ ylabel(yAxCell{5}); %'GenPwr P_g [MW]')
 if showBladeTip
     axPlotAll(8) = nexttile;
     plot(time,bldTipMdl2,time,bldTipFAST);
+    if addB, hold on; plotB(gca, bldTipMdl2B); end
     axis tight; grid on;
     if size(ylimVal,1) >= 8, ylim(gca,ylimVal(8,:)); end
     ylabel(yAxCell{8});
@@ -396,7 +446,7 @@ set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
 %set(groot,'defaultLineLineWidth',defaultLineWidth);
 
-printFigure(gcf, fullfile(figDir,['cmpTimeDomain_All',strFig]));
+printFigure(gcf, fullfile(figDir,['cmpTimeDomain_All',strFig,strBlade]));
 
 
 if OutTable.Time(end) >1000
@@ -414,28 +464,35 @@ if OutTable.Time(end) >1000
     ylabel(axZoom(1), yAxCell{1}); if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle'), title(axZoom(1), titleStr); end, grid(axZoom(1), 'on');
 
     plot(axZoom(2), time, OutTableTest2.GenTq(idxTime)/1e3, time, OutTable.GenTq(idxTime), time, OutTableTest1.GenTq(idxTime)/1e3, 'k--');
+    if addB, hold(axZoom(2), 'on'); plotB(axZoom(2), OutTableTest2B.GenTq(idxTime)/1e3); end
     ylabel(axZoom(2), yAxCell{2}); grid(axZoom(2), 'on');
     posAxis = axis(axZoom(2));
     axis(axZoom(2), [posAxis(1:2), min(43,posAxis(3)), 44]);
 
     plot(axZoom(3), time, OutTableTest2.BlPitch1(idxTime), time, OutTable.BlPitch1(idxTime), time, OutTableTest1.BlPitch1(idxTime), 'k--');
+    if addB, hold(axZoom(3), 'on'); plotB(axZoom(3), OutTableTest2B.BlPitch1(idxTime)); end
     ylabel(axZoom(3), yAxCell{3}); grid(axZoom(3), 'on');
 
     plot(axZoom(4), time, OutTableTest2.RotSpeed(idxTime), time, OutTable.RotSpeed(idxTime), time, OutTableTest1.RotSpeed(idxTime), 'k--');
+    if addB, hold(axZoom(4), 'on'); plotB(axZoom(4), OutTableTest2B.RotSpeed(idxTime)); end
     ylabel(axZoom(4), yAxCell{4}); grid(axZoom(4), 'on');
 
     plot(axZoom(5), time, OutTableTest2.NcIMUTAxs(idxTime), time, OutTable.NcIMUTAxs(idxTime), time, OutTableTest1.NcIMUTAxs(idxTime), 'k--');
+    if addB, hold(axZoom(5), 'on'); plotB(axZoom(5), OutTableTest2B.NcIMUTAxs(idxTime)); end
     ylabel(axZoom(5), yAxCell{6}); grid(axZoom(5), 'on');
 
     plot(axZoom(6), time, OutTableTest2.NcIMUTAys(idxTime), time, OutTable.NcIMUTAys(idxTime), time, OutTableTest1.NcIMUTAys(idxTime), 'k--');
+    if addB, hold(axZoom(6), 'on'); plotB(axZoom(6), OutTableTest2B.NcIMUTAys(idxTime)); end
     ylabel(axZoom(6), yAxCell{7}); grid(axZoom(6), 'on');
     set(axZoom(6),'YLim', get(axZoom(5),'YLim'))
 
     plot(axZoom(7), time, OutTableTest2.GenPwr(idxTime)/1e3, time, OutTable.GenPwr(idxTime)/1e3, time, OutTableTest1.GenPwr(idxTime)/1e3, 'k--');
+    if addB, hold(axZoom(7), 'on'); plotB(axZoom(7), OutTableTest2B.GenPwr(idxTime)/1e3); end
     ylabel(axZoom(7), yAxCell{5}); grid(axZoom(7), 'on');
 
     if showBladeTip
         plot(axZoom(8), time, bldTipMdl2, time, bldTipFAST);
+        if addB, hold(axZoom(8), 'on'); plotB(axZoom(8), bldTipMdl2B); end
         ylabel(axZoom(8), yAxCell{8}); grid(axZoom(8), 'on');
     end
     xlabel(axZoom(nAx), 'Time (s)');
@@ -453,10 +510,37 @@ if OutTable.Time(end) >1000
     set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
-    printFigure(gcf, fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]));
+    printFigure(gcf, fullfile(figDir,['cmpTimeDomain_AllZoom',strFig,strBlade]));
 
 
 
 end
 
+end % runCompareModels
 
+function restoreObj = setMdl2BladeModel(simMdlname)
+% setMdl2BladeModel sets the WECS model reference of the Mdl2 test model to
+% the blade model variant B (Mdl_BianchiOL -> Mdl_BianchiOL_BladeB,
+% Mdl_BianchiOL_WindFiltered -> Mdl_BianchiOL_BladeB_WindFiltered; in
+% memory only). The original reference is restored when restoreObj is
+% cleared.
+load_system(simMdlname);
+blk = find_system(simMdlname, 'BlockType', 'ModelReference', 'Name', 'WECS Model');
+oldName = get_param(blk{1}, 'ModelName');
+if ~contains(oldName, 'BladeB')
+    set_param(blk{1}, 'ModelName', strrep(oldName, 'Mdl_BianchiOL', 'Mdl_BianchiOL_BladeB'));
+end
+restoreObj = onCleanup(@() set_param(blk{1}, 'ModelName', oldName));
+end
+
+function checkBladeDD(bladeVersion)
+% checkBladeDD checks that the parameters of the blade model variant B are
+% in the data dictionary of the WECS models (updateDDMdl1 after setting
+% bladeModelVersion)
+dictObj = Simulink.data.dictionary.open('DD_Mdl1.sldd');
+wecs = getValue(getEntry(getSection(dictObj, 'Design Data'), 'wecs'));
+if ~isfield(wecs, 'bladeRRef') || wecs.bladeMassScaled ~= strcmp(bladeVersion, 'B2')
+    error('runCompareModels:bladeDD', ['Blade model %s: parameters missing in DD_Mdl1.sldd, ', ...
+        'call updateDDMdl1 after setting bladeModelVersion.'], bladeVersion);
+end
+end
