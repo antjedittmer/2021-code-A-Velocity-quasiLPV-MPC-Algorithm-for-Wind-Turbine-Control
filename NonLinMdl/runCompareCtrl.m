@@ -458,7 +458,7 @@ if useTitle(2) == 0 % either plot the
     set(gcf, 'position', [posDefault(1:3),posDefault(4)*1.1]);
     setFigureSize(gcf, [1 1.1]); % export size independent of the screen
 
-    set(findall(gcf,'-property','FontSize'),'FontSize',12.5)
+    set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',1.2)
 
 
@@ -500,11 +500,19 @@ titleStr = sprintf(['\\color[rgb]{%.3f %.3f %.3f}Baseline PI', ...
     meanOpt);
 
 %titleStr = ['Baseline PI vs. qLPV MPC; ', meanOpt];
-nAx = 5;
+% Generator torque tile only if the torque of PI or qLMPC changes in the
+% plotted time range (above rated wind speed constant rated torque)
+tqAll = [OutTableTest2Plot.GenTq(:); OutTableMPCPlot.GenTq(:)]/1000; % kNm
+tqRange = [min(tqAll), max(tqAll)];
+showTq = all(isfinite(tqRange)) && diff(tqRange) > 1e-3*max(abs(tqRange));
+nAx = 4 + showTq;
 tiledlayout(nAx,1,'TileSpacing','compact','Padding','compact'); % small, equal gaps between the tiles (tightenTiles)
 
 if nAx ~= 7
     yAxCell = yAxCell5;
+end
+if ~showTq
+    yAxCell(2) = []; % no torque tile
 end
 
 idxT = 1;
@@ -518,14 +526,16 @@ if ~isappdata(groot, 'ShowThesisTitle') || getappdata(groot, 'ShowThesisTitle') 
 end
 idxT = idxT + 1;
 
-axPlotAll(idxT) = nexttile; %axPlotAll(2) = subplot(nAx,1,2);
-plot(timeVecPlot,OutTableTest2Plot.GenTq/1000,timeVecPlot,OutTableMPCPlot.GenTq/1000,'-.');
-axis tight;
-posAxis = axis;
-axis([posAxis(1:2), min(43,posAxis(3)), 44]);
-grid on; % axis tight;
-ylabel(yAxCell{idxT}); %'GenTq T_g [Nm]')
-idxT = idxT + 1;
+if showTq
+    axPlotAll(idxT) = nexttile; %axPlotAll(2) = subplot(nAx,1,2);
+    plot(timeVecPlot,OutTableTest2Plot.GenTq/1000,timeVecPlot,OutTableMPCPlot.GenTq/1000,'-.');
+    axis tight;
+    posAxis = axis;
+    axis([posAxis(1:2), min(43,posAxis(3)), 44]);
+    grid on; % axis tight;
+    ylabel(yAxCell{idxT}); %'GenTq T_g [Nm]')
+    idxT = idxT + 1;
+end
 
 axPlotAll(idxT) = nexttile; %axPlotAll(3) = subplot(nAx,1,3);
 plot(timeVecPlot,OutTableTest2Plot.BlPitch1,timeVecPlot,OutTableMPCPlot.BlPitch1,'-.');
@@ -533,7 +543,7 @@ axis tight; grid on;
 ylabel(yAxCell{idxT}); %'Pitch \beta [°]')
 idxT = idxT + 1;
 
-if nAx == 7
+if nAx == 7 % not used (nAx is 4 or 5)
     axPlotAll(idxT) = nexttile; %axPlotAll(4) = subplot(nAx,1,4);
     plot(timeVecPlot,OutTableTest2Plot.RotSpeed * 30/pi,timeVecPlot,OutTableMPCPlot.RotSpeed,'-.');
     axis tight; grid on;
@@ -581,10 +591,11 @@ tightenTiles(axPlotAll); % x tick labels only at the bottom, same tile spacing i
 
 set(gcf,'Name',figLabel,'NumberTitle','off')
 posDefault = get(0,'DefaultFigurePosition');
-set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*1.7]);
-setFigureSize(gcf, [1 1.7]); % export size independent of the screen
+pl = 1.7*nAx/5; % same tile height with and without the torque tile
+set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*pl]);
+setFigureSize(gcf, [1 pl]); % export size independent of the screen
 
-set(findall(gcf,'-property','FontSize'),'FontSize',12)
+set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 hold on; plot(timeVecPlot,PGRef/1000,'k--','LineWidth',1.5)
 

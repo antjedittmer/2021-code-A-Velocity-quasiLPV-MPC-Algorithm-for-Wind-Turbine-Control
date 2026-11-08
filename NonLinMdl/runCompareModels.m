@@ -1,4 +1,4 @@
-function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr,allPlots,ylimVal)
+function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr,allPlots,ylimVal,showBladeTip)
 % runCompareModels compares two Simulink models with FASTTool simulation
 % data generated with the baseline controller.
 %
@@ -9,6 +9,11 @@ function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDi
 %   simulation (Default: 1)
 % - figNo1: Number of figure (Default: 1)
 % - yAxCell: Axes labels
+% - figDirStr: figure folder (Default: figDir)
+% - allPlots: additional figures (Default: 1)
+% - ylimVal: y limits of the tiles (Default: tight)
+% - showBladeTip: last tile with the blade tip out-of-plane displacement
+%   (Default: 0, not shown)
 
 %% Handle optional inputs
 % The default inputs are provided here.
@@ -39,12 +44,16 @@ if nargin <5 || isempty(figDirStr)
     figDirStr = 'figDir';
 end
 
-if nargin < 6
+if nargin < 6 || isempty(allPlots)
     allPlots = 1;
 end
 
 if nargin < 7
     ylimVal = '';
+end
+
+if nargin < 8 || isempty(showBladeTip)
+    showBladeTip = 0; % blade tip out-of-plane displacement not shown
 end
 
 %% Initialize path and files names
@@ -220,7 +229,7 @@ if allPlots == 1
     ylabel('BldPitch1 \beta [deg]')
     xlabel('Time [s]')
     linkaxes(axPlot,'x');
-    set(findall(gcf,'-property','FontSize'),'FontSize',12)
+    set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',1)
 
     if cmpOnly1 <= 1
@@ -265,7 +274,7 @@ if allPlots == 1
     axis tight; grid on;
     ylabel('GenPwr P_g [MW]')
     xlabel('Time [s]')
-    set(findall(gcf,'-property','FontSize'),'FontSize',12)
+    set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',1)
     linkaxes(axPlot2,'x');
 
@@ -301,7 +310,7 @@ end
 
 
 %% Figure for paper and dissertation
-% Blade tip out-of-plane displacement (last tile): Mdl2 R*theta_b (rigid
+% Blade tip out-of-plane displacement (last tile, showBladeTip): Mdl2 R*theta_b (rigid
 % blade, rotation theta_b about the blade root), FAST mean of the
 % out-of-plane tip deflections of the three blades (relative to the
 % undeflected blade). Mdl1 has no blade degree of freedom.
@@ -311,7 +320,7 @@ bldTipFAST = mean([OutTable.OoPDefl1, OutTable.OoPDefl2, OutTable.OoPDefl3], 2);
 bldTipFAST = bldTipFAST(idxTime);
 
 figure(figNo1 + 2*allPlots)
-nAx = 8;
+nAx = 7 + logical(showBladeTip); % blade tip tile optional
 tiledlayout(nAx,1,'TileSpacing','compact','Padding','compact'); % small, equal gaps between the tiles (tightenTiles)
 
 axPlotAll(1) = nexttile; %subplot(nAx,1,1);
@@ -365,11 +374,13 @@ axis tight; grid on;
 if ~isempty(ylimVal), ylim(gca,ylimVal(7,:)); end
 ylabel(yAxCell{5}); %'GenPwr P_g [MW]')
 
-axPlotAll(8) = nexttile;
-plot(time,bldTipMdl2,time,bldTipFAST);
-axis tight; grid on;
-if size(ylimVal,1) >= 8, ylim(gca,ylimVal(8,:)); end
-ylabel(yAxCell{8});
+if showBladeTip
+    axPlotAll(8) = nexttile;
+    plot(time,bldTipMdl2,time,bldTipFAST);
+    axis tight; grid on;
+    if size(ylimVal,1) >= 8, ylim(gca,ylimVal(8,:)); end
+    ylabel(yAxCell{8});
+end
 xlabel('Time (s)')
 linkaxes(axPlotAll,'x');
 tightenTiles(axPlotAll); % x tick labels only at the bottom, same tile spacing in all figures
@@ -380,7 +391,7 @@ pl = 2.4*nAx/7; % same tile height as with the seven tiles before
 set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*pl]);
 setFigureSize(gcf, [1 pl]); % export size independent of the screen
 
-set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
 %set(groot,'defaultLineLineWidth',defaultLineWidth);
@@ -423,8 +434,11 @@ if OutTable.Time(end) >1000
     plot(axZoom(7), time, OutTableTest2.GenPwr(idxTime)/1e3, time, OutTable.GenPwr(idxTime)/1e3, time, OutTableTest1.GenPwr(idxTime)/1e3, 'k--');
     ylabel(axZoom(7), yAxCell{5}); grid(axZoom(7), 'on');
 
-    plot(axZoom(8), time, bldTipMdl2, time, bldTipFAST);
-    ylabel(axZoom(8), yAxCell{8}); xlabel(axZoom(8), 'Time (s)'); grid(axZoom(8), 'on');
+    if showBladeTip
+        plot(axZoom(8), time, bldTipMdl2, time, bldTipFAST);
+        ylabel(axZoom(8), yAxCell{8}); grid(axZoom(8), 'on');
+    end
+    xlabel(axZoom(nAx), 'Time (s)');
 
     % Link and zoom
     linkaxes(axZoom, 'x');
@@ -436,7 +450,7 @@ if OutTable.Time(end) >1000
     set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault(3),posDefault(4)*pl]);
     setFigureSize(gcf, [1 pl]); % export size independent of the screen
 
-    set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+    set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
     printFigure(gcf, fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]));

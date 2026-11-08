@@ -167,7 +167,7 @@ set(gcf, 'position', [posDefault(1:3),posDefault(4)*1.7]);
 setFigureSize(gcf, [1 1.7]); % export size independent of the screen
 % set(groot,'defaultLineLineWidth',defaultLineWidth);
 
-set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
 % 

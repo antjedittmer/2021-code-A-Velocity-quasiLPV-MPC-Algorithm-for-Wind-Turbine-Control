@@ -12,6 +12,12 @@
 % true: titles as before. Scripts run on their own show the titles.
 showTitles = [false, false, false, false, false, false, false, false, false, true, true];
 
+% Font size of the time series figures of all repositories (model and
+% controller comparisons, pitch rate, FAST, IPC, Koopman open and closed
+% loop; getTimeSeriesFontSize). Empty: default of the scripts (13); a
+% number overrides it for this call. Scripts run on their own use 13.
+timeSeriesFontSize = [];
+
 % Calls the figure scripts of the repositories next to this one (same
 % parent folder):
 %   2021-code-A-Velocity-quasiLPV-MPC-Algorithm-for-Wind-Turbine-Control
@@ -58,9 +64,9 @@ showTitles = [false, false, false, false, false, false, false, false, false, tru
 % in the local function main. A failing script is reported and skipped;
 % the MATLAB path and the current folder are restored after each script.
 
-main(showTitles);
+main(showTitles, timeSeriesFontSize);
 
-function main(showTitles)
+function main(showTitles, timeSeriesFontSize)
 %% Folders
 mainDir = fileparts(mfilename('fullpath'));
 parentDir = fileparts(mainDir);
@@ -137,7 +143,7 @@ for idx = 1:nSteps
         continue
     end
     fprintf('\n===== %d/%d %s =====\n', idx, nSteps, descr);
-    status(idx) = runStep(repoDir, cmd, showTitles(idx));
+    status(idx) = runStep(repoDir, cmd, showTitles(idx), timeSeriesFontSize);
 end
 
 %% Figures linked in the thesis (subfolder/name, lower case, no extension)
@@ -198,15 +204,20 @@ if ~isempty(missing)
 end
 end
 
-function status = runStep(repoDir, cmd, showTitle)
+function status = runStep(repoDir, cmd, showTitle, timeSeriesFontSize)
 % Runs cmd in repoDir: a script file (path relative to repoDir) or a
 % function call in the base workspace, or a function handle; restores the
 % MATLAB path and the current folder afterwards. showTitle: titles of the
 % figures (root application data ShowThesisTitle, read by the plot
-% functions, removed afterwards)
+% functions, removed afterwards); timeSeriesFontSize: font size of the time
+% series figures (root application data TimeSeriesFontSize, read by
+% getTimeSeriesFontSize, removed afterwards; empty: default 13)
 oldPath = path;
 oldDir = pwd;
 setappdata(groot, 'ShowThesisTitle', logical(showTitle));
+if ~isempty(timeSeriesFontSize)
+    setappdata(groot, 'TimeSeriesFontSize', timeSeriesFontSize);
+end
 cleanup = onCleanup(@() restoreState(oldPath, oldDir));
 try
     if ~isfolder(repoDir)
@@ -233,6 +244,9 @@ path(oldPath);
 cd(oldDir);
 if isappdata(groot, 'ShowThesisTitle')
     rmappdata(groot, 'ShowThesisTitle');
+end
+if isappdata(groot, 'TimeSeriesFontSize')
+    rmappdata(groot, 'TimeSeriesFontSize');
 end
 end
 

@@ -25,6 +25,10 @@ mainDir = fileparts(mfilename('fullpath'));
 % initWorkspace sets the default version 'FAST' again.
 setModelVersionPaper('paper');
 
+% Blade tip out-of-plane displacement as last tile of the model comparison
+% time series (runCompareModels; 0: not shown, thesis)
+showBladeTip = 0;
+
 onlyDissPics = 1; % only generates diss plots, minus the filtered timeseries
 allPlots = 0; % generate all plots, including norm plots}
 filteredPlots = 1; % plots with filter for turbulent wind
@@ -104,12 +108,12 @@ set_param(blkMdl2{1}, 'ModelName', 'Mdl_BianchiOL');
 figNo = 2; % 4 m/s ->
 %updateDDMdl1(multRb,useTurn, x,scaleFactor)
 updateDDMdl1(0.75, [],[], 0.96);
-normStruct.Sweep = runCompareModels('Step',loadData,figNo,yAxCell,figDirStr,allPlots);
+normStruct.Sweep = runCompareModels('Step',loadData,figNo,yAxCell,figDirStr,allPlots,'',showBladeTip);
 figNo = figNo + 2;
 updateDDMdl1(0.75, [],[], 0.9475);
-normStruct.Sweep = runCompareModels('Sweep',loadData,figNo,yAxCell,figDirStr,allPlots);
+normStruct.Sweep = runCompareModels('Sweep',loadData,figNo,yAxCell,figDirStr,allPlots,'',showBladeTip);
 figNo = figNo + 1;
-normStruct.NTM18 = runCompareModels(18,loadData,figNo,yAxCell,figDirStr,allPlots);
+normStruct.NTM18 = runCompareModels(18,loadData,figNo,yAxCell,figDirStr,allPlots,'',showBladeTip);
 
 ax = findall(gcf, 'Type', 'Axes');
 for idxA = numel(ax):-1:1
@@ -133,7 +137,7 @@ if filteredPlots == 1
         end
     end
     figNo = figNo + 1;
-    runCompareModels(18,loadData,figNo,yAxCell,figDirStr,allPlots,ylimVal);
+    runCompareModels(18,loadData,figNo,yAxCell,figDirStr,allPlots,ylimVal,showBladeTip);
 
     % Remove the filters again
     for idxM = 1: length(simMdlCell)
@@ -147,7 +151,7 @@ end
 
 if onlyDissPics == 0
     figNo = figNo + 1;
-    normStruct.EOG = runCompareModels('EOG',loadData,figNo,yAxCell,figDirStr);
+    normStruct.EOG = runCompareModels('EOG',loadData,figNo,yAxCell,figDirStr,[],'',showBladeTip);
     save('normsGapCell','gapCell', 'normStruct');
 end
 
@@ -565,7 +569,7 @@ set(gcf, 'Name', 'cmpTimeDomain_All5PIvsMPC_Filt');
 posDefault = [520   378   560   420];
 set(gcf, 'position', [posDefault(1:3), posDefault(4)*1.7]);
 setFigureSize(gcf, [1 1.7]); % export size independent of the screen
-set(findall(gcf,'-property','FontSize'),'FontSize',11.5)
+set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 end
 
