@@ -1,4 +1,4 @@
-function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr,allPlots,ylimVal,showBladeTip)
+function normStruct = runCompareModels(strWindType,loadData,figNo1,yAxCell,figDirStr,allPlots,ylimVal,showBladeTip,showTqOv)
 % runCompareModels compares two Simulink models with FASTTool simulation
 % data generated with the baseline controller.
 %
@@ -55,6 +55,13 @@ end
 if nargin < 8 || isempty(showBladeTip)
     showBladeTip = 0; % blade tip out-of-plane displacement not shown
 end
+
+if nargin < 0
+showTqOv = 0;
+
+end
+
+
 
 %% Initialize path and files names
 % The path to figure and input directory is set. The name of the Simulink
