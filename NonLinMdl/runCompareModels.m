@@ -237,6 +237,7 @@ if allPlots == 1
     xlabel('Time [s]')
     linkaxes(axPlot,'x');
     set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
+    setTimeLabelFontSize(gcf) % time axis label 14 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',1)
 
     if cmpOnly1 <= 1
@@ -282,6 +283,7 @@ if allPlots == 1
     ylabel('GenPwr P_g [MW]')
     xlabel('Time [s]')
     set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
+    setTimeLabelFontSize(gcf) % time axis label 14 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',1)
     linkaxes(axPlot2,'x');
 
@@ -399,6 +401,7 @@ set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault
 setFigureSize(gcf, [1 pl]); % export size independent of the screen
 
 set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
+setTimeLabelFontSize(gcf) % time axis label 14 (runGenerateAllThesisFigures)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
 %set(groot,'defaultLineLineWidth',defaultLineWidth);
@@ -458,6 +461,7 @@ if OutTable.Time(end) >1000
     setFigureSize(gcf, [1 pl]); % export size independent of the screen
 
     set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
+    setTimeLabelFontSize(gcf) % time axis label 14 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 
     printFigure(gcf, fullfile(figDir,['cmpTimeDomain_AllZoom',strFig]));

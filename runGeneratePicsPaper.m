@@ -571,6 +571,7 @@ posDefault = [520   378   560   420];
 set(gcf, 'position', [posDefault(1:3), posDefault(4)*1.7]);
 setFigureSize(gcf, [1 1.7]); % export size independent of the screen
 set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
+setTimeLabelFontSize(gcf) % time axis label 14 (runGenerateAllThesisFigures)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 end
 

@@ -18,6 +18,11 @@ showTitles = [false, false, false, false, false, false, false, false, false, tru
 % number overrides it for this call. Scripts run on their own use 13.
 timeSeriesFontSize = [];
 
+% Font size of the time axis labels ('Time (s)') of the time series figures
+% (setTimeLabelFontSize), larger than the other texts. Empty: default of
+% the scripts (14); a number overrides it for this call.
+timeLabelFontSize = [];
+
 % Calls the figure scripts of the repositories next to this one (same
 % parent folder):
 %   2021-code-A-Velocity-quasiLPV-MPC-Algorithm-for-Wind-Turbine-Control
@@ -64,9 +69,9 @@ timeSeriesFontSize = [];
 % in the local function main. A failing script is reported and skipped;
 % the MATLAB path and the current folder are restored after each script.
 
-main(showTitles, timeSeriesFontSize);
+main(showTitles, timeSeriesFontSize, timeLabelFontSize);
 
-function main(showTitles, timeSeriesFontSize)
+function main(showTitles, timeSeriesFontSize, timeLabelFontSize)
 %% Folders
 mainDir = fileparts(mfilename('fullpath'));
 parentDir = fileparts(mainDir);
@@ -143,7 +148,7 @@ for idx = 1:nSteps
         continue
     end
     fprintf('\n===== %d/%d %s =====\n', idx, nSteps, descr);
-    status(idx) = runStep(repoDir, cmd, showTitles(idx), timeSeriesFontSize);
+    status(idx) = runStep(repoDir, cmd, showTitles(idx), timeSeriesFontSize, timeLabelFontSize);
 end
 
 %% Figures linked in the thesis (subfolder/name, lower case, no extension)
@@ -204,19 +209,25 @@ if ~isempty(missing)
 end
 end
 
-function status = runStep(repoDir, cmd, showTitle, timeSeriesFontSize)
+function status = runStep(repoDir, cmd, showTitle, timeSeriesFontSize, timeLabelFontSize)
 % Runs cmd in repoDir: a script file (path relative to repoDir) or a
 % function call in the base workspace, or a function handle; restores the
 % MATLAB path and the current folder afterwards. showTitle: titles of the
 % figures (root application data ShowThesisTitle, read by the plot
 % functions, removed afterwards); timeSeriesFontSize: font size of the time
 % series figures (root application data TimeSeriesFontSize, read by
-% getTimeSeriesFontSize, removed afterwards; empty: default 13)
+% getTimeSeriesFontSize, removed afterwards; empty: default 13);
+% timeLabelFontSize: font size of the time axis labels (root application
+% data TimeLabelFontSize, read by setTimeLabelFontSize, removed afterwards;
+% empty: default 14)
 oldPath = path;
 oldDir = pwd;
 setappdata(groot, 'ShowThesisTitle', logical(showTitle));
 if ~isempty(timeSeriesFontSize)
     setappdata(groot, 'TimeSeriesFontSize', timeSeriesFontSize);
+end
+if ~isempty(timeLabelFontSize)
+    setappdata(groot, 'TimeLabelFontSize', timeLabelFontSize);
 end
 cleanup = onCleanup(@() restoreState(oldPath, oldDir));
 try
@@ -247,6 +258,9 @@ if isappdata(groot, 'ShowThesisTitle')
 end
 if isappdata(groot, 'TimeSeriesFontSize')
     rmappdata(groot, 'TimeSeriesFontSize');
+end
+if isappdata(groot, 'TimeLabelFontSize')
+    rmappdata(groot, 'TimeLabelFontSize');
 end
 end
 
