@@ -7,16 +7,22 @@
 %  5 mainPlotPaper (IPC/TEFC)       6 plotIPC_RateLimitComparison
 %  7 runWFSimAnimationPlots (none)  8 mainGeneratePlotThesis
 %  9 mainGeneratePlotThesisAdaptiveAIC
-% 10 plotScholarStatisticsWT       11 plotScholarStatisticsWF
+% 10 WFSim grids and program structure (no titles)
+% 11 plotScholarStatisticsWT       12 plotScholarStatisticsWF
 % false: no titles (the title calls of the plot functions are skipped),
 % true: titles as before. Scripts run on their own show the titles.
-showTitles = [false, false, false, false, false, false, false, false, false, true, true];
+showTitles = [false, false, false, false, false, false, false, false, false, false, true, true];
 
 % Font size of the time series figures of all repositories (model and
 % controller comparisons, pitch rate, FAST, IPC, Koopman open and closed
 % loop; getTimeSeriesFontSize). Empty: default of the scripts (13); a
 % number overrides it for this call. Scripts run on their own use 13.
 timeSeriesFontSize = [];
+
+% Font size of the time axis labels ('Time (s)') of the time series figures
+% (setTimeLabelFontSize), larger than the other texts. Empty: default of
+% the scripts (14); a number overrides it for this call.
+timeLabelFontSize = [];
 
 % Calls the figure scripts of the repositories next to this one (same
 % parent folder):
@@ -40,6 +46,10 @@ timeSeriesFontSize = [];
 %       03FigAngle0_20_tex)
 %     - mainGeneratePlotThesis: Koopman WRC/AIC (figures_IFAC23)
 %     - mainGeneratePlotThesisAdaptiveAIC: adaptive AIC (figures_CDC22)
+%     - WFSimCode/bin/analysis: plotMeshDiss_zoombox, grids of the two and
+%       nine turbine farms (dirFigWFSimLayout; thesis figures_IFAC23 and
+%       figDirETC), plotFlowchartInitCtrlPlant, WFSim program structure
+%       (figuresBlockDiagram_IFAC23)
 %   Scholar (https://github.com/antjedittmer/Scholar, MATLABscripts4plots)
 %     - plotScholarStatisticsWT, plotScholarStatisticsWF: Google Scholar
 %       entries per year (dirFigures)
@@ -64,9 +74,9 @@ timeSeriesFontSize = [];
 % in the local function main. A failing script is reported and skipped;
 % the MATLAB path and the current folder are restored after each script.
 
-main(showTitles, timeSeriesFontSize);
+main(showTitles, timeSeriesFontSize, timeLabelFontSize);
 
-function main(showTitles, timeSeriesFontSize)
+function main(showTitles, timeSeriesFontSize, timeLabelFontSize)
 %% Folders
 mainDir = fileparts(mfilename('fullpath'));
 parentDir = fileparts(mainDir);
@@ -107,6 +117,7 @@ steps = {
     koopDir,    fullfile('WFSimCode', 'bin', 'analysis', 'runWFSimAnimationPlots.m'), 'power over yaw, wake centre lines', true
     koopDir,    'mainGeneratePlotThesis.m',             'Koopman WRC/AIC', true
     koopDir,    'mainGeneratePlotThesisAdaptiveAIC.m',  'adaptive AIC', true
+    koopDir,    @() plotWFSimStructure(koopDir),        'WFSim grids and program structure', true
     scholarDir, 'plotScholarStatisticsWT.m',            'Google Scholar entries wind turbine control', true
     scholarDir, 'plotScholarStatisticsWF.m',            'Google Scholar entries wind farm control', true};
 
@@ -123,12 +134,15 @@ figFolders = {
     fullfile(koopDir, 'figPaper'),                  'figPaper'
     fullfile(koopDir, 'figures_IFAC23'),            'figures_IFAC23'
     fullfile(koopDir, 'figures_CDC22'),             'figures_CDC22'
+    fullfile(koopDir, 'WFSimCode', 'bin', 'analysis', 'figuresBlockDiagram_IFAC23'), 'figuresBlockDiagram_IFAC23'
     fullfile(fileparts(scholarDir), 'dirFigures'),  'Figures_ADi'};
 % Figures with another name in the thesis: {source without extension,
 % thesis subfolder, thesis name}
 figRenamed = {
     fullfile(koopDir, 'figPaper', 'PowerVsYaw'),            'figures_IFAC23', '01FigPwrVsYaw_tex'
-    fullfile(koopDir, 'figPaper', 'gamma0_20_AngleCenter'), 'figures_IFAC23', '03FigAngle0_20_tex'};
+    fullfile(koopDir, 'figPaper', 'gamma0_20_AngleCenter'), 'figures_IFAC23', '03FigAngle0_20_tex'
+    fullfile(koopDir, 'WFSimCode', 'bin', 'analysis', 'dirFigWFSimLayout', 'gridmesh2_tex'), 'figures_IFAC23', 'gridmesh2_tex'
+    fullfile(koopDir, 'WFSimCode', 'bin', 'analysis', 'dirFigWFSimLayout', 'gridmesh9_tex'), 'figDirETC', 'gridmesh9_tex'};
 
 %% Run the figure scripts
 nSteps = size(steps, 1);
@@ -143,7 +157,7 @@ for idx = 1:nSteps
         continue
     end
     fprintf('\n===== %d/%d %s =====\n', idx, nSteps, descr);
-    status(idx) = runStep(repoDir, cmd, showTitles(idx), timeSeriesFontSize);
+    status(idx) = runStep(repoDir, cmd, showTitles(idx), timeSeriesFontSize, timeLabelFontSize);
 end
 
 %% Figures linked in the thesis (subfolder/name, lower case, no extension)
@@ -204,19 +218,25 @@ if ~isempty(missing)
 end
 end
 
-function status = runStep(repoDir, cmd, showTitle, timeSeriesFontSize)
+function status = runStep(repoDir, cmd, showTitle, timeSeriesFontSize, timeLabelFontSize)
 % Runs cmd in repoDir: a script file (path relative to repoDir) or a
 % function call in the base workspace, or a function handle; restores the
 % MATLAB path and the current folder afterwards. showTitle: titles of the
 % figures (root application data ShowThesisTitle, read by the plot
 % functions, removed afterwards); timeSeriesFontSize: font size of the time
 % series figures (root application data TimeSeriesFontSize, read by
-% getTimeSeriesFontSize, removed afterwards; empty: default 13)
+% getTimeSeriesFontSize, removed afterwards; empty: default 13);
+% timeLabelFontSize: font size of the time axis labels (root application
+% data TimeLabelFontSize, read by setTimeLabelFontSize, removed afterwards;
+% empty: default 14)
 oldPath = path;
 oldDir = pwd;
 setappdata(groot, 'ShowThesisTitle', logical(showTitle));
 if ~isempty(timeSeriesFontSize)
     setappdata(groot, 'TimeSeriesFontSize', timeSeriesFontSize);
+end
+if ~isempty(timeLabelFontSize)
+    setappdata(groot, 'TimeLabelFontSize', timeLabelFontSize);
 end
 cleanup = onCleanup(@() restoreState(oldPath, oldDir));
 try
@@ -248,6 +268,9 @@ end
 if isappdata(groot, 'TimeSeriesFontSize')
     rmappdata(groot, 'TimeSeriesFontSize');
 end
+if isappdata(groot, 'TimeLabelFontSize')
+    rmappdata(groot, 'TimeLabelFontSize');
+end
 end
 
 function plotCoefficientMaps(velDir)
@@ -268,6 +291,18 @@ if ~isfolder(figDir)
     mkdir(figDir);
 end
 initModel5MWNREL(1, '', '', '', '', figDir);
+end
+
+function plotWFSimStructure(koopDir)
+% Grids of the two and nine turbine farms with zoomed turbine regions
+% (plotMeshDiss_zoombox, dirFigWFSimLayout) and the WFSim program structure
+% diagrams (plotFlowchartInitCtrlPlant, figuresBlockDiagram_IFAC23) in
+% WFSimCode/bin/analysis; runStep restores the current folder
+cd(fullfile(koopDir, 'WFSimCode', 'bin', 'analysis'));
+plotMeshDiss_zoombox(2, false);
+plotMeshDiss_zoombox(9, false);
+plotFlowchartInitCtrlPlant(1);
+plotFlowchartInitCtrlPlant(2);
 end
 
 function restoreVersion(hasVersion, oldVersion)

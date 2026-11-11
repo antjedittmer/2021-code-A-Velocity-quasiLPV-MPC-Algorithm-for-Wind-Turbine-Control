@@ -597,6 +597,7 @@ tightenTiles(ax); % x tick labels only at the bottom, same tile spacing in all f
 posDefault = get(0, 'DefaultFigurePosition');
 set(gcf, 'position', [posDefault(1), posDefault(2) - posDefault(4)*1.2, posDefault(3), posDefault(4)*2.3]);
 set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
+setTimeLabelFontSize(gcf) % time axis label 14 (runGenerateAllThesisFigures)
 
 % without the torque tile one tile height less: same tile height in all figures
 printFigFixed(gcf, fullfile(figDir, ['cmpCtrlFASTthesis_', windName]), [14.8 25.6 - 3.2*~showTq]);
