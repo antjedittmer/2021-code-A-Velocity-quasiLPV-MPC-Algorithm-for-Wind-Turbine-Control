@@ -7,10 +7,11 @@
 %  5 mainPlotPaper (IPC/TEFC)       6 plotIPC_RateLimitComparison
 %  7 runWFSimAnimationPlots (none)  8 mainGeneratePlotThesis
 %  9 mainGeneratePlotThesisAdaptiveAIC
-% 10 plotScholarStatisticsWT       11 plotScholarStatisticsWF
+% 10 WFSim grids and program structure (no titles)
+% 11 plotScholarStatisticsWT       12 plotScholarStatisticsWF
 % false: no titles (the title calls of the plot functions are skipped),
 % true: titles as before. Scripts run on their own show the titles.
-showTitles = [false, false, false, false, false, false, false, false, false, true, true];
+showTitles = [false, false, false, false, false, false, false, false, false, false, true, true];
 
 % Font size of the time series figures of all repositories (model and
 % controller comparisons, pitch rate, FAST, IPC, Koopman open and closed
@@ -45,6 +46,10 @@ timeLabelFontSize = [];
 %       03FigAngle0_20_tex)
 %     - mainGeneratePlotThesis: Koopman WRC/AIC (figures_IFAC23)
 %     - mainGeneratePlotThesisAdaptiveAIC: adaptive AIC (figures_CDC22)
+%     - WFSimCode/bin/analysis: plotMeshDiss_zoombox, grids of the two and
+%       nine turbine farms (dirFigWFSimLayout; thesis figures_IFAC23 and
+%       figDirETC), plotFlowchartInitCtrlPlant, WFSim program structure
+%       (figuresBlockDiagram_IFAC23)
 %   Scholar (https://github.com/antjedittmer/Scholar, MATLABscripts4plots)
 %     - plotScholarStatisticsWT, plotScholarStatisticsWF: Google Scholar
 %       entries per year (dirFigures)
@@ -112,6 +117,7 @@ steps = {
     koopDir,    fullfile('WFSimCode', 'bin', 'analysis', 'runWFSimAnimationPlots.m'), 'power over yaw, wake centre lines', true
     koopDir,    'mainGeneratePlotThesis.m',             'Koopman WRC/AIC', true
     koopDir,    'mainGeneratePlotThesisAdaptiveAIC.m',  'adaptive AIC', true
+    koopDir,    @() plotWFSimStructure(koopDir),        'WFSim grids and program structure', true
     scholarDir, 'plotScholarStatisticsWT.m',            'Google Scholar entries wind turbine control', true
     scholarDir, 'plotScholarStatisticsWF.m',            'Google Scholar entries wind farm control', true};
 
@@ -128,12 +134,15 @@ figFolders = {
     fullfile(koopDir, 'figPaper'),                  'figPaper'
     fullfile(koopDir, 'figures_IFAC23'),            'figures_IFAC23'
     fullfile(koopDir, 'figures_CDC22'),             'figures_CDC22'
+    fullfile(koopDir, 'WFSimCode', 'bin', 'analysis', 'figuresBlockDiagram_IFAC23'), 'figuresBlockDiagram_IFAC23'
     fullfile(fileparts(scholarDir), 'dirFigures'),  'Figures_ADi'};
 % Figures with another name in the thesis: {source without extension,
 % thesis subfolder, thesis name}
 figRenamed = {
     fullfile(koopDir, 'figPaper', 'PowerVsYaw'),            'figures_IFAC23', '01FigPwrVsYaw_tex'
-    fullfile(koopDir, 'figPaper', 'gamma0_20_AngleCenter'), 'figures_IFAC23', '03FigAngle0_20_tex'};
+    fullfile(koopDir, 'figPaper', 'gamma0_20_AngleCenter'), 'figures_IFAC23', '03FigAngle0_20_tex'
+    fullfile(koopDir, 'WFSimCode', 'bin', 'analysis', 'dirFigWFSimLayout', 'gridmesh2_tex'), 'figures_IFAC23', 'gridmesh2_tex'
+    fullfile(koopDir, 'WFSimCode', 'bin', 'analysis', 'dirFigWFSimLayout', 'gridmesh9_tex'), 'figDirETC', 'gridmesh9_tex'};
 
 %% Run the figure scripts
 nSteps = size(steps, 1);
@@ -282,6 +291,18 @@ if ~isfolder(figDir)
     mkdir(figDir);
 end
 initModel5MWNREL(1, '', '', '', '', figDir);
+end
+
+function plotWFSimStructure(koopDir)
+% Grids of the two and nine turbine farms with zoomed turbine regions
+% (plotMeshDiss_zoombox, dirFigWFSimLayout) and the WFSim program structure
+% diagrams (plotFlowchartInitCtrlPlant, figuresBlockDiagram_IFAC23) in
+% WFSimCode/bin/analysis; runStep restores the current folder
+cd(fullfile(koopDir, 'WFSimCode', 'bin', 'analysis'));
+plotMeshDiss_zoombox(2, false);
+plotMeshDiss_zoombox(9, false);
+plotFlowchartInitCtrlPlant(1);
+plotFlowchartInitCtrlPlant(2);
 end
 
 function restoreVersion(hasVersion, oldVersion)
