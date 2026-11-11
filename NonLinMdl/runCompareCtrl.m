@@ -463,6 +463,7 @@ if useTitle(2) == 0 % either plot the
     setFigureSize(gcf, [1 1.1]); % export size independent of the screen
 
     set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
+    setTimeLabelFontSize(gcf) % time axis label 14 (runGenerateAllThesisFigures)
     set(findall(gcf,'-property','LineWidth'),'LineWidth',1.2)
 
 
@@ -600,6 +601,7 @@ set(gcf, 'position', [posDefault(1),posDefault(2) - posDefault(4)*0.7,posDefault
 setFigureSize(gcf, [1 pl]); % export size independent of the screen
 
 set(findall(gcf,'-property','FontSize'),'FontSize',getTimeSeriesFontSize()) % default 13 (runGenerateAllThesisFigures)
+setTimeLabelFontSize(gcf) % time axis label 14 (runGenerateAllThesisFigures)
 set(findall(gcf,'-property','LineWidth'),'LineWidth',0.75)
 hold on; plot(timeVecPlot,PGRef/1000,'k--','LineWidth',1.5)
 
