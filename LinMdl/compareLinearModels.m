@@ -111,6 +111,21 @@ end
     initModel5MWNREL(plotOnCpCt, Rotor_Lamda, Rotor_Pitch, Rotor_cQ, Rotor_cT, Rotor_cP, figFolder,0.75,xWeights); %  
 wecs.Js = wecs.Jr + wecs.Ng^2 * wecs.Jg;
 
+% Blade model of Mdl2 (getBladeModelVersion): 'original' (thesis, default)
+% or variant B ('B1', 'B2': parameters in wecs.blade*, initModel5MWNREL);
+% with bladeModelCompare the original Mdl2 is shown additionally (Mdl2
+% variant B: yellow, dash-dotted)
+[bladeVersion, bladeCompare] = getBladeModelVersion;
+if strcmp(bladeVersion, 'original')
+    mdl2Versions = {'original'};
+else
+    if bladeCompare
+        mdl2Versions = {'original', bladeVersion};
+    else
+        mdl2Versions = {bladeVersion};
+    end
+end
+
 %% Compute aerodynamic force and torque gradients
 ksw = 1/(2/3* wecs.H);
 dLambda = mean(diff(lambda));
@@ -292,23 +307,31 @@ for index =  speedVec
     %% Linear Model Mdl2: System and input matrices
     % Set up system and input matrices dependent on airspeed, pitch and rotor speed  x_FA
 
-    C5aero =  [B1_3(5,1) * [-dFtdV, -dFtdV*wecs.rb, 0, dFtdomega 0]; ... % yFAdot
-        B1_3(6,1) * [-dFtdV, -dFtdV*wecs.rb, 0, dFtdomega 0]; ... % deltaDot
-        B1_3(7,2) * [-dTrdV, -dTrdV*wecs.rb, 0, dTrdomega,0];... % xSWdot
-        B1_3(8,2) * [-dTrdV, -dTrdV*wecs.rb, 0, dTrdomega,0];... % omega_r
+    sysLagrangeAll = cell(size(mdl2Versions));
+    for idxBl = 1:numel(mdl2Versions)
+    % Blade model matrices (original: M, K, Ce, B1_3, wecs.rb; variant B:
+    % at the operating point, see bladeMatricesMdl2)
+    Ftbar = kCT*Ctb*Vebar^2; % thrust at the operating point (N)
+    [M2, K2, Ce2, B1_3m, rb2, dG2dsched] = bladeMatricesMdl2(mdl2Versions{idxBl}, ...
+        wecs, M, K, Ce, Q3, B1_3, Lambda_bar, beta_bar, Ftbar);
+
+    C5aero =  [B1_3m(5,1) * [-dFtdV, -dFtdV*rb2, 0, dFtdomega 0]; ... % yFAdot
+        B1_3m(6,1) * [-dFtdV, -dFtdV*rb2, 0, dFtdomega 0]; ... % deltaDot
+        B1_3m(7,2) * [-dTrdV, -dTrdV*rb2, 0, dTrdomega,0];... % xSWdot
+        B1_3m(8,2) * [-dTrdV, -dTrdV*rb2, 0, dTrdomega,0];... % omega_r
         zeros(1,5)];  % omega_gr
 
     % B1_3 has the order: F_T, T_r, T_g
-    QTildaTg =  [0;0; B1_3(7,3); 0; B1_3(9,3)];
-    QTildaBeta = [B1_3(5,1) *dFtdbeta; B1_3(6,1)*dFtdbeta; B1_3(7,2) * dTrdbeta;...
-        B1_3(8,2)*dTrdbeta;0];
-    QTildaV = [B1_3(5,1) * dFtdV; B1_3(6,1) * dFtdV; B1_3(7,2) * dTrdV;...
-        B1_3(8,2)*dTrdV;0];
+    QTildaTg =  [0;0; B1_3m(7,3); 0; B1_3m(9,3)];
+    QTildaBeta = [B1_3m(5,1) *dFtdbeta; B1_3m(6,1)*dFtdbeta; B1_3m(7,2) * dTrdbeta;...
+        B1_3m(8,2)*dTrdbeta;0];
+    QTildaV = [B1_3m(5,1) * dFtdV; B1_3m(6,1) * dFtdV; B1_3m(7,2) * dTrdV;...
+        B1_3m(8,2)*dTrdV;0];
 
     A9DoF = zeros(size(A1) + 2); % 9 states + 2 ctrl input
     A9DoF(1:4,:) = [A1(1:4,:) ,zeros(4,2)]; % states 1 - 4: y_FA,delta,x_sw, Theta_s
-    A9DoF(5:9,1:4) = -M\K;
-    A9DoF(5:9,5:9) = -M\Ce + C5aero; % states 5 - 9: y_FA,delta,x_sw, w_r, w_gr
+    A9DoF(5:9,1:4) = -M2\K2;
+    A9DoF(5:9,5:9) = -M2\Ce2 + C5aero; % states 5 - 9: y_FA,delta,x_sw, w_r, w_gr
     A9DoF(5:9,10:11) = [QTildaTg, QTildaBeta];
     %A9DoF(10:11,:) = zeros(2,11); % states 10 - 11: T_g, beta
     A9DoF(10,10) =  -1/kappa;
@@ -316,6 +339,15 @@ for index =  speedVec
 
     B9DoF = zeros(size(A1,1) + 2,3); % 3 inputs -> 9 states + 2 ctrl input
     B9DoF(5:9,3) = QTildaV;
+
+    % Variant B: generalized blade force r_b(s)*F_T - N*Kb(s)*r_ref^2*theta
+    % depends on the scheduling variables s = (lambda0, beta), lambda0 =
+    % Rr*omega_r/(Ve - ydot_fa) (zero for the original blade model)
+    sBl = M2\[0; 1; 0; 0; 0];
+    A9DoF(5:9,8) = A9DoF(5:9,8) + sBl*dG2dsched(1)*dlambdadomega; % omega_r
+    A9DoF(5:9,5) = A9DoF(5:9,5) + sBl*dG2dsched(1)*dlambdadydotfa; % ydot_fa
+    A9DoF(5:9,11) = A9DoF(5:9,11) + sBl*dG2dsched(2); % beta
+    B9DoF(5:9,3) = B9DoF(5:9,3) + sBl*dG2dsched(1)*dlambdadV*kWind; % V
     B9DoF(10,1) = 1/kappa;
     B9DoF(11,2) = 1/tau;
     A7DoF = A9DoF(1:9,1:9);
@@ -349,6 +381,8 @@ for index =  speedVec
 
     sysLagrange.Outputname = sysOutputname;
     sysLagrange.Inputname = sysInputname;
+    sysLagrangeAll{idxBl} = sysLagrange;
+    end % blade model versions: the last one is Mdl2 (outputs, metrics)
 
     Cout = [C9DoF;
         [zeros(1,7+2) 1 zeros(1,1)];  % beta
@@ -377,7 +411,7 @@ for index =  speedVec
         ff.Color = 'white'; ff.Visible = plotVisible;
         %wVec = logspace(opts.XLim{1}(1),opts.XLim{1}(2),100);
 
-        bodemag(sysLagrange,opts); hold on; grid on;
+        bodemag(sysLagrangeAll{1},opts); hold on; grid on; % original Mdl2 if bladeCompare
         freq9DoF = linspace(opts.XLim{:}(1),opts.XLim{:}(2),100);
         mag9DoF = bode(sysLagrange,freq9DoF);
         bodemag(sys5DoF,'k--',opts); hold on; grid on;
@@ -391,6 +425,14 @@ for index =  speedVec
             bodemag(model,opts); hold on
             magFAST = bode(model,freq9DoF);
             grid on
+        end
+
+        % Review of the blade model: Mdl2 variant B in addition (yellow, dash-dotted)
+        if numel(sysLagrangeAll) > 1
+            linesBefore = findall(ff, 'Type', 'line');
+            bodemag(sysLagrangeAll{end}, '-.', opts);
+            clB = lines(3);
+            set(setdiff(findall(ff, 'Type', 'line'), linesBefore), 'Color', clB(3,:));
         end
 
         vecStates = [1:5,16:18];
@@ -447,10 +489,13 @@ for index =  speedVec
         end
 
         % Figure information
-        figStr = [strrep(titleStr,'Bode mag. plot for V =','Figure_Bode V ='),'.png'];
+        % file names with the suffix _Blade<version> for the blade model variant B
+        strBlade = '';
+        if ~strcmp(bladeVersion, 'original'), strBlade = ['_Blade', bladeVersion]; end
+        figStr = [strrep(titleStr,'Bode mag. plot for V =','Figure_Bode V ='),strBlade,'.png'];
         figFolderStr = fullfile(figFolder,figStr);
 
-        figFolderStrEps = fullfile(figFolder,sprintf('BodeV%d',Vbar));
+        figFolderStrEps = fullfile(figFolder,[sprintf('BodeV%d',Vbar),strBlade]);
         posaxes =   get(0,'defaultFigurePosition');
         set(gcf,'Position',[posaxes(1:3),posaxes(4)*1.1]);
         setFigureSize(gcf, [1 1.1]); % export size independent of the screen
@@ -483,3 +528,34 @@ for index =  speedVec
 
 end
 
+
+end % compareLinearModels
+
+function [M2, K2, Ce2, B1_3m, rb2, dG2dsched] = bladeMatricesMdl2(bladeVersion, wecs, M, K, Ce, Q3, B1_3, lam0, beta0, Ftbar)
+% bladeMatricesMdl2 returns the Lagrange matrices of Mdl2 for the blade
+% model bladeVersion at the operating point (lam0, beta0) with the thrust
+% Ftbar (N):
+% - 'original': M, K, Ce, B1_3 = [0; M\Q3] and r_b = wecs.rb unchanged
+% - 'B1', 'B2' (variant B, bladeParamsMdl2 with the parameters wecs.blade*,
+%   as the Simulink models Mdl_BianchiOL_BladeB*): modal blade mass at
+%   r_ref, thrust load point r_b(lambda, beta), stiffness Kb(lambda, beta)
+%   (B2: mass mb = Kb/wnb^2). dG2dsched: derivative of the generalized
+%   blade force r_b*F_T - N*Kb*r_ref^2*theta with respect to (lambda0,
+%   beta) at the equilibrium theta = F_T*r_b/(N*Kb*r_ref^2) (zero for
+%   'original'). Mass and damping changes do not contribute (zero
+%   accelerations and velocities at the equilibrium).
+if strcmp(bladeVersion, 'original')
+    M2 = M; K2 = K; Ce2 = Ce; B1_3m = B1_3; rb2 = wecs.rb; dG2dsched = [0, 0];
+    return
+end
+N = wecs.N;
+[rr, rb2, Kb, mb, Bb, dG2dsched] = bladeParamsMdl2(wecs, lam0, beta0, Ftbar);
+M2 = M;
+M2(1,1) = wecs.mt + N*mb;
+M2(1,2) = N*mb*rr; M2(2,1) = M2(1,2);
+M2(2,2) = N*mb*rr^2;
+K2 = K; K2(2,2) = N*Kb*rr^2;
+Ce2 = Ce; Ce2(2,2) = N*Bb*rr^2;
+Q3m = Q3; Q3m(2,1) = rb2;
+B1_3m = [zeros(4,3); M2\Q3m];
+end

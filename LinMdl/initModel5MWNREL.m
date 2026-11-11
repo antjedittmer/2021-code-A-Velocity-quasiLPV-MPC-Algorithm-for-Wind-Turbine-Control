@@ -262,6 +262,26 @@ CqBump = exp(-0.5*((lambdaGrid - 6.65)/0.3).^2) .* exp(-0.5*((betaGrid - 1)/0.5)
     .* min(max((betaGrid - 0.11)/0.4, 0), 1);
 Cq = Cq .* (1 + kCqRated*CqBump);
 
+% Blade model of Mdl2 (getBladeModelVersion): variant B ('B1', 'B2') adds the
+% fields blade* (qLPV-MPC prediction model and blade flap observer,
+% bladeParamsMdl2), fitted to the FAST step reference of the model version;
+% 'original' (roll-back): no additional fields
+bladeVersion = getBladeModelVersion;
+if ~strcmp(bladeVersion, 'original')
+    [~, stepDataMatB] = getWecsModelVersion;
+    PB = fitBladeModelB(wecs, lambda, pitch, Ct, rho, stepDataMatB);
+    wecs.bladeMassScaled = double(strcmp(bladeVersion, 'B2'));
+    wecs.bladeRRef = PB.rRef;
+    wecs.bladeLamBp = PB.lamBp(:)';
+    wecs.bladeRbLam = PB.rbLam(:)';
+    wecs.bladeKbLam = PB.KbLam(:)';
+    wecs.bladeBetaBp = PB.betaBp(:)';
+    wecs.bladeRbBeta = PB.rbBeta(:)';
+    wecs.bladeKbBeta = PB.KbBeta(:)';
+    wecs.bladeRbRated = PB.rbRated;
+    wecs.bladeKbRated = PB.KbRated;
+end
+
 
 %% Plot aerodynamic torque and force dependent on pitch and tip speed ratio
 
