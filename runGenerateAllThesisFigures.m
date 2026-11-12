@@ -7,11 +7,12 @@
 %  5 mainPlotPaper (IPC/TEFC)       6 plotIPC_RateLimitComparison
 %  7 runWFSimAnimationPlots (none)  8 mainGeneratePlotThesis
 %  9 mainGeneratePlotThesisAdaptiveAIC
-% 10 WFSim grids and program structure (no titles)
-% 11 plotScholarStatisticsWT       12 plotScholarStatisticsWF
+% 10 WFSim wind fields of the adaptive AIC (titles always: time, P_ref, C_T')
+% 11 WFSim grids and program structure (no titles)
+% 12 plotScholarStatisticsWT       13 plotScholarStatisticsWF
 % false: no titles (the title calls of the plot functions are skipped),
 % true: titles as before. Scripts run on their own show the titles.
-showTitles = [false, false, false, false, false, false, false, false, false, false, true, true];
+showTitles = [false, false, false, false, false, false, false, false, false, false, false, true, true];
 
 % Font size of the time series figures of all repositories (model and
 % controller comparisons, pitch rate, FAST, IPC, Koopman open and closed
@@ -40,12 +41,18 @@ timeLabelFontSize = [];
 %     - plotIPC_RateLimitComparison: IPC time series, IPC rate limit PSD
 %       and AALC PSDs (figIPCThesis)
 %   2023-code-IFAC-Koopman-Model-Predictive-Control-for-Wind-Farm
-%     - runWFSimAnimationPlots (as in mainGeneratePlots): power over yaw
-%       and wake centre lines (figPaper; PowerVsYaw and
-%       gamma0_20_AngleCenter are the thesis figures 01FigPwrVsYaw_tex and
-%       03FigAngle0_20_tex)
+%     - runWFSimAnimationPlots (as in mainGeneratePlots, with plotAll =
+%       true: all figures): power over yaw, wake centre lines and the yaw
+%       wind fields flowing from left to right with the Bastankhah wake
+%       (figPaper; PowerVsYaw and gamma0_20_AngleCenter are the thesis
+%       figures 01FigPwrVsYaw_tex and 03FigAngle0_20_tex; gamma0_5,
+%       gamma10_20, gamma25_30_FlowTiled)
 %     - mainGeneratePlotThesis: Koopman WRC/AIC (figures_IFAC23)
 %     - mainGeneratePlotThesisAdaptiveAIC: adaptive AIC (figures_CDC22)
+%     - plotAdaptiveAICFlowFields: wind fields of the adaptive AIC closed
+%       loop at 240, 2100, 2520 and 4990 s (figPaper,
+%       adaptiveAIC_t*_FlowTiled; the first call repeats the closed-loop
+%       run once, about 2 min, and stores the wind fields)
 %     - WFSimCode/bin/analysis: plotMeshDiss_zoombox, grids of the two and
 %       nine turbine farms (dirFigWFSimLayout; thesis figures_IFAC23 and
 %       figDirETC), plotFlowchartInitCtrlPlant, WFSim program structure
@@ -114,9 +121,10 @@ steps = {
     velDir,     @() plotCoefficientMaps(velDir),        'c_T, c_P, c_Q maps (initModel5MWNREL)', true
     ipcDir,     'mainPlotPaper.m',                      'Re, airfoil coefficients, TEF open loop', true
     ipcDir,     'plotIPC_RateLimitComparison()',        'IPC time series, IPC and AALC PSDs', true
-    koopDir,    fullfile('WFSimCode', 'bin', 'analysis', 'runWFSimAnimationPlots.m'), 'power over yaw, wake centre lines', true
+    koopDir,    @() plotWFSimYaw(koopDir),              'power over yaw, wake centre lines, yaw wind fields', true
     koopDir,    'mainGeneratePlotThesis.m',             'Koopman WRC/AIC', true
     koopDir,    'mainGeneratePlotThesisAdaptiveAIC.m',  'adaptive AIC', true
+    koopDir,    @() plotAdaptiveAICFlow(koopDir),       'wind fields adaptive AIC', true
     koopDir,    @() plotWFSimStructure(koopDir),        'WFSim grids and program structure', true
     scholarDir, 'plotScholarStatisticsWT.m',            'Google Scholar entries wind turbine control', true
     scholarDir, 'plotScholarStatisticsWF.m',            'Google Scholar entries wind farm control', true};
@@ -291,6 +299,23 @@ if ~isfolder(figDir)
     mkdir(figDir);
 end
 initModel5MWNREL(1, '', '', '', '', figDir);
+end
+
+function plotWFSimYaw(koopDir)
+% runWFSimAnimationPlots with plotAll = true (base workspace variable,
+% removed afterwards): besides PowerVsYaw and the yaw wind fields
+% gamma*_FlowTiled also gamma0_20_AngleCenter (thesis 03FigAngle0_20_tex)
+assignin('base', 'plotAll', true);
+cleanup = onCleanup(@() evalin('base', 'clear plotAll'));
+evalin('base', sprintf('run(''%s'');', ...
+    fullfile(koopDir, 'WFSimCode', 'bin', 'analysis', 'runWFSimAnimationPlots.m')));
+end
+
+function plotAdaptiveAICFlow(koopDir)
+% Wind fields of the adaptive AIC closed loop (plotAdaptiveAICFlowFields
+% in WFSimCode/bin/analysis, figPaper); runStep restores the current folder
+cd(fullfile(koopDir, 'WFSimCode', 'bin', 'analysis'));
+plotAdaptiveAICFlowFields();
 end
 
 function plotWFSimStructure(koopDir)
