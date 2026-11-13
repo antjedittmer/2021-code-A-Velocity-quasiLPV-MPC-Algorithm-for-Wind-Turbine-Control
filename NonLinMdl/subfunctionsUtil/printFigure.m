@@ -19,8 +19,18 @@ end
 if ~strcmp(get(h, 'PaperPositionMode'), 'manual') || ~strcmp(get(h, 'PaperUnits'), 'centimeters')
     setFigureSize(h, [1 1]);
 end
-if any(strcmp(formats, 'eps'))
-    print(h, fName, '-depsc', '-painters', '-loose');
+
+% the coefficient plots need to be treated differently
+fNameCell = regexp(fName,filesep,'split');
+figStr = strrep(strrep(fNameCell{end},'.png',''),'.eps','');
+isCoeffPlot = matches(figStr, "C" + lettersPattern(1) + "_NRRLFAST5MW");
+
+if any(strcmp(formats, 'eps')) && ~isCoeffPlot
+   print(h, fName, '-depsc', '-vector', '-loose');
+elseif any(strcmp(formats, 'eps')) && isCoeffPlot
+    print(h, fName, '-depsc', '-image', '-r300', '-loose');
+else
+    %do nothing here
 end
 if any(strcmp(formats, 'png'))
     print(h, fName, '-dpng', '-r300');
