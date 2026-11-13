@@ -39,8 +39,8 @@ ms = 7;
 % Controllers (qLMPC designs, IPC, AALC): table name, legend label, line
 % style, marker
 ctrl = {"qLMPC", 'qLMPC (Mdl2, proxies)', ':', 'h';
-    "qLMPC flapNotch", 'qLMPC (FAST)', '-', 'd';
-    "qLMPC flapNotchIPC", 'qLMPC + IPC (FAST)', '-', '^';
+    "qLMPC flapNotch", 'qLMPC notch (FAST)', '-', 'd';
+    "qLMPC flapNotchIPC", 'qLMPC notch + IPC (FAST)', '-', '^';
     "qLMPC flapNotchSmooth12", 'qLMPC smooth (FAST)', '-.', 'v';
     "qLMPC flapNotchSmooth12IPC", 'qLMPC smooth + IPC (FAST)', '-.', '>';
     "IPC", 'IPC', '--', 'o';
@@ -68,12 +68,12 @@ ovalFill = (1 - ovalAlpha) + ovalAlpha*grpCol;
 grpDark = [0.7, 0.55, 0; 0.8, 0.4, 0; 0.75, 0.15, 0.45];
 % Oval labels: controller, label, position of the label at the oval (right,
 % left, above, below, aboveleft), shift [dx, dy] in data units
-ovalLabel = {"qLMPC", 'qLMPC, Mdl2', 'right', [-0.2, 0.07];
-    "qLMPC flapNotch", 'qLMPC, FAST', 'aboveleft', [0, 0];
+ovalLabel = {"qLMPC", 'qLMPC, Mdl2', 'right', [-0.9, 0.25];
+    "qLMPC flapNotch", 'qLMPC notch, FAST', 'aboveleft', [0, 0];
     "qLMPC flapNotchSmooth12", 'qLMPC smooth, FAST', 'above', [0, 0];
     "IPC", 'IPC', 'above', [0.5, 0];
     "AALC", 'AALC', 'above', [0, 0.03];
-    "qLMPC flapNotchIPC", 'qLMPC + IPC, FAST', 'aboveleft', [0, 0];
+    "qLMPC flapNotchIPC", 'qLMPC notch + IPC, FAST', 'below', [0, 0];
     "qLMPC flapNotchSmooth12IPC", 'qLMPC smooth + IPC, FAST', 'above', [0, 0]};
 yMax = max(1.1, ceil(10*max([T.C_DEL_b; T.C_DEL_t; T.C_DEL_tt; T.C_dP; T.C_TwrAcc], [], 'omitnan'))/10) + 0.1; % room for the ovals
 xMax = ceil(max([T.C_Act; T.C_ActEst], [], 'omitnan'));
@@ -173,7 +173,7 @@ for idxP = 1:nP
         b(k).FaceColor = critCol(k, :);
         ok = ~isnan(b(k).YData);
         text(ax, b(k).XEndPoints(ok), b(k).YEndPoints(ok), compose(' %.2f', b(k).YData(ok)), ...
-            'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'Rotation', 90, 'FontSize', 8);
+            'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'Rotation', 90, 'FontSize', 10);
     end
     yline(ax, 1, 'k--', 'HandleVisibility', 'off');
     grid(ax, 'on');
