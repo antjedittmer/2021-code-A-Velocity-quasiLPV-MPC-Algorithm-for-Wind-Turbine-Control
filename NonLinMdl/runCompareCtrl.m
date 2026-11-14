@@ -298,6 +298,11 @@ end
 DT = 0.008;
 r = GenPwrRef;
 
+% CPU time of the qLPV-MPC: mean, cycles > 3 ms and > 10 ms, thesis text (txt file)
+if ~isempty(tictoc_LPVMPC)
+    writeCpuTimeSummary(tictoc_LPVMPC, strWindType, DT, strTableFilt);
+end
+
 % Plot and compare closed-loop results
 plotComparison(OutTableTest2,OutTableMPC,q_,r_,p,DT,figStr,figDir,r,timeForPlot,meanOpt,figNo1,useTitle,strWindType,figLabel,strTableFilt,addPgrefText,showTqOv)
 
